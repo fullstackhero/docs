@@ -15,9 +15,10 @@ $black:    #000;
 $yellow:   #ffe000;
 $black:    #1d2d35;
 $beige:    #fbf7f0;
-// $red:      #e55235;
+$red:      #e55235;
 $purple:   #5d2f86;
 $brown:    #aa9c84;
+$blue:     #009eec;
 
 $blue-300: #8ed6fb;
 $pink-500: #d32e9d;
@@ -34,8 +35,8 @@ $color-btn-text: $white;
 
 $enable-caret:                true;
 $enable-rounded:              true;
-$enable-shadows:              false;
-$enable-gradients:            false;
+$enable-shadows:              true;
+$enable-gradients:            true;
 $enable-transitions:          true;
 $enable-reduced-motion:       true;
 $enable-smooth-scroll:        true;
@@ -55,7 +56,7 @@ $navbar-light-toggler-icon-bg: none;
 //
 // Quickly modify global styling by enabling or disabling optional features.
 
-// $enable-responsive-font-sizes: true;
+ $enable-responsive-font-sizes: true;
 
 // Body
 //
@@ -76,11 +77,11 @@ $link-decoration:                         none;
 // Define the maximum width of `.container` for different screen sizes.
 
 $container-max-widths: (
-  sm: 540px,
-  md: 720px,
-  lg: 960px,
-  xl: 1240px,
-  xxl: 1320px
+  sm: 95%,
+  md: 95%,
+  lg: 95%,
+  xl: 95%,
+  xxl: 95%
 );
 
 @include _assert-ascending($container-max-widths, "$container-max-widths");
@@ -118,9 +119,9 @@ $font-size-sm:                $font-size-base * 0.875;
 $line-height-base:            1.5;
 
 $headings-font-family:        null;
-$headings-font-weight:        700;
+$headings-font-weight:        100;
 
-$lead-font-weight:            400;
+$lead-font-weight:            100;
 
 // Spacing
 //

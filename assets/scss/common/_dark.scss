@@ -377,3 +377,15 @@ body.dark .copy-status:active::after {
   display: block;
   color: $link-color-dark;
 }
+
+//Custom
+
+body.dark .alert-global a {
+  color: $body-color-dark;
+}
+body.dark .alert-global {
+  background: $body-bg-dark;
+  opacity: 0.975;
+  color: $body-color-dark;
+  border: 1px solid $border-dark !important;
+}

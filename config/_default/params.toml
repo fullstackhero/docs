@@ -37,7 +37,7 @@ schemaGitHub = "https://github.com/h-enk/doks"
 schemaSection = "blog"
 
 ## Sitelinks Search Box
-siteLinksSearchBox = false
+siteLinksSearchBox = true
 
 ## Chrome Browser
 themeColor = "#fff"
@@ -55,7 +55,7 @@ copyRight = "Copyright (c) 2020-2021 Henk Verlinde"
 
 # Alert
 alert = true
-alertText = "Like Doks? <a class=\"alert-link\" href=\"https://github.com/fullstackhero/docs/stargazers\">Star on GitHub</a>. Thanks!</a>"
+alertText = "Like fullstackhero? <a target=\"_blank\" class=\"alert-link\" href=\"https://buymeacoffee.com/codewithmukesh\">Support the project by buying me a coffee!</a>"
 
 # Edit Page
 docsRepo = "https://github.com/fullstackhero/docs"
@@ -68,7 +68,7 @@ editPage = true
   flexSearch = true
   darkMode = true
   bootStrapJs = true
-  breadCrumb = false
+  breadCrumb = true
   highLight = true
-  kaTex = false
+  kaTex = true
   collapsibleSidebar = false

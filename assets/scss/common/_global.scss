@@ -9,6 +9,25 @@
   padding-bottom: 3rem;
 }
 
+::-webkit-scrollbar {
+  width: 2px!important;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  background: #f1f1f1!important;
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+  background: rgb(209, 209, 209)!important;
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(97, 97, 97)!important;
+}
+
 h1,
 h2,
 h3,
@@ -226,4 +245,38 @@ body {
 
 .katex {
   font-size: $font-size-md;
+}
+
+
+@media screen and (max-width: 1920px) {
+  .navbar-form {
+    margin-left: 80%!important;
+  }
+}
+@media screen and (max-width: 1400px) {
+  .navbar-form {
+    margin-left: 65%!important;
+  }
+}
+@media screen and (max-width: 906px) {
+  .navbar-form {
+    margin-left: 50%!important;
+  }
+}
+.navbar
+{
+  margin-top: 0px!important;
+  border-bottom: 0px!important;
+  box-shadow: 0px 10px 60px 0px rgba(29,29,31,0.05) !important;
+}
+.docs-links
+{
+  overflow: auto!important;
+}
+.docs .alert {
+  margin: 0px!important;
+}
+.docs-sidebar
+{
+  border: none;
 }

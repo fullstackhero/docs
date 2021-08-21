@@ -1,5 +1,5 @@
 baseurl = "/"
-canonifyURLs = false
+canonifyURLs = true
 disableAliases = true
 disableHugoGeneratorInject = true
 enableEmoji = true
@@ -45,7 +45,7 @@ rel  = "sitemap"
 [markup]
   [markup.goldmark]
     [markup.goldmark.extensions]
-      linkify = false
+      linkify = true
     [markup.goldmark.parser]
       autoHeadingID = true
       autoHeadingIDType = "github"
@@ -56,12 +56,12 @@ rel  = "sitemap"
       unsafe = true
   [markup.highlight]
     codeFences = false
-    guessSyntax = false
+    guessSyntax = true
     hl_Lines = ""
     lineNoStart = 1
     lineNos = false
-    lineNumbersInTable = true
-    noClasses = false
+    lineNumbersInTable = false
+    noClasses = true
     style = "dracula"
     tabWidth = 4
 

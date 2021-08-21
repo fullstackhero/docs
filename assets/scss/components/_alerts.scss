@@ -67,3 +67,35 @@
   color: $black;
   padding: 0.25rem 0.5rem;
 }
+
+.alert-global {
+  background-color: rgba(253, 253, 253, 0.95);
+  margin: 0 15% 1rem;
+  font-family: $font-family-base;
+}
+
+.alert-global a {
+  color: #dee2e6; }
+
+.alert-global {
+  background: #212529;
+  opacity: 0.95;
+  color: #dee2e6;}
+
+@include media-breakpoint-up(sm) {
+  .alert-global {
+    margin: 0 25% 1rem;
+  }
+}
+
+@include media-breakpoint-up(md) {
+  .alert-global {
+    margin: 0 30% 1rem;
+  }
+}
+
+@include media-breakpoint-up(lg) {
+  .alert-global {
+    margin: 0 35% 1rem;
+  }
+}
