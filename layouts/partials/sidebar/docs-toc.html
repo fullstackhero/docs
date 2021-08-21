@@ -8,9 +8,11 @@
     href="https://www.buymeacoffee.com/codewithmukesh" target="_blank" role="button">Buy me
     a Coffee</a>
 </div>
+{{  if ge (len .TableOfContents) 100 }}
 <div class="page-links">
   <h3>On this page</h3>
   {{ .TableOfContents }}
 </div>
+{{ end }}
 
 {{ end -}}
