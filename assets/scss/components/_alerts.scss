@@ -80,23 +80,22 @@
 
 .alert-global {
   background: $primary;
-  opacity: 0.90;
   color: white;}
 
 @include media-breakpoint-up(sm) {
   .alert-global {
-    margin: 0 25% 1rem;
+    margin: 0 0% 0rem;
   }
 }
 
 @include media-breakpoint-up(md) {
   .alert-global {
-    margin: 0 30% 1rem;
+    margin: 0 0% 0rem;
   }
 }
 
 @include media-breakpoint-up(lg) {
   .alert-global {
-    margin: 0 35% 1rem;
+    margin: 0 0% 0rem;
   }
 }
