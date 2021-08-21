@@ -1,7 +1,7 @@
 # Meta Data for SEO
 
 ## Homepage
-title = "Doks"
+title = "fullstackhero"
 titleSeparator = "-"
 titleAddition = "Modern Documentation Theme"
 description = "Doks is a Hugo theme helping you build modern documentation websites that are secure, fast, and SEO-ready — by default."
@@ -54,12 +54,12 @@ footer = "Powered by <a href=\"https://www.netlify.com/\">Netlify</a>, <a href=\
 copyRight = "Copyright (c) 2020-2021 Henk Verlinde"
 
 # Alert
-alert = false
-alertText = "Like Doks? <a class=\"alert-link\" href=\"https://github.com/h-enk/doks/stargazers\">Star on GitHub</a>. Thanks!</a>"
+alert = true
+alertText = "Like Doks? <a class=\"alert-link\" href=\"https://github.com/fullstackhero/docs/stargazers\">Star on GitHub</a>. Thanks!</a>"
 
 # Edit Page
-docsRepo = "https://github.com/h-enk/doks"
-editPage = false
+docsRepo = "https://github.com/fullstackhero/docs"
+editPage = true
 
 [options]
   lazySizes = true
