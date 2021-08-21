@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://fullstackhero.github.io/sitemap.xml
+Sitemap: https://fullstackhero.net/sitemap.xml
