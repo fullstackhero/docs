@@ -1,7 +1,7 @@
 ---
 title: "Overview"
-description: "Doks is a Hugo theme helping you build modern documentation websites that are secure, fast, and SEO-ready — by default."
-lead: "Doks is a Hugo theme helping you build modern documentation websites that are secure, fast, and SEO-ready — by default."
+description: ".NET WebAPI Boilerplate Template built with .NET 6.0. Incorporates the most essential Packages your projects will ever need. Follows Clean Architecture Principles."
+lead: ".NET WebAPI Boilerplate Template built with .NET 6.0. Incorporates the most essential Packages your projects will ever need. Follows Clean Architecture Principles."
 overview: true
 date: 2020-10-06T08:48:57+00:00
 lastmod: 2020-10-06T08:48:57+00:00
@@ -16,46 +16,35 @@ weight: 1
 toc: true
 ---
 
-## Get started
+`dotnet-webapi-boilerplate` is the integral part of the `fullstackhero` project.
 
-There are two main ways to get started with Doks:
+`fullstackhero` is a venture to develop industry leading boilerplate templates for the dotnet stack as the backend (webapi) along with modern client frameworks like Angular, MVC and Blazor.
 
-### Tutorial
+This repository contains the WebApi Project of `fullstackhero`.
 
-{{< alert icon="👉" text="The Tutorial is intended for novice to intermediate users." />}}
+## Features
 
-Step-by-step instructions on how to start a new Doks project. [Tutorial →](https://getdoks.org/tutorial/introduction/)
+1. Built on .NET 6.0
+2. Follows Clean Architecture Principles
+3. Completely Documented
+4. Multi Tenancy Support
+5. Default Database Provider is PostgreSQL. Can be switched to MSSQL or MySQL
+6. Uses Entity Framework Core as DB Abstraction
+7. MediatR Pattern with Advanced Pipeline Behaviors
+8. Serilog Integration
+9. Swagger Support
+10. Automapper / Mapster
+11. API Versioning
+12. Repository / Unit Of Work Pattern
+13. Response Caching - Distributed Caching
+14. Audit Logging
+15. Advanced User & Role Based Permission Management
+16. & Much More
 
-### Quick Start
+## Community
 
-{{< alert icon="👉" text="The Quick Start is intended for intermediate to advanced users." />}}
+- Discord [@fullstackhero](https://discord.gg/gdgHRt4mMw)
 
-One page summary of how to start a new Doks project. [Quick Start →]({{< relref "quick-start" >}})
+## License
 
-## Go further
-
-Recipes, Reference Guides, Extensions, and Showcase.
-
-### Recipes
-
-Get instructions on how to accomplish common tasks with Doks. [Recipes →](https://getdoks.org/docs/recipes/project-configuration/)
-
-### Reference Guides
-
-Learn how to customize Doks to fully make it your own. [Reference Guides →](https://getdoks.org/docs/reference-guides/security/)
-
-### Extensions
-
-Get instructions on how to add even more to Doks. [Extensions →](https://getdoks.org/docs/extensions/breadcrumb-navigation/)
-
-### Showcase
-
-See what others have build with Doks. [Showcase →](https://getdoks.org/showcase/electric-blocks/)
-
-## Contributing
-
-Find out how to contribute to Doks. [Contributing →](https://getdoks.org/docs/contributing/how-to-contribute/)
-
-## Help
-
-Get help on Doks. [Help →]({{< relref "how-to-update" >}})
+This project is licensed with the [MIT license](LICENSE).
