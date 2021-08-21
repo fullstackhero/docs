@@ -5,7 +5,7 @@
   url = "/docs/general/"
 
 [[docs]]
-  name = "Dotnet WebApi"
+  name = ".NET WebApi"
   weight = 20
   identifier = "dotnet-webapi-boilerplate"
   url = "/docs/dotnet-webapi-boilerplate/"
@@ -23,7 +23,7 @@
   url = "/docs/blazor-wasm/"
 
 [[docs]]
-  name = "Dotnet MVC"
+  name = ".NET MVC"
   weight = 50
   identifier = "dotnet-mvc"
   url = "/docs/dotnet-mvc/"
