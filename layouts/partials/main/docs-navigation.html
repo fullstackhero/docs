@@ -1,24 +1,31 @@
+<div class="support-card">
+  <p>Like fullstackhero? Support the project by buying me a coffee!</p>
+  <a class="btn btn-primary btn-lg px-4 mb-2" href="https://www.buymeacoffee.com/codewithmukesh" target="_blank"
+    role="button">Buy me
+    a Coffee</a>
+</div>
+
 {{ if or .Prev .Next -}}
-	<div class="docs-navigation d-flex justify-content-between">
-	<!-- https://www.feliciano.tech/blog/custom-sort-hugo-single-pages/ -->
-	{{ $pages := where site.RegularPages "Section" .Section -}}
-	{{ with $pages.Next . -}}
-		<a href="{{ .RelPermalink }}">
-			<div class="card my-1">
-				<div class="card-body py-2">
-					&larr; {{ .Title }}
-				</div>
-			</div>
-		</a>
-	{{ end -}}
-	{{ with $pages.Prev . -}}
-		<a class="ms-auto" href="{{ .RelPermalink }}">
-			<div class="card my-1">
-				<div class="card-body py-2">
-					{{ .Title }} &rarr;
-				</div>
-			</div>
-		</a>
-	{{ end -}}
-	</div>
+<div class="docs-navigation d-flex justify-content-between">
+  <!-- https://www.feliciano.tech/blog/custom-sort-hugo-single-pages/ -->
+  {{ $pages := where site.RegularPages "Section" .Section -}}
+  {{ with $pages.Next . -}}
+  <a href="{{ .RelPermalink }}">
+    <div class="card my-1">
+      <div class="card-body py-2">
+        &larr; {{ .Title }}
+      </div>
+    </div>
+  </a>
+  {{ end -}}
+  {{ with $pages.Prev . -}}
+  <a class="ms-auto" href="{{ .RelPermalink }}">
+    <div class="card my-1">
+      <div class="card-body py-2">
+        {{ .Title }} &rarr;
+      </div>
+    </div>
+  </a>
+  {{ end -}}
+</div>
 {{ end -}}
