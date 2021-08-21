@@ -8,8 +8,8 @@ draft: false
 images: []
 menu:
   docs:
-    parent: "prologue"
-weight: 100
+    parent: "dotnet-webapi-boilerplate"
+weight: 1
 toc: true
 ---
 

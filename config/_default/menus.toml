@@ -1,8 +1,32 @@
 [[docs]]
-  name = "Prologue"
+  name = "General"
   weight = 10
-  identifier = "prologue"
-  url = "/docs/prologue/"
+  identifier = "general"
+  url = "/docs/general/"
+
+[[docs]]
+  name = "Dotnet WebApi"
+  weight = 20
+  identifier = "dotnet-webapi-boilerplate"
+  url = "/docs/dotnet-webapi-boilerplate/"
+
+[[docs]]
+  name = "Angular Material"
+  weight = 30
+  identifier = "angular-material-boilerplate"
+  url = "/docs/angular-material-boilerplate/"
+
+[[docs]]
+  name = "Blazor WASM"
+  weight = 40
+  identifier = "blazor-wasm"
+  url = "/docs/blazor-wasm/"
+
+[[docs]]
+  name = "Dotnet MVC"
+  weight = 50
+  identifier = "dotnet-mvc"
+  url = "/docs/dotnet-mvc/"
 
 [[docs]]
   name = "Help"

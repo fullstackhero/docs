@@ -104,7 +104,7 @@ npm run start
 
 ## Other commands
 
-Doks comes with [commands](https://getdoks.org/docs/prologue/commands/) for common tasks.
+Doks comes with [commands](https://getdoks.org/docs/general/commands/) for common tasks.
 
 ## Documentation
 
