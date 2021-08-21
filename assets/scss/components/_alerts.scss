@@ -70,17 +70,18 @@
 
 .alert-global {
   background-color: rgba(253, 253, 253, 0.95);
-  margin: 0 15% 1rem;
   font-family: $font-family-base;
 }
 
 .alert-global a {
-  color: #dee2e6; }
+  color: white;
+  text-decoration: none;
+}
 
 .alert-global {
-  background: #212529;
-  opacity: 0.95;
-  color: #dee2e6;}
+  background: $primary;
+  opacity: 0.90;
+  color: white;}
 
 @include media-breakpoint-up(sm) {
   .alert-global {
