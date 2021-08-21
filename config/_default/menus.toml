@@ -1,3 +1,15 @@
+[[main]]
+  name = "Docs"
+  weight = 10
+  identifier = "docs"
+  url = "/docs/general/"
+
+[[main]]
+  name = "Contact"
+  weight = 20
+  identifier = "contact"
+  url = "/contact"
+
 [[docs]]
   name = "General"
   weight = 10

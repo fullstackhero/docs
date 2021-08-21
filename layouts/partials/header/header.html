@@ -46,7 +46,7 @@
         {{- $active = or $active (and (eq .Name "Guides") (eq $current.Section "guides")) -}}
         {{- $active = or $active (and (eq .Name "Blog") (eq $current.Section "blog" "authors")) -}}
         <li class="nav-item{{ if $active }} active{{ end }}">
-          <a class="nav-link" href="{{ .URL | relURL }}">{{ .Name }}</a>
+          <a class="nav-link" style="white-space: nowrap;" href="{{ .URL | relURL }}">{{ .Name }}</a>
         </li>
         {{ end -}}
       </ul>
