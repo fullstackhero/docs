@@ -57,7 +57,7 @@ copyRight = "Copyright (c) 2020-2021 Henk Verlinde"
 
 # Alert
 alert = true
-alertText = "Like fullstackhero? <a target=\"_blank\" class=\"alert-link\" href=\"https://buymeacoffee.com/codewithmukesh\">Support the project by buying me a coffee!</a>"
+alertText = "<a target=\"_blank\" class=\"alert-link\" href=\"https://buymeacoffee.com/codewithmukesh\">Support the project by buying me a coffee!</a>"
 
 # Edit Page
 docsRepo = "https://github.com/fullstackhero/docs"
