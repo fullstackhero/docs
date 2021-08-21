@@ -61,7 +61,7 @@ alertText = "Like fullstackhero? <a target=\"_blank\" class=\"alert-link\" href=
 
 # Edit Page
 docsRepo = "https://github.com/fullstackhero/docs"
-editPage = true
+editPage = false
 
 [options]
   lazySizes = true

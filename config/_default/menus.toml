@@ -8,13 +8,13 @@
   name = "Dotnet WebApi"
   weight = 20
   identifier = "dotnet-webapi-boilerplate"
-  url = "/docs/dotnet-webapi-boilerplate/overview/"
+  url = "/docs/dotnet-webapi-boilerplate/"
 
 [[docs]]
   name = "Angular Material"
   weight = 30
   identifier = "angular-material-boilerplate"
-  url = "/docs/angular-material-boilerplate/overview/"
+  url = "/docs/angular-material-boilerplate/"
 
 [[docs]]
   name = "Blazor WASM"

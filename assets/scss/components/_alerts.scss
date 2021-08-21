@@ -8,7 +8,9 @@
 }
 
 .docs .alert {
+  border-radius: 5px;
   margin: 2rem -1.5rem;
+  margin-bottom: 12px!important;
 }
 
 .alert .alert-link {
@@ -29,7 +31,9 @@
 }
 
 .alert-warning {
-  background: $beige;
+  padding: 20px;
+  margin-bottom: 20px!important;
+  background: whitesmoke;
   color: $black;
 }
 

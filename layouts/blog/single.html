@@ -1,6 +1,6 @@
 {{ define "main" }}
-<div class="row justify-content-center">
-  <div class="col-md-12 col-lg-10 col-xl-8">
+<div class="row">
+  <div class="col-md-12 col-lg-12 col-xl-12">
     <article>
       <div class="blog-header">
         <h1>{{ .Title }}</h1>
@@ -9,6 +9,14 @@
       <p class="lead">{{ .Params.lead | safeHTML }}</p>
       {{ .Content }}
     </article>
+    <div class="support-card">
+      <h4 style="margin: 5px;">Like fullstackhero?</h4>
+      <p> Support the project by buying me a coffee!</p>
+      <a class="btn btn-primary btn-lg px-4 mb-2" style="font-size: medium;"
+        href="https://www.buymeacoffee.com/codewithmukesh" target="_blank" role="button">Buy me
+        a Coffee</a>
+    </div>
   </div>
 </div>
+
 {{ end }}
