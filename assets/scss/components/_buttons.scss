@@ -183,3 +183,12 @@ pre {
 .btn-toggle-nav a.active {
   color: $link-color;
 }
+
+.btn-primary {
+  color: white;
+}
+.btn-primary:hover {
+  color: white;
+}
+
+.btn:active {outline: 0 !important;;}

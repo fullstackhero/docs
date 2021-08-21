@@ -1,12 +1,16 @@
 {{ if ne .Params.toc false -}}
-  <div class="page-links">
-    <h3>On this page</h3>
-    {{ .TableOfContents }}
-  </div>
-  <div>
-    <h6>SUPPORT THE PROJECT</h6>
-    <script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" data-name="bmc-button"
-      data-slug="codewithmukesh" data-color="#FFDD00" data-emoji="" data-font="Cookie" data-text="Buy me a coffee"
-      data-outline-color="#000000" data-font-color="#000000!important" data-coffee-color="#ffffff"></script>
-  </div>
+<div>
+  <h6>SUPPORT THE PROJECT</h6>
+  <p style="font-size: 0.9375rem;">
+    Like fullstackhero? Support the project by buying me a coffee!
+  </p>
+  <a class="btn btn-primary btn-lg px-4 mb-2" href="https://www.buymeacoffee.com/codewithmukesh" target="_blank"
+    role="button">Buy me
+    a Coffee</a>
+</div>
+<div class="page-links">
+  <h3>On this page</h3>
+  {{ .TableOfContents }}
+</div>
+
 {{ end -}}
