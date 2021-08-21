@@ -8,6 +8,8 @@ enableRobotsTXT = true
 languageCode = "en-US"
 paginate = 7
 rssLimit = 10
+googleAnalytics = "G-V1XWX7CJF6"
+
 
 # add redirects/headers
 [outputs]
