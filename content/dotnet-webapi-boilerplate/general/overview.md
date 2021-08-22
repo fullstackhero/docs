@@ -1,24 +1,23 @@
 ---
-title: "Introduction"
+title: "Overview"
 description: "Doks is a Hugo theme helping you build modern documentation websites that are secure, fast, and SEO-ready — by default."
 lead: "Doks is a Hugo theme helping you build modern documentation websites that are secure, fast, and SEO-ready — by default."
-overview: true
 date: 2020-10-06T08:48:57+00:00
 lastmod: 2020-10-06T08:48:57+00:00
 draft: false
 images: []
 menu:
-  docs:
-    identifier: "angular-material-overview"
+  webapi:
+    identifier: "general-overview"
     name: "Overview"
-    parent: "angular-material-boilerplate"
+    parent: "general"
 weight: 1
 toc: true
 ---
 
 ## Get started
 
-There are two main ways to get started with Doks:
+There are two main ways to get stakrted with Doks:
 
 ### Tutorial
 
@@ -56,6 +55,3 @@ See what others have build with Doks. [Showcase →](https://getdoks.org/showcas
 
 Find out how to contribute to Doks. [Contributing →](https://getdoks.org/docs/contributing/how-to-contribute/)
 
-## Help
-
-Get help on Doks. [Help →]({{< relref "how-to-update" >}})
