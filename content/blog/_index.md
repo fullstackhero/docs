@@ -1,6 +1,6 @@
 ---
 title: "Blog"
-description: "The fullstackhero Blog."
+description: "The fullstackhero blog."
 draft: false
 images: []
 ---
