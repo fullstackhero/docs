@@ -8,19 +8,16 @@
   name = "Angular"
   weight = 20
   identifier = "angular-material-boilerplate"
-  url = "/angular-material-boilerplate"
 
 [[main]]
   name = "MVC"
   weight = 30
   identifier = "dotnet-mvc-boilerplate"
-  url = "/dotnet-mvc-boilerplate"
 
 [[main]]
   name = "Blazor"
   weight = 40
   identifier = "blazor-wasm-boilerplate"
-  url = "/blazor-wasm-boilerplate"
 
 [[webapi]]
   name = "General"
