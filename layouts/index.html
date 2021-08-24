@@ -8,12 +8,11 @@
       <h1 class="mt-0">fullstack<b style="font-weight: 600;">hero</b></h1>
     </div>
     <div class="col-lg-9 col-xl-8 text-center">
-      <p class="lead">{{ .Params.lead | safeHTML }}</p>
+      <b class="primary-text" style="font-weight: 600!important;">
+        <p class="lead" style="margin-bottom: 0;">{{ .Params.lead | safeHTML }}</p>
+      </b>
+      <p class="lead">{{ .Params.description | safeHTML }}</p>
       <a class="btn btn-primary btn-lg px-4 mb-2" href="getting-started/" role="button">Get Started</a>
-      <a class="btn btn-primary btn-lg px-4 mb-2" href="https://www.buymeacoffee.com/codewithmukesh" target="_blank"
-        role="button">Sponsor</a>
-      <a class="btn btn-primary btn-lg px-4 mb-2" href="https://github.com/fullstackhero" target="_blank"
-        role="button">Github</a>
       <p class="meta">Open-source MIT Licensed.</p>
     </div>
   </div>
@@ -23,11 +22,17 @@
 {{ define "sidebar-prefooter" }}
 <section class="section section-sm">
   <div class="container">
+    <div class="justify-content-center text-center">
+      <h2>Key Features</h2>
+      <p>Use sensible defaults for structured data, open graph, and Twitter cards. Or easily change the SEO settings
+        to your liking.</p>
+    </div>
+
     <div class="row justify-content-center text-center">
       <div class="col-lg-5">
-        <h2 class="h4">Security aware</h2>
-        <p>Get A+ scores on <a href="https://observatory.mozilla.org/analyze/doks.netlify.app">Mozilla Observatory</a>
-          out of the box. Easily change the default Security Headers to suit your needs.</p>
+        <h2 class="h4"><b class="primary-text">Clean</b> Architecture</h2>
+        <b class="primary-text">fullstackhero</b> follows Clean Architecture principles to keep the project highly
+        scalable in nature.
       </div>
       <div class="col-lg-5">
         <h2 class="h4">Fast by default ⚡️</h2>
@@ -36,24 +41,24 @@
             Lighthouse</a> by default. Doks removes unused css, prefetches links, and lazy loads images.</p>
       </div>
       <div class="col-lg-5">
-        <h2 class="h4">SEO-ready</h2>
+        <h2 class="h4 text-primary">Project Separation</h2>
         <p>Use sensible defaults for structured data, open graph, and Twitter cards. Or easily change the SEO settings
           to your liking.</p>
       </div>
     </div>
     <div class="row justify-content-center text-center">
       <div class="col-lg-5">
-        <h2 class="h4">Full text search</h2>
+        <h2 class="h4">Well Documented</h2>
         <p>Search your Doks site with FlexSearch. Easily customize index settings and search options to your liking.</p>
       </div>
       <div class="col-lg-5">
-        <h2 class="h4">Page layouts</h2>
+        <h2 class="h4">Saves 100+ Development Hours</h2>
         <p>Build pages with a landing page, blog, or documentation layout. Add custom sections and components to suit
           your needs.</p>
       </div>
       <div class="col-lg-5">
-        <h2 class="h4">Dark mode</h2>
-        <p>Switch to a low-light UI with the click of a button. Change colors with variables to match your branding.</p>
+        <h2 class="h4">Free & Open Source</h2>
+        <p>The project is actively developed on GitHub under MIT licence and is open for contributions.</p>
       </div>
     </div>
   </div>
