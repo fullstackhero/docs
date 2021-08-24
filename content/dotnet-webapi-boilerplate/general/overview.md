@@ -2,6 +2,8 @@
 title: "Overview"
 description: "Doks is a Hugo theme helping you build modern documentation websites that are secure, fast, and SEO-ready — by default."
 lead: "Doks is a Hugo theme helping you build modern documentation websites that are secure, fast, and SEO-ready — by default."
+date: 2021-08-24T11:40:05+05:30
+lastmod: 2021-08-24T11:40:16+05:30
 draft: false
 images: []
 menu:

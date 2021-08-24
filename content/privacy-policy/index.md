@@ -1,7 +1,9 @@
 ---
 title: "Privacy Policy"
 description: "We do not use cookies and we do not collect any personal data."
-draft: true
+date: 2021-08-24T11:40:05+05:30
+lastmod: 2021-08-24T11:40:16+05:30
+draft: false
 images: []
 ---
 
