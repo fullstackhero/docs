@@ -5,8 +5,8 @@ title = "fullstackhero"
 logo = "/images/full-stack-hero-logo.png"
 navBarLogo = "/images/navbar-logo.png"
 titleSeparator = "-"
-titleAddition = "Modern Documentation Theme"
-description = "Doks is a Hugo theme helping you build modern documentation websites that are secure, fast, and SEO-ready — by default."
+titleAddition = "Open-Source Boilerplates for Modern Web Applications"
+description = "fullstackhero is a collection of Enterprise Level Boilerplates for Modern Web Applications that gets you started with premium application development in no-time!"
 
 ## Open Graph
 images = ["doks.png"]
