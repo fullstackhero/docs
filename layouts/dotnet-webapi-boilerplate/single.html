@@ -31,7 +31,6 @@
       {{ partial "main/edit-page.html" . }}
       {{ end -}}
       {{ if not .Site.Params.options.collapsibleSidebar -}}
-      {{ template "_internal/disqus.html" . }}
       {{ partial "main/docs-navigation.html" . }}
       {{ else -}}
       <div class="my-n3"></div>
