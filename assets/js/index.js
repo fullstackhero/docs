@@ -109,9 +109,8 @@ Source:
       })
       {{ if ne (add $index 1) $len -}}
         .add(
-      {{ end -}}
-    {{ end -}}
-  ;
+          {{ end -}}
+          {{ end -}});
 
   userinput.addEventListener('input', show_results, true);
   suggestions.addEventListener('click', accept_suggestion, true);
