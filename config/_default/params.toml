@@ -62,7 +62,7 @@ alertText = "<a target=\"_blank\" class=\"alert-link\" href=\"https://buymeacoff
 
 # Edit Page
 docsRepo = "https://github.com/fullstackhero/docs"
-editPage = false
+editPage = true
 
 [options]
   lazySizes = true
