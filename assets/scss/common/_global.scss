@@ -179,7 +179,7 @@ body {
 .docs-navigation {
   border-top: 1px solid $gray-200;
   margin-top: 2rem;
-  margin-bottom: 0;
+  margin-bottom: 2rem;
   padding-top: 2rem;
 }
 
@@ -188,10 +188,6 @@ body {
 }
 
 @include media-breakpoint-up(lg) {
-  .docs-navigation {
-    margin-bottom: -1rem;
-  }
-
   .docs-navigation a {
     font-size: $font-size-base;
   }
