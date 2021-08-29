@@ -1,8 +1,8 @@
 ---
 title: "Blog"
 description: "The Doks Blog."
-date: 2021-08-24T11:40:05+05:30
-lastmod: 2021-08-24T11:40:16+05:30
+date: 2020-10-06T08:49:55+00:00
+lastmod: 2020-10-06T08:49:55+00:00
 draft: false
 images: []
 ---

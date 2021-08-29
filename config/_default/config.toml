@@ -1,5 +1,5 @@
 baseurl = "/"
-canonifyURLs = true
+canonifyURLs = false
 disableAliases = true
 disableHugoGeneratorInject = true
 enableEmoji = true
@@ -9,7 +9,6 @@ languageCode = "en-US"
 paginate = 7
 rssLimit = 10
 googleAnalytics = "G-V1XWX7CJF6"
-
 
 # add redirects/headers
 [outputs]

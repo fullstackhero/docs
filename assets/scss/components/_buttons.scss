@@ -25,7 +25,14 @@
     padding: 0.5625em 0.25rem 0.5rem 0.125rem;
   }
 }
-
+.btn:focus {
+  color: white;
+  box-shadow:none!important;
+}
+.btn:active {
+  color: white;
+  box-shadow:none!important;
+}
 .navbar .btn-link:hover {
   color: $navbar-light-hover-color;
 }

@@ -1,4 +1,9 @@
 [[main]]
+  name = "Blog"
+  url = "/blog/"
+  weight = 20
+
+[[main]]
   name = "WebApi"
   weight = 10
   identifier = "dotnet-webapi-boilerplate"

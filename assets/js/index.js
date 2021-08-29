@@ -95,7 +95,7 @@ Source:
 
   // https://discourse.gohugo.io/t/range-length-or-last-element/3803/2
 
-  {{ $list := (where .Site.Pages "Section" "docs") -}}
+  {{ $list := where site.RegularPages "Type" "in" site.Params.mainSections -}}
   {{ $len := (len $list) -}}
 
   index.add(
@@ -109,8 +109,10 @@ Source:
       })
       {{ if ne (add $index 1) $len -}}
         .add(
-          {{ end -}}
-          {{ end -}});
+      {{ end -}}
+    {{ end -}}
+  ;
+
 
   userinput.addEventListener('input', show_results, true);
   suggestions.addEventListener('click', accept_suggestion, true);
