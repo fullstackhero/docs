@@ -1,7 +1,7 @@
 ---
 title: "Overview"
-description: "Doks is a Hugo theme helping you build modern documentation websites that are secure, fast, and SEO-ready — by default."
-lead: "Doks is a Hugo theme helping you build modern documentation websites that are secure, fast, and SEO-ready — by default."
+description: ".NET WebAPI Boilerplate Template built with .NET 6.0. Incorporates the most essential Packages your projects will ever need. Follows Clean Architecture Principles."
+lead: ".NET WebAPI Boilerplate Template built with .NET 6.0. Incorporates the most essential Packages your projects will ever need. Follows Clean Architecture Principles."
 date: 2021-08-24T11:40:05+05:30
 lastmod: 2021-08-24T11:40:16+05:30
 draft: false
@@ -15,41 +15,44 @@ weight: 1
 toc: true
 ---
 
-## Get started
+## About
 
-There are two main ways to get stakrted with Doks:
+`dotnet-webapi-boilerplate` is the integral part of the `fullstackhero` project.
 
-### Tutorial
+`fullstackhero` is a venture to develop industry leading boilerplate templates for the dotnet stack as the backend (webapi) along with modern client frameworks like Angular, MVC and Blazor.
 
-{{< alert icon="👉" text="The Tutorial is intended for novice to intermediate users." />}}
+This repository contains the WebApi Project of `fullstackhero`.
 
-Step-by-step instructions on how to start a new Doks project. [Tutorial →](https://getdoks.org/tutorial/introduction/)
+## Features
 
-### Quick Start
+- [x] Built on .NET 6.0
+- [x] Follows Clean Architecture Principles
+- [ ] Completely Documented
+- [x] Multi Tenancy Support
+- [x] Default Database Provider is PostgreSQL. Can be switched to MSSQL or MySQL
+- [x] Uses Entity Framework Core as DB Abstraction
+- [x] Repository Pattern
+- [x] Dapper Integration
+- [x] Serilog Integration
+- [x] Swagger Support
+- [x] Automapper
+- [x] API Versioning
+- [x] Response Caching - Distributed Caching
+- [ ] Audit Logging
+- [ ] Advanced User & Role Based Permission Management
+- [ ] & Much More
 
-{{< alert icon="👉" text="The Quick Start is intended for intermediate to advanced users." />}}
+## Prerequisites
+1. Visual Code v1.59.xx or higher
+2. .NET SDK 6.0.100-preview.7.21379.14 or higher
+3. PostgreSQL with pgAdmin4 or higher
 
-## Go further
+## Community
 
-Recipes, Reference Guides, Extensions, and Showcase.
+- Discord [@fullstackhero](https://discord.gg/gdgHRt4mMw)
 
-### Recipes
+## License
 
-Get instructions on how to accomplish common tasks with Doks. [Recipes →](https://getdoks.org/docs/recipes/project-configuration/)
+This project is licensed with the [MIT license](LICENSE).
 
-### Reference Guides
-
-Learn how to customize Doks to fully make it your own. [Reference Guides →](https://getdoks.org/docs/reference-guides/security/)
-
-### Extensions
-
-Get instructions on how to add even more to Doks. [Extensions →](https://getdoks.org/docs/extensions/breadcrumb-navigation/)
-
-### Showcase
-
-See what others have build with Doks. [Showcase →](https://getdoks.org/showcase/electric-blocks/)
-
-## Contributing
-
-Find out how to contribute to Doks. [Contributing →](https://getdoks.org/docs/contributing/how-to-contribute/)
 
