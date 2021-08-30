@@ -28,6 +28,7 @@
       <p class="lead">{{ .Params.lead | safeHTML }}</p>
       {{ partial "main/headline-hash.html" .Content }}
       {{ if .Site.Params.editPage -}}
+      <p style="font-size: small;">Want to add in More Details or Update this Document ?</p>
       {{ partial "main/edit-page.html" . }}
       {{ end -}}
       {{ if not .Site.Params.options.collapsibleSidebar -}}
