@@ -193,14 +193,16 @@ pre {
 
 .btn-primary {
   color: white;
-  font-size: medium;
+  font-size: small!important;
+  box-shadow: none!important;
+  transition: 0.3s;
 }
+
 .btn-primary:hover {
   color: white;
 }
 
 .btn:active {outline: 0 !important;;}
-
 
 a:hover, a:visited, a:link, a:active
 {
