@@ -14,7 +14,7 @@ menu:
 weight: 2
 toc: true
 ---
-fullstackhero's .NET WebApi Boilerplate Project Development needs you to have the following applications / tools available on your machine. Please Note that this project is being built on a Windows 10 Machine.
+fullstackhero's **.NET WebApi Boilerplate** Project Development needs you to have the following applications / tools available on your machine. Please Note that this project is being built on a Windows 10 Machine.
 
 ## .NET SDK
 
