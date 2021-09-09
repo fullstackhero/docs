@@ -1,28 +1,8 @@
 [[main]]
-  name = "Blog"
-  url = "/blog/"
-  weight = 20
-
-[[main]]
   name = "WebApi"
   weight = 10
   identifier = "dotnet-webapi-boilerplate"
   url = "/dotnet-webapi-boilerplate"
-
-[[main]]
-  name = "Angular"
-  weight = 20
-  identifier = "angular-material-boilerplate"
-
-[[main]]
-  name = "MVC"
-  weight = 30
-  identifier = "dotnet-mvc-boilerplate"
-
-[[main]]
-  name = "Blazor"
-  weight = 40
-  identifier = "blazor-wasm-boilerplate"
 
 [[webapi]]
   name = "General"
