@@ -11,6 +11,6 @@ menu:
     identifier: "general-getting-started"
     name: "Getting Started"
     parent: "general"
-weight: 2
+weight: 3
 toc: true
 ---
