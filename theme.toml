@@ -10,5 +10,5 @@ tags = ["landing page", "documentation", "blog", "minimal", "modern", "customiza
 features = ["security aware", "fast by default", "seo-ready", "development tools", "bootstrap framework", "netlify-ready", "full text search", "page layouts", "dark mode"]
 
 [author]
-  name = "Henk Verlinde"
-  homepage = "https://henkverlinde.com"
+  name = "Mukesh Murugan"
+  homepage = "https://codewithmukesh.com"

@@ -1,10 +1,10 @@
 ---
-title: "Say hello to Doks 👋"
-description: "Introducing Doks, a Hugo theme helping you build modern documentation websites that are secure, fast, and SEO-ready — by default."
-lead: "Introducing Doks, a Hugo theme helping you build modern documentation websites that are secure, fast, and SEO-ready — by default."
+title: "Say hello to fullstackhero 👋"
+description: ".NET WebAPI Boilerplate Template built with .NET 6.0. Incorporates the most essential Packages your projects will ever need. Follows Clean Architecture Principles."
+lead: ".NET WebAPI Boilerplate Template built with .NET 6.0. Incorporates the most essential Packages your projects will ever need. Follows Clean Architecture Principles."
 date: 2020-11-04T09:19:42+01:00
-lastmod: 2020-11-04T09:19:42+01:00
+lastmod: 2021-09-10T06:07:15+05:30
 draft: false
 weight: 50
-contributors: ["Henk Verlinde"]
+contributors: ["Mukesh Murugan"]
 ---

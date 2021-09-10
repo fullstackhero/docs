@@ -18,17 +18,17 @@ domainTLD = "doks.netlify.app"
 titleHome = "Doks Theme"
 
 ## Twitter Cards
-twitterSite = "@getdoks"
-twitterCreator = "@henkverlinde"
+twitterSite = "@codewithmukesh"
+twitterCreator = "@iammukeshm"
 
 ## JSON-LD
 # schemaType = "Person"
 schemaType = "Organization"
-schemaName = "Doks"
-schemaAuthor = "Henk Verlinde"
-schemaAuthorTwitter = "https://twitter.com/henkverlinde"
-schemaAuthorLinkedIn = "https://www.linkedin.com/in/henkverlinde/"
-schemaAuthorGitHub = "https://github.com/h-enk"
+schemaName = "fullstackhero"
+schemaAuthor = "Mukesh Murugan"
+schemaAuthorTwitter = "https://twitter.com/iammukeshm"
+schemaAuthorLinkedIn = "https://www.linkedin.com/in/iammukeshm/"
+schemaAuthorGitHub = "https://github.com/iammukeshm"
 schemaLocale = "en-US"
 schemaLogo = "logo-doks.png"
 schemaLogoWidth = 512
@@ -36,9 +36,9 @@ schemaLogoHeight = 512
 schemaImage = "doks.png"
 schemaImageWidth = 1280
 schemaImageHeight = 640
-schemaTwitter = "https://twitter.com/getdoks"
+schemaTwitter = "https://twitter.com/codewithmukesh"
 schemaLinkedIn = ""
-schemaGitHub = "https://github.com/h-enk/doks"
+schemaGitHub = "https://github.com/fullstackhero"
 schemaSection = "blog"
 
 ## Sitelinks Search Box
@@ -56,7 +56,7 @@ lqipWidth = "20x"
 
 # Footer
 footer = "Developed & Maintained by <a href=\"https://www.codewithmukesh.com/\">Mukesh Murugan</a>"
-copyRight = "Copyright (c) 2020-2021 Henk Verlinde"
+copyRight = "Copyright (c) 2020-2021 Mukesh Murugan"
 
 # Alert
 alert = true
