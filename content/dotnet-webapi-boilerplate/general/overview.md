@@ -23,13 +23,25 @@ toc: true
 
 This repository contains the WebApi Project of `fullstackhero`.
 
+## Release Planning
+
+Expected to be released by Novemeber, 2021 as soon as .NET 6 LTS is launched by Microsoft. Preview versions of this project will be available by October 15, 2021 for Initial Developer Testing.
+
+As of August 30, 2021, the .NET WebApi Boilerplate project has made a considerable progress.
+
+Track Progress - [Release 1.0 Milestones](https://github.com/fullstackhero/dotnet-webapi-boilerplate/milestone/1)
+
+Participate in Discussions - [QNA & General Discussions](https://github.com/fullstackhero/dotnet-webapi-boilerplate/discussions)
+
+Join our Discord - [fullstackhero @ Discord](https://discord.gg/gdgHRt4mMw)
+
 ## Features
 
 - [x] Built on .NET 6.0
 - [x] Follows Clean Architecture Principles
-- [ ] Completely Documented
+- [ ] Completely Documented at [fullstackhero.net](https://fullstackhero.net)
 - [x] Multi Tenancy Support
-- [x] Default Database Provider is PostgreSQL. Can be switched to MSSQL or MySQL
+- [x] Supports MySQL, MSSQL & PostgreSQL!
 - [x] Uses Entity Framework Core as DB Abstraction
 - [x] Repository Pattern
 - [x] Dapper Integration
@@ -38,14 +50,19 @@ This repository contains the WebApi Project of `fullstackhero`.
 - [x] Automapper
 - [x] API Versioning
 - [x] Response Caching - Distributed Caching
-- [ ] Audit Logging
+- [x] Fluent Validations
+- [x] Audit Logging
 - [ ] Advanced User & Role Based Permission Management
+- [x] Code Analysis & StyleCop Integration with Rulesets
+- [x] JSON Based Localization with Caching
+- [x] Hangfire Support
+- [ ] Test Projects
 - [ ] & Much More
 
 ## Prerequisites
-1. Visual Code v1.59.xx or higher
-2. .NET SDK 6.0.100-preview.7.21379.14 or higher
-3. PostgreSQL with pgAdmin4 or higher
+1. Visual Code v1.59.xx or higher / Visual Studio 2022 Preview (17.0.0 Preview 4.0) or Higher.
+2. dotnet-sdk-6.0.100-rc.1.21458.32 or higher.
+3. PostgreSQL / MSSQL / MySQL Database Server instances.
 
 ## Community
 

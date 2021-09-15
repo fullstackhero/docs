@@ -22,12 +22,14 @@ As mentioned earlier, this project is built on the latest available .NET SDK, wh
 
 Ensure that you have the latest preview version of the SDK available - [Download from Microsoft](https://dotnet.microsoft.com/download/dotnet/6.0)
 
-{{< alert icon="💡" text="Note : At the time of compiling this documentation, the latest version available was .NET SDK 6.0.100-preview.7.21379.14." />}}
+{{< alert icon="💡" text="Note : At the time of compiling this documentation, the latest version available was dotnet-sdk-6.0.100-rc.1.21458.32" />}}
 
 
 ## IDE
 
 Visual Code IDE is the recommended IDE to use for fullstackhero's .NET WebApi Boilerplate Project Development. If you are not already using this IDE, consider switching to it. It's definitely worth it! (_Fun Fact : I recently switched from Visual Studio 2019 Community to Visual Code and it's been awesome!_)
+
+Also note that I use Visual Studio 2022 Preview Community Version at times.
 
 However, you are always free to use your choice of IDEs as well.
 
