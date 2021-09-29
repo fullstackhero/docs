@@ -25,6 +25,7 @@
       </nav>
       {{ end }}
       <h1>{{ .Title }}</h1>
+      {{ partial "main/view-counter.html" . }}
       <p class="lead">{{ .Params.lead | safeHTML }}</p>
       {{ partial "main/headline-hash.html" .Content }}
       {{ if .Site.Params.editPage -}}
