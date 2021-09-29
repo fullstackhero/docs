@@ -14,3 +14,7 @@ menu:
 weight: 3
 toc: true
 ---
+
+{{< img src="nuget-page.jpg" >}}
+
+{{< img src="install-fullstackhero.jpg" >}}

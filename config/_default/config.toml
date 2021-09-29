@@ -100,3 +100,8 @@ rel  = "sitemap"
   [[module.mounts]]
     source = "node_modules/mermaid"
     target = "assets/js/vendor/mermaid"
+
+[imaging]
+resampleFilter = "CatmullRom"
+quality = 99
+anchor = "smart"
