@@ -102,6 +102,6 @@ rel  = "sitemap"
     target = "assets/js/vendor/mermaid"
 
 [imaging]
-resampleFilter = "CatmullRom"
-quality = 99
+resampleFilter = "Lanczos"
+quality = 100
 anchor = "smart"
