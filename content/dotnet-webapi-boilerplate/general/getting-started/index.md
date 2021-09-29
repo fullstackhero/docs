@@ -15,6 +15,9 @@ weight: 3
 toc: true
 ---
 
+{{< alert text="FullStackHero.WebAPI.Boilerplate is now in pre-release state. You can find the latest version on NuGet.org" />}}
+
+
 {{< img src="nuget-page.jpg" >}}
 
 {{< img src="install-fullstackhero.jpg" >}}
