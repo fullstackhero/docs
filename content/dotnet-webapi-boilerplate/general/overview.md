@@ -25,9 +25,19 @@ This repository contains the WebApi Project of `fullstackhero`.
 
 ## Release Planning
 
-Expected to be released by Novemeber, 2021 as soon as .NET 6 LTS is launched by Microsoft. Preview versions of this project will be available by October 15, 2021 for Initial Developer Testing.
+### 0.0.1 RC is available now!
 
-As of August 30, 2021, the .NET WebApi Boilerplate project has made a considerable progress.
+This is the first pre-release version of the `fullstackhero .NET WebAPI Boilerplate` package. Newer versions will be available on a weekly basis with newer updates and patches. [Read the getting-started guide for more.](https://fullstackhero.net/dotnet-webapi-boilerplate/general/getting-started/)
+
+The Release Version is expected to be out by Novemeber, 2021 as soon as .NET 6 LTS is launched by Microsoft. Preview versions of this project is available for Initial Developer Testing.
+
+## Important Links & Documentations
+
+[Documentation] Overview - [Read](https://fullstackhero.net/dotnet-webapi-boilerplate/general/overview/)
+
+[Documentation] Getting Started - [Read](https://fullstackhero.net/dotnet-webapi-boilerplate/general/getting-started/)
+
+[Documentation] Development Environment - [Learn about setting up the DEV environment](https://fullstackhero.net/dotnet-webapi-boilerplate/general/development-environment/)
 
 Track Progress - [Release 1.0 Milestones](https://github.com/fullstackhero/dotnet-webapi-boilerplate/milestone/1)
 
@@ -37,26 +47,26 @@ Join our Discord - [fullstackhero @ Discord](https://discord.gg/gdgHRt4mMw)
 
 ## Features
 
-- [x] Built on .NET 6.0 :heavy_check_mark:
-- [x] Follows Clean Architecture Principles :heavy_check_mark:
+- [x] Built on .NET 6.0
+- [x] Follows Clean Architecture Principles
 - [ ] Completely Documented at [fullstackhero.net](https://fullstackhero.net)
-- [x] Multi Tenancy Support :heavy_check_mark:
-- [x] Supports MySQL, MSSQL & PostgreSQL! :heavy_check_mark:
-- [x] Uses Entity Framework Core as DB Abstraction :heavy_check_mark:
-- [x] Flexible Repository Pattern :heavy_check_mark:
-- [x] Dapper Integration for Optimal Performance :heavy_check_mark:
-- [x] Serilog Integration :heavy_check_mark:
-- [x] Swagger Support :heavy_check_mark:
-- [x] Automapper :heavy_check_mark:
-- [x] API Versioning :heavy_check_mark:
-- [x] Response Caching - Distributed Caching :heavy_check_mark:
-- [x] Fluent Validations :heavy_check_mark:
-- [x] Audit Logging :heavy_check_mark:
+- [x] Multi Tenancy Support
+- [x] Supports MySQL, MSSQL & PostgreSQL!
+- [x] Uses Entity Framework Core as DB Abstraction
+- [x] Flexible Repository Pattern
+- [x] Dapper Integration for Optimal Performance
+- [x] Serilog Integration
+- [x] Swagger Support
+- [x] Mapster
+- [x] API Versioning
+- [x] Response Caching - Distributed Caching
+- [x] Fluent Validations
+- [x] Audit Logging
 - [ ] Advanced User & Role Based Permission Management
-- [x] Code Analysis & StyleCop Integration with Rulesets :heavy_check_mark:
-- [x] JSON Based Localization with Caching :heavy_check_mark:
-- [x] Hangfire Support :heavy_check_mark:
-- [x] File Storage Service :heavy_check_mark:
+- [x] Code Analysis & StyleCop Integration with Rulesets
+- [x] JSON Based Localization with Caching
+- [x] Hangfire Support
+- [x] File Storage Service
 - [ ] Test Projects
 - [ ] & Much More
 
@@ -64,6 +74,8 @@ Join our Discord - [fullstackhero @ Discord](https://discord.gg/gdgHRt4mMw)
 1. Visual Code v1.59.xx or higher / Visual Studio 2022 Preview (17.0.0 Preview 4.0) or Higher.
 2. dotnet-sdk-6.0.100-rc.1.21458.32 or higher.
 3. PostgreSQL / MSSQL / MySQL Database Server instances.
+
+For more details, read [Development Environment](https://fullstackhero.net/dotnet-webapi-boilerplate/general/development-environment/).
 
 ## Community
 
