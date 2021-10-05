@@ -2,7 +2,7 @@
 title: "Contact"
 description: "Drop us an email."
 date: 2021-08-24T11:40:05+05:30
-lastmod: 2021-08-24T11:40:16+05:30
+lastmod: 2021-10-06T00:16:30+05:30
 draft: false
 images: []
 ---
@@ -18,14 +18,13 @@ For any bug reports, please first consult the main Github repositories : [https:
 If you cannot find a solution in the existing issues, please raise a bug report directly in Github. By tagging the issue with the label `Bug`, we'll try our best to prioritize your request.
 
 Please make sure to always include the following details in your bug report:
-* Details about your environment (operating system)
-* Exact command used to start LocalStack
-* Any error logs from the console (try using `DEBUG=1` to increase the log level)
+* Details about your environment
+* Any error logs from the console
 * Expected and actual behavior
 
 ### Chat
 
-Please join us in our Discord channel: [https://discord.gg/gdgHRt4mMw](https://discord.gg/gdgHRt4mMw)
+Join our Discord channel: [https://discord.gg/gdgHRt4mMw](https://discord.gg/gdgHRt4mMw)
 
-Don't have access to `discord` yet? Please contact us at [info@codewithmukesh.com](mailto:info@codewithmukesh.com) to receive an invite.
+Don't have access to `discord` yet? Please contact us at [hello@codewithmukesh.com](mailto:hello@codewithmukesh.com) to receive an invite.
 
