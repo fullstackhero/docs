@@ -62,7 +62,7 @@ Join our Discord - [fullstackhero @ Discord](https://discord.gg/gdgHRt4mMw)
 - [x] Response Caching - Distributed Caching
 - [x] Fluent Validations
 - [x] Audit Logging
-- [ ] Advanced User & Role Based Permission Management
+- [x] Advanced User & Role Based Permission Management
 - [x] Code Analysis & StyleCop Integration with Rulesets
 - [x] JSON Based Localization with Caching
 - [x] Hangfire Support
@@ -72,7 +72,7 @@ Join our Discord - [fullstackhero @ Discord](https://discord.gg/gdgHRt4mMw)
 
 ## Prerequisites
 1. Visual Code v1.59.xx or higher / Visual Studio 2022 Preview (17.0.0 Preview 4.0) or Higher.
-2. dotnet-sdk-6.0.100-rc.1.21458.32 or higher.
+2. dotnet-sdk-6.0.100-rc.2.21505.57 or higher.
 3. PostgreSQL / MSSQL / MySQL Database Server instances.
 
 For more details, read [Development Environment](https://fullstackhero.net/dotnet-webapi-boilerplate/general/development-environment/).
