@@ -14,7 +14,7 @@ menu:
 weight: 2
 toc: true
 ---
-fullstackhero's **.NET WebApi Boilerplate** Project Development needs you to have the following applications / tools available on your machine. Please Note that this project is being built on a Windows 10 Machine using Visual Code IDE.
+fullstackhero's **.NET WebApi Boilerplate** Project Development needs you to have the following applications / tools available on your machine. Please Note that this project is being built on a Windows 10 Machine using Visual Studio Code IDE.
 
 ## .NET SDK
 
@@ -27,11 +27,11 @@ Ensure that you have the latest version of the SDK available - [Download from Mi
 
 ## IDE
 
-Visual Code IDE is the recommended IDE to use for fullstackhero's .NET WebApi Boilerplate Project Development. If you are not already using this IDE, consider switching to it. It's definitely worth it! (_Fun Fact : I recently switched from Visual Studio 2019 Community to Visual Code and it's been awesome!_)
+Visual Studio Code IDE is the recommended IDE to use for fullstackhero's .NET WebApi Boilerplate Project Development. If you are not already using this IDE, consider switching to it. It's definitely worth it! (_Fun Fact : I recently switched from Visual Studio 2019 Community to Visual Studio Code and it's been awesome!_)
 
 However, you are always free to use your choice of IDEs as well.
 
-Incase you intend to use Visual Code for development, here are a bunch of helpful extensions that I use:
+Incase you intend to use Visual Studio Code for development, here are a bunch of helpful extensions that I use:
 - EditorConfig for VS Code
 - C#
 - C# Extensions
@@ -41,7 +41,7 @@ Incase you intend to use Visual Code for development, here are a bunch of helpfu
 - Material Icon Theme
 - REST Client
 
-{{< alert icon="💡" text="Note : All the screenshots included in these documentations are from Visual Code Point of View." />}}
+{{< alert icon="💡" text="Note : All the screenshots included in these documentations are from Visual Studio Code Point of View." />}}
 
 ## Database Servers
 
