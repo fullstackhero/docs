@@ -3,7 +3,7 @@ title: "Getting Started"
 description: "Let's get started with the .NET WebApi Boilerplate!"
 lead: "Let's get started with the .NET WebApi Boilerplate!"
 date: 2021-08-30T00:59:34+05:30
-lastmod: 2021-10-02T20:53:46+05:30
+lastmod: 2021-10-23T22:13:10+05:30
 draft: false
 images: []
 menu:
@@ -167,7 +167,7 @@ Open the **create-brands** request in Postman and run it. Click the 'Body' tab t
 }
 ```
 
-Resend the **'search-brands'** request to see: 
+Resend the **'search-brands'** request to see:
 
 ```powershell
 {
@@ -202,7 +202,38 @@ Next let's add a product. Run the **'create-product'** request at this point and
 
 What went wrong?? Click the '**Body**' tab and look at the value for the _brandId_. That field needs to match the _ID_ value of the **Brands** table. When I created the Postman collection I had to use the values that existed while I was building the project from my workstation. If you revisit the '**search-brands**' request and look at the results you'll see a value for '_id_'. Copy that value - return to the `**create-product**' request - replace the id value with what you'd copied and re-send the command. It should report success now.
 
+## Important Commands
 
+### Docker
 
+#### Build
 
+This command is to be executed from the root folder of the project.
 
+```powershell
+docker build -t iammukeshm/dotnet-webapi:0.0.3-rc -t iammukeshm/dotnet-webapi:latest  .
+```
+#### Push to DockerHub
+
+This command is to be executed from the root folder of the project.
+
+```powershell
+docker push iammukeshm/dotnet-webapi
+```
+
+### Migrations
+This command is to be executed from the Bootstrapper Directory of the project.
+
+```powershell
+dotnet ef migrations add <CommitMessage> --project .././Migrators/Migrators.<Provider>/ --context ApplicationDbContext -o Migrations/Application
+```
+CommitMessage : Enter a commit message here.
+Provider : Enter the available DB Provider name. MSSQL , MySQL , PostgreSQL
+
+### NuGet
+
+Generates a NuGet Package of the entire solution. NuGet Configuration is available in the *.nuspec file at the root of the project directory. This command is to be executed from the Bootstrapper Directory of the project.
+
+```powershell
+nuget pack -NoDefaultExcludes
+```
