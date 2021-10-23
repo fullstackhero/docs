@@ -27,12 +27,12 @@ This is by far the easiest and the most streamlined way of getting the latest av
 Open up your Command Prompt / Powershell and run the following command to install the solution template.
 
 ```powershell
-dotnet new --install FullStackHero.WebAPI.Boilerplate::0.0.1-rc
+dotnet new --install FullStackHero.WebAPI.Boilerplate::0.0.3-rc
 ```
 
 {{< img src="install-fullstackhero.jpg" >}}
 
-This would install the `fullstackhero .NET WebAPI Boilerplate` template globally on your machine. Do note that, at the time of writing this documentation, the latest available version is **0.0.1-rc** which is also the first pre-release version of the package. It is highly likely that there is already a newer version available when you are reading this.
+This would install the `fullstackhero .NET WebAPI Boilerplate` template globally on your machine. Do note that, at the time of writing this documentation, the latest available version is **0.0.3-rc** which is also one of the first pre-release version of the package. It is highly likely that there is already a newer version available when you are reading this.
 
 *To get the latest version of the package, visit [nuget.org](https://www.nuget.org/packages/FullStackHero.WebAPI.Boilerplate)*
 
@@ -167,7 +167,7 @@ Open the **create-brands** request in Postman and run it. Click the 'Body' tab t
 }
 ```
 
-Resend the **'get-brands'** request to see: 
+Resend the **'search-brands'** request to see: 
 
 ```powershell
 {
@@ -200,7 +200,7 @@ Next let's add a product. Run the **'create-product'** request at this point and
 }
 ```
 
-What went wrong?? Click the '**Body**' tab and look at the value for the _brandId_. That field needs to match the _ID_ value of the **Brands** table. When I created the Postman collection I had to use the values that existed while I was building the project from my workstation. If you revisit the '**get-brands**' request and look at the results you'll see a value for '_id_'. Copy that value - return to the `**create-product**' request - replace the id value with what you'd copied and re-send the command. It should report success now.
+What went wrong?? Click the '**Body**' tab and look at the value for the _brandId_. That field needs to match the _ID_ value of the **Brands** table. When I created the Postman collection I had to use the values that existed while I was building the project from my workstation. If you revisit the '**search-brands**' request and look at the results you'll see a value for '_id_'. Copy that value - return to the `**create-product**' request - replace the id value with what you'd copied and re-send the command. It should report success now.
 
 
 
