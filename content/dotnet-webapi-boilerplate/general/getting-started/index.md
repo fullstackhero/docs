@@ -232,7 +232,7 @@ Provider : Enter the available DB Provider name. MSSQL , MySQL , PostgreSQL
 
 ### NuGet
 
-Generates a NuGet Package of the entire solution. NuGet Configuration is available in the *.nuspec file at the root of the project directory. This command is to be executed from the Bootstrapper Directory of the project.
+Generates a NuGet Package of the entire solution. NuGet Configuration is available in the *.nuspec file at the root of the project directory. This command is to be executed from the Root Directory of the project.
 
 ```powershell
 nuget pack -NoDefaultExcludes
