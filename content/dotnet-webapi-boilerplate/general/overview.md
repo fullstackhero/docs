@@ -120,5 +120,5 @@ Here are a few ways by which you can support.
 -   Or, If you want to support this project in the long run, [consider buying me a coffee](https://www.buymeacoffee.com/codewithmukesh)! ☕
 
 <a class="btn btn-primary btn-lg px-3 mb-2" style="font-size: large;"
-    href="https://www.buymeacoffee.com/codewithmukesh" target="_blank" role="button"><i class="fas fa-mug-hot"> </i> Buy me
+    href="https://www.buymeacoffee.com/codewithmukesh" target="_blank" role="button"><i style="margin-right: 5px;" class="fas fa-mug-hot"> </i> Buy me
     a Coffee</a>
