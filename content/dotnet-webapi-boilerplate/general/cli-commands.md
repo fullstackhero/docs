@@ -11,7 +11,7 @@ menu:
     identifier: "cli-commands"
     name: "CLI Commands"
     parent: "general"
-weight: 5
+weight: 4
 toc: true
 ---
 
