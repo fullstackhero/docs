@@ -3,7 +3,7 @@ title: "Getting Started"
 description: "Let's get started with the .NET WebApi Boilerplate!"
 lead: "Let's get started with the .NET WebApi Boilerplate!"
 date: 2021-08-30T00:59:34+05:30
-lastmod: 2021-10-23T22:13:10+05:30
+lastmod: 2021-11-16T00:06:45+05:30
 draft: false
 images: []
 menu:
@@ -66,6 +66,13 @@ Simply open up Visual Studio 2022 and Click on Create New Project.
 
 {{< img src="visual-studio-support.jpg" >}}
 
+Important - Make sure to check the 'Place solution and project in same directory' option. Else the solution and projects will be created on different folders and there will be build errors stating that few files are not found.
+
+{{< img src="vs-same-directory.jpg" >}}
+
+Another issue I noticed with creating solutions via Visual Studio is that the Solution structure might be lost. This is a very minor bug, that maybe someone can figure out and fix in our template configuration. Microsoft doesn't seem to have very detailed guide about this.
+
+However, it's always recommended to create new solutions via the Console.
 
 ## Running the Application
 
