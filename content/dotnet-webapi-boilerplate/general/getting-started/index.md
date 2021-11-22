@@ -3,7 +3,7 @@ title: "Getting Started"
 description: "Let's get started with the .NET WebApi Boilerplate!"
 lead: "Let's get started with the .NET WebApi Boilerplate!"
 date: 2021-08-30T00:59:34+05:30
-lastmod: 2021-11-16T00:06:45+05:30
+lastmod: 2021-11-23T01:55:29+05:30
 draft: false
 images: []
 menu:
@@ -85,14 +85,14 @@ code .
 This opens up the solution via Visual Code. Make sure that you have the prerequisite tools and SDKs setup.
 
 ### Setting up the Connection String
-Next, let's set up some valid connection strings. Navigate to `src/Bootstrapper/` and open up `appSettings.json`. Here you would have to provide a valid connection string under the `MultitenancySettings` to either MSSQL,  MySQL or PostgreSQL instance. Below are some sample settings for each of the DB Providers.
+Next, let's set up some valid connection strings. Navigate to `src/Bootstrapper/Configurations` and open up `database.json`. Here you would have to provide a valid connection string under the `DatabaseSettings` to either MSSQL,  MySQL or PostgreSQL instance. Below are some sample settings for each of the DB Providers.
 
 Details on the usage of other Settings will be explained in the upcoming documentations.
 
 #### MySQL
 
 ```powershell
-"MultitenancySettings": {
+"DatabaseSettings": {
     "ConnectionString": "server=localhost;uid=root;pwd=root;database=defaultRootDb;Allow User Variables=True",
     "DBProvider": "mysql"
   }
@@ -100,7 +100,7 @@ Details on the usage of other Settings will be explained in the upcoming documen
 #### MSSQL
 
 ```powershell
-"MultitenancySettings": {
+"DatabaseSettings": {
     "DBProvider": "mssql",
     "ConnectionString": "Data Source=(localdb)\\mssqllocaldb;Initial Catalog=rootTenantDb;Integrated Security=True;MultipleActiveResultSets=True"
   }
@@ -108,7 +108,7 @@ Details on the usage of other Settings will be explained in the upcoming documen
 #### PostgreSQL
 
 ```powershell
-"MultitenancySettings": {
+"DatabaseSettings": {
     "ConnectionString": "Host=localhost;Database=rootTenantDb;Username=postgres;Password=root;Include Error Detail=true",
     "DBProvider": "postgresql"
   }
