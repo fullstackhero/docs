@@ -25,6 +25,7 @@
       </nav>
       {{ end }}
       <h1>{{ .Title }}</h1>
+      <h6 style="margin-top: 0px!important;">Last Updated On {{ .Lastmod.Format "January 02, 2006" }} 😎</h6>
       {{ partial "main/view-counter.html" . }}
       <p class="lead">{{ .Params.lead | safeHTML }}</p>
       {{ partial "main/headline-hash.html" .Content }}
