@@ -1,5 +1,5 @@
 [[main]]
-  name = "WebApi"
+  name = "Web API"
   weight = 10
   identifier = "dotnet-webapi-boilerplate"
   url = "/dotnet-webapi-boilerplate"
