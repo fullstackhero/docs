@@ -27,12 +27,12 @@ This is by far the easiest and the most streamlined way of getting the latest av
 Open up your Command Prompt / Powershell and run the following command to install the solution template.
 
 ```powershell
-dotnet new --install FullStackHero.WebAPI.Boilerplate::0.0.4-rc
+dotnet new --install FullStackHero.WebAPI.Boilerplate::0.0.5-rc
 ```
 
 {{< img src="install-fullstackhero.jpg" >}}
 
-This would install the `fullstackhero .NET WebAPI Boilerplate` template globally on your machine. Do note that, at the time of writing this documentation, the latest available version is **0.0.4-rc** which is also one of the first pre-release version of the package. It is highly likely that there is already a newer version available when you are reading this.
+This would install the `fullstackhero .NET WebAPI Boilerplate` template globally on your machine. Do note that, at the time of writing this documentation, the latest available version is **0.0.5-rc** which is also one of the first pre-release version of the package. It is highly likely that there is already a newer version available when you are reading this.
 
 *To get the latest version of the package, visit [nuget.org](https://www.nuget.org/packages/FullStackHero.WebAPI.Boilerplate)*
 
