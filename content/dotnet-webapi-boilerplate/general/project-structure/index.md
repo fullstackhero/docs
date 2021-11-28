@@ -3,7 +3,7 @@ title: "Project Structure"
 description: "Here is how the .NET WebApi Boilerplate is structured."
 lead: "Here is how the .NET WebApi Boilerplate is structured."
 date: 2021-08-24T11:40:05+05:30
-lastmod: 2021-11-06T13:29:23+05:30
+lastmod: 2021-11-28T17:35:38+05:30
 draft: false
 images: []
 menu:
@@ -23,7 +23,7 @@ This means that the entire solution is built in such a way that it can be scaled
 
 ```bash
 ├── src
-│   ├── Bootstrapper.csproj
+│   ├── Host.csproj
 │   ├── Core
 │   |   ├── Application.csproj
 │   |   └── Domain.csproj
@@ -38,22 +38,26 @@ This means that the entire solution is built in such a way that it can be scaled
 
 The idea is to build a very loosely coupled architecture following best practices and packages. Let's see in brief what responsibilities each of these projects handle.
 
-### Bootstrapper
+### Host
 Contains the API Controllers and Startup Logic including ASP.NET Core Container setup. This is the entry point of the application. Also, other static files like the logs, localization jsons, images, email templates and most importantly the appsettings.json live under this project.
 
+With 0.0.5-rc, the appSettings.json is further split into variable sub-setting like database.json, security.json and so on for better modularity and organization. You can find these new JSONs under the Configurations folder of the Host project.
+
 ```bash
-├── Bootstrapper
+├── Host
+|   ├── Configurations
 |   ├── Controllers
 |   ├── Email Templates
+|   ├── Extensions
 |   ├── Files
 │   |   ├── Images
 │   |   └── Documents
 |   ├── Localization
-|   ├── Settings
+|   ├── Logs
 |   └── appsettings.json
 ```
 
-Note that the *Bootstrapper* project depends on
+Note that the *Host* project depends on
 - Application
 - Infrastructure
 - Migration Projects
@@ -65,19 +69,29 @@ This is one of the projects in the Core Folder apart from the Domain Project. He
 ``` bash
 ├── Core
 |   ├── Application
-|   |   ├── Abstraction
-|   |   ├── Constants
-|   |   ├── Exceptions
-|   |   ├── Extensions
-|   |   ├── Services
+|   |   ├── Auditing
+|   |   ├── Catalog
+|   |   ├── Common
+|   |   ├── Dashboard
+|   |   ├── DependencyInjection
+|   |   ├── Identity
+|   |   ├── Multitenancy
 |   |   ├── Settings
-|   |   ├── Specifications
-|   |   ├── Validators
+|   |   ├── Storage
 |   |   └── Wrapper
 
 ```
 
-1. Abstraction folder consists of the majorly used Interfaces throughout the project including **IRepositoryAsync**  and **ITenantService**
+The folders and split at the top level Feature-wise. Meaning, it now makes it easier for developers to understand the folder structure. Each of the feature folders like Catalog will have further sub-folders like
+
+- EventHandlers
+- Interfaces
+- Services
+- Validators
+
+and so on. Thus everything related to a feature will be found directly under that Feature folder.
+
+In cases where there are less number of classes / interfaces associated with a feature, all of these classes are put directly under the root of the feature folder. Only when the complexity of the feature increases, it is recommended to separate the classes by their type.
 
 Note that the *Application* project does not depend on any other project.
 
@@ -88,60 +102,3 @@ Note that the *Domain* project does not depend on any other project.
 
 As per Clean Architecture principles, the Core of this Solution i.e, Application and Domain projects do not depend on any other projects. This helps achieve Dependency Inversion (The 'D' Principle of 'SOLID').
 
-## Directory
-
-This is the folder directory you will be seeing every-time a new project is generated via the FullStackHero .NET WebAPI Template.
-```bash
-├── src
-│   ├── Bootstrapper
-│   |   ├── Controllers
-│   |   ├── Email Templates
-│   |   ├── Files
-│   |   ├── Localization
-│   |   ├── Settings
-│   |   └── appsettings.json
-|   ├── Core
-│   |   ├── Application
-│   |   |   ├── Abstraction
-│   |   |   ├── Constants
-│   |   |   ├── Exceptions
-│   |   |   ├── Extensions
-│   |   |   ├── Services
-│   |   |   ├── Settings
-│   |   |   ├── Specifications
-│   |   |   ├── Validators
-│   |   |   └── Wrapper
-│   |   └── Domain
-│   |   |   ├── Constants
-│   |   |   ├── Contracts
-│   |   |   ├── Entities
-│   |   |   ├── Enums
-│   |   |   ├── Events
-│   |   |   ├── Extensions
-│   |   |   └── Interfaces
-|   ├── Infrastructure
-│   |   ├── Auditing
-│   |   ├── Extensions
-│   |   ├── HealthChecks
-│   |   ├── Identity
-│   |   ├── Localizer
-│   |   ├── Mappings
-│   |   ├── Middlewares
-│   |   ├── Persistence
-│   |   ├── Services
-│   |   ├── SwaggerFilters
-│   |   └── Utilities
-|   ├── Migrators
-│   |   ├── Migrators.MSSQL
-│   |   ├── Migrators.MySQL
-│   |   └── Migrators.PostgreSQL
-│   └── Shared
-│       └── Shared.DTOs
-├── postman
-├── deployments
-├── tests
-├── README.md
-├── DN.WebAPI.sln
-├── LICENSE
-└── .gitignore
-```
