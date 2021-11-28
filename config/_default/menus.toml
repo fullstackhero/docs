@@ -4,6 +4,12 @@
   identifier = "dotnet-webapi-boilerplate"
   url = "/dotnet-webapi-boilerplate"
 
+[[main]]
+  name = "Blazor"
+  weight = 11
+  identifier = "blazor-wasm-boilerplate"
+  url = "/blazor-wasm-boilerplate"
+
 [[webapi]]
   name = "General"
   weight = 20
