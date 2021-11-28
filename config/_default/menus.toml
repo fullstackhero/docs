@@ -17,8 +17,14 @@
   url = "/dotnet-webapi-boilerplate/general/"
 
 [[webapi]]
-  name = "Tutorials"
+  name = "Fundamentals"
   weight = 21
+  identifier = "fundamentals"
+  url = "/dotnet-webapi-boilerplate/fundamentals/"
+
+[[webapi]]
+  name = "Tutorials"
+  weight = 22
   identifier = "tutorials"
   url = "/dotnet-webapi-boilerplate/tutorials/"
 
