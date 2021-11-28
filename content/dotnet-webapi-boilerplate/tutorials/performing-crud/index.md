@@ -11,7 +11,7 @@ menu:
     identifier: "performing-crud"
     name: "Performing CRUD Operations"
     parent: "tutorials"
-weight: 1
+weight: 12
 toc: true
 ---
 

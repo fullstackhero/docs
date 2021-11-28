@@ -11,7 +11,7 @@ menu:
     identifier: "changelogs"
     name: "Changelogs"
     parent: "general"
-weight: 6
+weight: 7
 toc: true
 ---
 

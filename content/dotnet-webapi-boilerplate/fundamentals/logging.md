@@ -11,7 +11,7 @@ menu:
     identifier: "logging"
     name: "Logging"
     parent: "fundamentals"
-weight: 1
+weight: 11
 toc: true
 ---
 

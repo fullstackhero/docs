@@ -11,7 +11,7 @@ menu:
     identifier: "localization"
     name: "Localization"
     parent: "fundamentals"
-weight: 1
+weight: 10
 toc: true
 ---
 

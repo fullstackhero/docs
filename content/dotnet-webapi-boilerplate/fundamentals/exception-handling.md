@@ -11,7 +11,7 @@ menu:
     identifier: "exception-handling"
     name: "Exception Handling"
     parent: "fundamentals"
-weight: 1
+weight: 9
 toc: true
 ---
 

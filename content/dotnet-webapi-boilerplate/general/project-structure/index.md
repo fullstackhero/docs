@@ -11,7 +11,7 @@ menu:
     identifier: "general-project-structure"
     name: "Project Structure"
     parent: "general"
-weight: 5
+weight: 6
 toc: true
 ---
 

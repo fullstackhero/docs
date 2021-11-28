@@ -11,7 +11,7 @@ menu:
     identifier: "configurations"
     name: "Configurations"
     parent: "fundamentals"
-weight: 1
+weight: 8
 toc: true
 ---
 
