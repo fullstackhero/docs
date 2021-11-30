@@ -8,8 +8,8 @@ draft: false
 images: []
 menu:
   webapi:
-    identifier: "performing-crud"
-    name: "Performing CRUD Operations"
+    identifier: "crud-guide"
+    name: "CRUD Guide"
     parent: "tutorials"
 weight: 12
 toc: true
