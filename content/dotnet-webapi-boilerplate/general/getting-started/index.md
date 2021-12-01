@@ -85,7 +85,7 @@ code .
 This opens up the solution via Visual Code. Make sure that you have the prerequisite tools and SDKs setup.
 
 ### Setting up the Connection String
-Next, let's set up some valid connection strings. Navigate to `src/Bootstrapper/Configurations` and open up `database.json`. Here you would have to provide a valid connection string under the `DatabaseSettings` to either MSSQL,  MySQL or PostgreSQL instance. Below are some sample settings for each of the DB Providers.
+Next, let's set up some valid connection strings. Navigate to `src/Host/Configurations` and open up `database.json`. Here you would have to provide a valid connection string under the `DatabaseSettings` to either MSSQL,  MySQL or PostgreSQL instance. Below are some sample settings for each of the DB Providers.
 
 Details on the usage of other Settings will be explained in the upcoming documentations.
 
@@ -114,10 +114,10 @@ Details on the usage of other Settings will be explained in the upcoming documen
   }
 ```
 
-Now you need to navigate to the `Bootstrapper (API) Project` directory via CMD or VSCode's native terminal and run the basic build and run command to get the API up and running. Run the following.
+Now you need to navigate to the `Host (API) Project` directory via CMD or VSCode's native terminal and run the basic build and run command to get the API up and running. Run the following.
 
 ```powershell
- cd src/Bootstrapper
+ cd src/Host
  dotnet build
  dotnet run
 ```
