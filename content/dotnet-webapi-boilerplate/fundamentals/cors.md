@@ -7,22 +7,12 @@ lastmod: 2021-10-28T10:07:45+05:30
 draft: false
 images: []
 menu:
-webapi:
-identifier: "cors"
-name: "CORS"
-parent: "fundamentals"
+  webapi:
+    identifier: "cors"
+    name: "CORS"
+    parent: "fundamentals"
 weight: 11
 toc: true
 ---
-# Cross-Origin Resource Sharing (CORS)
 
-CORS is an mechanism that allows a server to indicate any origins (domain, scheme, or port) other than its own.
-
-We present two scenarios that demonstrate how Cross-Origin requests by clients:
-
-{
-  "CorsSettings": {
-    "Angular": "http://localhost:4200",
-    "Blazor": "https://localhost:5002;https://www.mydomain.my"
-  }
-}
+Coming Soon!
