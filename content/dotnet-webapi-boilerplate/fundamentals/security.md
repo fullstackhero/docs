@@ -1,18 +1,18 @@
 ---
-title: "Logging"
-description: "Understanding Logging in fullstackhero's Web API."
-lead: "Understanding Logging in fullstackhero's Web API."
+title: "Security"
+description: "Understanding Security in fullstackhero's Web API."
+lead: "Understanding Security in fullstackhero's Web API."
 date: 2021-08-24T11:40:05+05:30
 lastmod: 2021-10-28T10:07:45+05:30
 draft: false
 images: []
 menu:
   webapi:
-    identifier: "logging"
-    name: "Logging"
+    identifier: "security"
+    name: "Security"
     parent: "fundamentals"
 weight: 11
 toc: true
 ---
 
-Coming Soon!
+Documentation Coming Soon!
