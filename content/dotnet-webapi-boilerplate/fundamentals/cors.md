@@ -17,7 +17,7 @@ toc: true
 
 CORS is an mechanism that allows a server to indicate any origins (domain, scheme, or port) other than its own.
 
-FullStackHero Web API has out of the box support for providing to several clients. All of the configurations related this feature can be found under `src/Host/Configurations/cors.json`.
+FullStackHero Web API has support for providing to several clients, all of the configurations related this feature can be found under `src/Host/Configurations/cors.json`.
 
 We present two scenarios that demonstrate how Cross-Origin requests by clients:
 ```
