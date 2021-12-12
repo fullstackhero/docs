@@ -15,4 +15,23 @@ weight: 8
 toc: true
 ---
 
-Documentation Coming Soon!
+Within the Host boot project there is a folder called "Configurations". where there are all the configuration files, one for each area.
+
+## General Structure
+```bash
+├── Host.csproj
+│   ├── Configurations
+│   |   ├── cache.json
+│   |   ├── cors.json
+│   |   ├── database.json
+│   |   ├── hangfire.json
+│   |   ├── logger.json
+│   |   ├── mail.json
+│   |   ├── middleware.json
+│   |   ├── security.json
+│   |   └── signalr.json
+|   ├── appsettings.json
+|
+```
+
+> The classic appsettings.json configuration file is still available to manage custom parameters.
