@@ -31,7 +31,8 @@ This means that the entire solution is built in such a way that it can be scaled
 |   ├── Migrators
 │   |   ├── Migrators.MSSQL.csproj
 │   |   ├── Migrators.MySQL.csproj
-│   |   └── Migrators.PostgreSQL.csproj
+│   |   ├── Migrators.PostgreSQL.csproj
+│   |   └── Migrators.Oracle.csproj
 │   └── Shared
 │       └── Shared.DTOs.csproj
 ```

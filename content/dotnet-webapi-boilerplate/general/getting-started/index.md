@@ -3,7 +3,7 @@ title: "Getting Started"
 description: "Let's get started with the .NET WebApi Boilerplate!"
 lead: "Let's get started with the .NET WebApi Boilerplate!"
 date: 2021-08-30T00:59:34+05:30
-lastmod: 2021-11-23T01:55:29+05:30
+lastmod: 2021-12-12T08:03:50+05:30
 draft: false
 images: []
 menu:
@@ -89,6 +89,8 @@ Next, let's set up some valid connection strings. Navigate to `src/Bootstrapper/
 
 Details on the usage of other Settings will be explained in the upcoming documentations.
 
+{{< alert text="It is important to update the src/Bootstrapper/Configurations/hangfire.json connection string / provider as well." />}}
+
 #### MySQL
 
 ```powershell
@@ -112,6 +114,17 @@ Details on the usage of other Settings will be explained in the upcoming documen
     "ConnectionString": "Host=localhost;Database=rootTenantDb;Username=postgres;Password=root;Include Error Detail=true",
     "DBProvider": "postgresql"
   }
+```
+
+#### Oracle
+
+```powershell
+{
+  "DatabaseSettings": {
+    "DBProvider": "oracle",
+    "ConnectionString": "Data Source=(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=127.0.0.1)(PORT=49154))(CONNECT_DATA =(SERVER=DEDICATED)(SERVICE_NAME=ORCLPDB1.localdomain)));User Id=fullstack;Password=password123"
+  }
+}
 ```
 
 Now you need to navigate to the `Bootstrapper (API) Project` directory via CMD or VSCode's native terminal and run the basic build and run command to get the API up and running. Run the following.
