@@ -19,7 +19,7 @@ CORS is an mechanism that allows a server to indicate any origins (domain, schem
 
 FullStackHero Web API has support for providing to several clients, all of the configurations related this feature can be found under `src/Host/Configurations/cors.json`.
 
-We present two scenarios that demonstrate how Cross-Origin requests by clients:
+We present two scenarios that demonstrate how Cross-Origin requests by clients can be served:
 ```
 {
   "CorsSettings": {
