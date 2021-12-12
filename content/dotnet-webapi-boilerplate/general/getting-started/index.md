@@ -89,7 +89,7 @@ Next, let's set up some valid connection strings. Navigate to `src/Host/Configur
 
 Details on the usage of other Settings will be explained in the upcoming documentations.
 
-{{< alert text="It is important to update the src/Bootstrapper/Configurations/hangfire.json connection string / provider as well." />}}
+{{< alert text="It is important to update the src/Host/Configurations/hangfire.json connection string / provider as well." />}}
 
 #### MySQL
 
@@ -116,7 +116,6 @@ Details on the usage of other Settings will be explained in the upcoming documen
   }
 ```
 
-<<<<<<< HEAD
 #### Oracle
 
 ```powershell
@@ -128,10 +127,7 @@ Details on the usage of other Settings will be explained in the upcoming documen
 }
 ```
 
-Now you need to navigate to the `Bootstrapper (API) Project` directory via CMD or VSCode's native terminal and run the basic build and run command to get the API up and running. Run the following.
-=======
 Now you need to navigate to the `Host (API) Project` directory via CMD or VSCode's native terminal and run the basic build and run command to get the API up and running. Run the following.
->>>>>>> 18f2c88c9c69a9014895b6583597c1d3f39329d9
 
 ```powershell
  cd src/Host
