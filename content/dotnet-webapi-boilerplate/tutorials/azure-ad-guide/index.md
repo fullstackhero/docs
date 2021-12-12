@@ -15,4 +15,4 @@ weight: 12
 toc: true
 ---
 
-Coming Soon!
+Documentation Coming Soon!
