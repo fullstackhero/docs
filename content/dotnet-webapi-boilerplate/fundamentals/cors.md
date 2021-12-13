@@ -29,5 +29,4 @@ We present two scenarios that demonstrate how Cross-Origin requests by clients c
 }
 ```
 
-Documentation Coming Soon!
 
