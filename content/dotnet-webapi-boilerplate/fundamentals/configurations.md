@@ -14,10 +14,10 @@ menu:
 weight: 8
 toc: true
 ---
-
 Within the Host boot project there is a folder called "Configurations". where there are all the configuration files, one for each area.
 
 ## General Structure
+
 ```bash
 ├── Host.csproj
 │   ├── Configurations
@@ -35,3 +35,5 @@ Within the Host boot project there is a folder called "Configurations". where th
 ```
 
 > The classic appsettings.json configuration file is still available to manage custom parameters.
+
+The **`Startup` class** inside the folder is responsible for loading all the configuration files described above.
