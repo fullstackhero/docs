@@ -3,7 +3,7 @@
 ## How to contribute?
 
 1. Fork this Repository to your Github Profile.
-2. Navigate to your newly cloned Repository -> Settings -> Secrets.
+2. Navigate to your newly forked Repository -> Settings -> Secrets.
 3. Here, Add a new Repository Secret with a name `GT_TOKEN`. As for the value, paste in your GitHub Token (https://github.com/settings/tokens)
 4. Now, clone this repository locally.
 5. Ensure that you have Node.js and Visual Code installed.
