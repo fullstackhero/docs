@@ -23,6 +23,8 @@ Note that currently, fullstackhero's Web API supports the following major DB Pro
 3. PostgreSQL
 4. Oracle
 
+Download links to setup the supported Database providers are mentioned here - https://fullstackhero.net/dotnet-webapi-boilerplate/general/development-environment/
+
 To maintain scalability, the database migrations of each of these DB Providers are kept in separate class library projects namely
 1. Migrators/Migrators.MSSQL
 2. Migrators/Migrators.MySQL
@@ -76,7 +78,7 @@ Once your connection strings are all updated in the mentioned configuration file
 
 As mentioned earlier, since we have 2 Db Contexts defined in our application, we will have seperate commands for each of the available context classes.
 
-The generic command to add migrations over the **Application Db Contex**t goes like this,
+The generic command to add migrations over the **Application Db Context** goes like this,
 
 ```
 dotnet ef migrations add <CommitMessage> --project .././Migrators/Migrators.<DBProvider>/ --context ApplicationDbContext -o Migrations/Application
@@ -109,7 +111,5 @@ Keeping that in mind, here is how you would add Migrations for MySQL.
 ```dotnet ef migrations add ModifiedTenantTable --project .././Migrators/Migrators.MySQL/ --context TenantDbContext -o Migrations/Tenant```
 
 That's almost it. Once the process is completed you would be able see new Migration cs files that represent your new additions / modifications at the table level added to the respective Migrator project.
-
-Note - To regenerate all the existing migrations in a clean way, Delete the sub-folders (Application and Tenant) under the concerned DBProvider's Migrator project.
 
 You do not have to do anything extra to apply the migrations to your database. The application does it for you during the startup. Cheers!
