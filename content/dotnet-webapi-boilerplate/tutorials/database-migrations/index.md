@@ -108,7 +108,7 @@ Keeping that in mind, here is how you would add Migrations for MySQL.
 
 ```dotnet ef migrations add ModifiedTenantTable --project .././Migrators/Migrators.MySQL/ --context TenantDbContext -o Migrations/Tenant```
 
-That's almost it. Once the process is completed you would new Migration cs files that represent your new additions / modifications at the table level.
+That's almost it. Once the process is completed you would be able see new Migration cs files that represent your new additions / modifications at the table level added to the respective Migrator project.
 
 Note - To regenerate all the existing migrations in a clean way, Delete the sub-folders (Application and Tenant) under the concerned DBProvider's Migrator project.
 
