@@ -9,7 +9,7 @@ images: []
 menu:
   webapi:
     identifier: "crud-guide"
-    name: "CRUD"
+    name: "Implementing CRUD"
     parent: "tutorials"
 weight: 12
 toc: true
