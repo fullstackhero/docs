@@ -78,7 +78,7 @@ Ensure that you have Docker installed on your machine along with the Docker Exte
 {{< img src="docker-elk.jpg" >}}
 
 By default,
-- Kiabana runs on port 5601 - http://localhost:5601
+- Kibana runs on port 5601 - http://localhost:5601
 - Elastic Search runs on port 9200 - http://localhost:9200
 
 Package used - `Serilog.Sinks.Elasticsearch`
