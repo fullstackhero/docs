@@ -9,6 +9,9 @@ description = "fullstackhero is an ambitious project to cater the needs of Devel
 ## Documentation
 # docsVersion = "0.3"
 
+# Search
+mainSections = ["blog", "docs"]
+
 ## Open Graph
 images = ["doks.png"]
 ogLocale = "en_US"
