@@ -31,7 +31,11 @@
 [[main]]
   name = "Docs"
   url = "/docs/prologue/introduction/"
-# url = "/docs/1.0/prologue/introduction/"
+  weight = 10
+
+[[main]]
+  name = "API"
+  url = "/dotnet-webapi-boilerplate/general/overview/"
   weight = 10
 
 # [[main]]

@@ -10,7 +10,7 @@ description = "fullstackhero is an ambitious project to cater the needs of Devel
 # docsVersion = "0.3"
 
 # Search
-mainSections = ["blog", "docs"]
+mainSections = ["blog", "docs", "dotnet-webapi-boilerplate"]
 
 ## Open Graph
 images = ["doks.png"]

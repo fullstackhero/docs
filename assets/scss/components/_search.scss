@@ -71,11 +71,12 @@
     padding-right: 1rem;
     border-right: 1px solid $gray-200;
     display: inline-block;
-    text-align: right;
+    text-align: left;
   }
 
   .suggestion__description {
     width: 19rem;
     padding-left: 1rem;
+    font-style: italic;
   }
 }
