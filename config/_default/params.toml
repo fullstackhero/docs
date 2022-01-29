@@ -1,10 +1,10 @@
 # Meta Data for SEO
 
 ## Homepage
-title = "Doks"
+title = "fullstackhero"
 titleSeparator = "-"
-titleAddition = "Modern Documentation Theme"
-description = "Doks is a Hugo theme for building secure, fast, and SEO-ready documentation websites, which you can easily update and customize."
+titleAddition = "Open-Source Boilerplates for Modern Web Applications."
+description = "fullstackhero is an ambitious project to cater the needs of Developers and Organizations and helps reduce the development hours by over 200+ hours!"
 
 ## Documentation
 # docsVersion = "0.3"
@@ -16,17 +16,17 @@ domainTLD = "doks.netlify.app"
 titleHome = "Doks Theme"
 
 ## Twitter Cards
-twitterSite = "@getdoks"
-twitterCreator = "@henkverlinde"
+twitterSite = "@codewithmukesh"
+twitterCreator = "@iammukeshm"
 
 ## JSON-LD
 # schemaType = "Person"
 schemaType = "Organization"
 schemaName = "Doks"
-schemaAuthor = "Henk Verlinde"
-schemaAuthorTwitter = "https://twitter.com/henkverlinde"
-schemaAuthorLinkedIn = "https://www.linkedin.com/in/henkverlinde/"
-schemaAuthorGitHub = "https://github.com/h-enk"
+schemaAuthor = "Mukesh Murugan"
+schemaAuthorTwitter = "https://twitter.com/iammukeshm"
+schemaAuthorLinkedIn = "https://www.linkedin.com/in/iammukeshm/"
+schemaAuthorGitHub = "https://github.com/iammukeshm"
 schemaLocale = "en-US"
 schemaLogo = "logo-doks.png"
 schemaLogoWidth = 512
@@ -34,9 +34,9 @@ schemaLogoHeight = 512
 schemaImage = "doks.png"
 schemaImageWidth = 1280
 schemaImageHeight = 640
-schemaTwitter = "https://twitter.com/getdoks"
+schemaTwitter = "https://twitter.com/codewithmukesh"
 schemaLinkedIn = ""
-schemaGitHub = "https://github.com/h-enk/doks"
+schemaGitHub = "https://github.com/fullstackhero"
 schemaSection = "blog"
 
 ## Sitelinks Search Box
@@ -54,25 +54,22 @@ lqipWidth = "20x"
 smallLimit = "300"
 
 # Footer
-footer = "Powered by <a href=\"https://www.netlify.com/\">Netlify</a>, <a href=\"https://gohugo.io/\">Hugo</a>, and <a href=\"https://getdoks.org/\">Doks</a>"
+footer = "Developed & Maintained by <a href=\"https://www.codewithmukesh.com/\">Mukesh Murugan</a>"
 
 # Feed
-copyRight = "Copyright (c) 2020-2021 Henk Verlinde"
+copyRight = "Copyright (c) 2021-2022 Mukesh Murugan"
 
 # Alert
-alert = false
+alert = true
 alertDismissable = true
-# alertText = "Introducing the Doks child theme, several DX + UX updates, and more! <a class=\"alert-link stretched-link\" href=\"https://getdoks.org/blog/doks-v0.2/\" target=\"_blank\" rel=\"noopener\">Check out Doks v0.2</a>"
-alertText = "Introducing the Doks child theme, several DX + UX updates, and more! <a class=\"alert-link stretched-link\" href=\"https://getdoks.org/blog/doks-v0.2/\">Check out Doks v0.2</a>"
+alertText = "<a target=\"_blank\" class=\"alert-link\" href=\"https://buymeacoffee.com/codewithmukesh\">Support the project by buying me a coffee!</a>"
 
 # Edit Page
-# repoHost [Github | Gitea | GitLab] is used for building the edit link based on git hoster
 repoHost = "GitHub"
-#repoHost = "Gitea"
-docsRepo = "https://github.com/h-enk/doks"
+docsRepo = "https://github.com/fullstackhero/docs"
 docsRepoBranch = "master"
-editPage = false
-lastMod = false
+editPage = true
+lastMod = true
 
 [options]
   lazySizes = true
@@ -81,12 +78,12 @@ lastMod = false
   flexSearch = true
   darkMode = true
   bootStrapJs = true
-  breadCrumb = false
+  breadCrumb = true
   highLight = true
   kaTex = false
-  multilingualMode = false
+  multilingualMode = true
   docsVersioning = false
-  fullWidth = false
+  fullWidth = true
 
 [menu]
   [menu.section]

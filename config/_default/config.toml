@@ -1,9 +1,9 @@
-baseurl = "https://doks.netlify.app/"
+baseurl = "/"
 canonifyURLs = false
 disableAliases = true
 disableHugoGeneratorInject = true
 enableEmoji = true
-enableGitInfo = false
+enableGitInfo = true
 enableRobotsTXT = true
 languageCode = "en-US"
 paginate = 7
@@ -53,7 +53,7 @@ rel  = "sitemap"
     maxAge = "10s"
 
 [sitemap]
-  changefreq = "weekly"
+  changefreq = "daily"
   filename = "sitemap.xml"
   priority = 0.5
 
