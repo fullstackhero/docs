@@ -3,13 +3,13 @@
 ## Homepage
 title = "fullstackhero"
 titleSeparator = "-"
-titleAddition = "Open-Source Boilerplates for Modern Web Applications."
+titleAddition = "Open-Source Framework for Modern Web Applications."
 description = "fullstackhero is an ambitious project to cater the needs of Developers and Organizations and helps reduce the development hours by over 200+ hours!"
 logo = "/images/full-stack-hero-logo.png"
 navBarLogo = "/images/navbar-logo.png"
 
 ## Documentation
-# docsVersion = "0.3"
+# docsVersion = "1"
 
 # Search
 mainSections = ["blog", "docs", "dotnet-webapi-boilerplate"]

@@ -4,9 +4,10 @@
     <div class="col-lg-12 text-center">
       <img src="{{ .Site.Params.Logo }}" alt="fullstackhero Logo" style="max-width: 300px">
       <h1 class="mt-0">fullstack<b style="font-weight: 600;">hero</b></h1>
+      <p>{{ .Params.sub }}</p>
     </div>
     <div class="col-lg-9 col-xl-8 text-center">
-      <p class="lead">{{ .Params.lead | safeHTML }}</p>
+      <p class="lead">{{ .Params.lead }}</p>
       <a class="btn btn-primary btn-lg px-4 mb-2" href="/basics/{{ if .Site.Params.options.docsVersioning }}{{ .Site.Params.docsVersion }}/{{ end }}getting-started/" role="button">Get Started</a>
       <p class="meta">Open-source MIT Licensed. <a href="https://github.com/fullstackhero">GitHub</a></p>
     </div>
