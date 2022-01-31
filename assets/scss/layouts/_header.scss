@@ -119,7 +119,9 @@ button#doks-versions {
 }
 
 .offcanvas .nav-link.active {
-  color: $link-color;
+  background: $link-color;
+  color: $white;
+  border-radius: 38px;
 }
 
 /*
