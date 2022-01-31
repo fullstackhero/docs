@@ -3,10 +3,32 @@
   url = "/basics/getting-started/"
   weight = 10
 
+##############################
+
 [[main]]
   name = "API"
   url = "/dotnet-webapi-boilerplate/general/overview/"
   weight = 20
+
+[[dotnet-webapi-boilerplate]]
+  name = "General"
+  weight = 20
+  identifier = "general"
+  url = "/dotnet-webapi-boilerplate/general/"
+
+[[dotnet-webapi-boilerplate]]
+  name = "Fundamentals"
+  weight = 30
+  identifier = "fundamentals"
+  url = "/dotnet-webapi-boilerplate/fundamentals/"
+
+[[dotnet-webapi-boilerplate]]
+  name = "Tutorials"
+  weight = 40
+  identifier = "tutorials"
+  url = "/dotnet-webapi-boilerplate/tutorials/"
+
+####################################
 
 [[main]]
   name = "Blazor"

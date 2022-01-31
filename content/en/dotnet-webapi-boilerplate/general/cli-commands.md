@@ -7,7 +7,7 @@ lastmod: 2021-12-12T08:09:20+05:30
 draft: false
 images: []
 menu:
-  webapi:
+  dotnet-webapi-boilerplate:
     identifier: "cli-commands"
     name: "CLI Commands"
     parent: "general"

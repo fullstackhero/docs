@@ -7,7 +7,7 @@ lastmod: 2021-11-29T00:44:06+05:30
 draft: false
 images: []
 menu:
-  webapi:
+  dotnet-webapi-boilerplate:
     identifier: "azure-ad-guide"
     name: "Azure AD Authentication"
     parent: "tutorials"
@@ -84,7 +84,7 @@ This should be enough for testing from swagger. But you'll probably will want to
 
 ## Update the AzureAd settings on the Web Api project
 
-Now that's all set up, the only thing left is updating the configuration to use AzureAd. 
+Now that's all set up, the only thing left is updating the configuration to use AzureAd.
 On the Web API project, under `src\Host\Configurations`, open `security.json` and fill out the required settings:
 
 * `Provider`: set to `AzureAd`

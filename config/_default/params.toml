@@ -5,6 +5,8 @@ title = "fullstackhero"
 titleSeparator = "-"
 titleAddition = "Open-Source Boilerplates for Modern Web Applications."
 description = "fullstackhero is an ambitious project to cater the needs of Developers and Organizations and helps reduce the development hours by over 200+ hours!"
+logo = "/images/full-stack-hero-logo.png"
+navBarLogo = "/images/navbar-logo.png"
 
 ## Documentation
 # docsVersion = "0.3"
@@ -64,7 +66,7 @@ copyRight = "Copyright (c) 2021-2022 Mukesh Murugan"
 
 # Alert
 alert = true
-alertDismissable = true
+alertDismissable = false
 alertText = "<a target=\"_blank\" class=\"alert-link\" href=\"https://buymeacoffee.com/codewithmukesh\">Support the project by buying me a coffee!</a>"
 
 # Edit Page
@@ -90,5 +92,5 @@ lastMod = true
 
 [menu]
   [menu.section]
-    auto = true
+    auto = false
     collapsibleSidebar = true

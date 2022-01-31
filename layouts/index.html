@@ -2,7 +2,8 @@
 <section class="section container-fluid mt-n3 pb-3">
   <div class="row justify-content-center">
     <div class="col-lg-12 text-center">
-      <h1 class="mt-0">{{ .Title }}</h1>
+      <img src="{{ .Site.Params.Logo }}" alt="fullstackhero Logo" style="max-width: 300px">
+      <h1 class="mt-0">fullstack<b style="font-weight: 600;">hero</b></h1>
     </div>
     <div class="col-lg-9 col-xl-8 text-center">
       <p class="lead">{{ .Params.lead | safeHTML }}</p>

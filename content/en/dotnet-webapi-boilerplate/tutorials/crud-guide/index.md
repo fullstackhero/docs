@@ -7,7 +7,7 @@ lastmod: 2021-11-29T00:44:06+05:30
 draft: false
 images: []
 menu:
-  webapi:
+  dotnet-webapi-boilerplate:
     identifier: "crud-guide"
     name: "Implementing CRUD"
     parent: "tutorials"

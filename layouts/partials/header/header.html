@@ -10,7 +10,12 @@
 <header class="navbar navbar-expand-md navbar-light doks-navbar">
   <nav class="container-{{ if .Site.Params.options.fullWidth }}fluid{{ else }}xxl{{ end }} flex-wrap flex-md-nowrap" aria-label="Main navigation">
     <a class="navbar-brand p-0 me-auto" href="{{ "/" | relLangURL }}" aria-label="{{ .Site.Params.Title }}">
-      {{ .Site.Params.Title }}
+      <img src="{{ .Site.Params.NavBarLogo }}" alt="FullStackHero Logo" style="max-width: 40px">
+      fullstack<b style="font-weight: 600;">hero</b>
+    </a>
+
+    <a class="navbar-brand order-1 order-md-0 me-auto" href="/">
+
     </a>
 
     <button class="btn btn-menu d-block d-md-none order-5" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasDoks" aria-controls="offcanvasDoks" aria-label="Open main menu">

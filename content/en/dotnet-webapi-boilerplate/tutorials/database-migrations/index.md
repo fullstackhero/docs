@@ -7,7 +7,7 @@ lastmod: 2022-01-15T21:31:44+05:30
 draft: false
 images: []
 menu:
-  webapi:
+  dotnet-webapi-boilerplate:
     identifier: "database-migrations"
     name: "Database Migrations"
     parent: "tutorials"

@@ -1,6 +1,6 @@
 .alert {
-  font-family: $font-family-monospace;
   font-size: $font-size-sm;
+  text-decoration: none;
 }
 
 .alert-icon {
@@ -12,7 +12,7 @@
 }
 
 .alert .alert-link {
-  text-decoration: underline;
+  text-decoration: none;
 }
 
 .alert-doks {
