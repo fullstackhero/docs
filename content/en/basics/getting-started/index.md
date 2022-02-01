@@ -7,7 +7,7 @@ lastmod: 2021-12-12T08:03:50+05:30
 draft: false
 images: []
 menu:
-  webapi:
+  basics:
     identifier: "basics-getting-started"
     name: "Getting Started"
     parent: "basics"
