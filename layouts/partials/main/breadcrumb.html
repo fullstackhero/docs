@@ -2,7 +2,7 @@
 {{ partial "main/breadcrumb.html" . -}}
 
 {{ if not .IsHome }}
-{{ if ne .Title "Docs" ".NET Web API Boilerplate" "Blazor WebAssembly Boilerplate" }}
+{{ if ne .Title "Docs" }}
 <li class="breadcrumb-item"><a href="{{ .RelPermalink }}">
     {{ .Title }}
   </a></li>

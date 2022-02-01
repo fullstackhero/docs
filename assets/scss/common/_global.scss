@@ -284,3 +284,48 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: rgb(97, 97, 97)!important;
 }
+
+.support-card
+{
+  padding: 40px;
+  text-align: center;
+  margin-top: 40px!important;
+}
+
+.card {
+  border: 0px!important;
+  box-shadow: 0 4px 8px 0 rgba(0,0,0,0.1);
+  transition: 0.3s;
+  color: black;
+}
+
+.card:hover {
+  box-shadow: 0 8px 16px 0 rgba(0,0,0,0.1);
+}
+
+.stretched-link
+{
+  color: black;
+}
+
+.btn
+{
+  font-size: small!important;
+}
+
+.tech-card
+{
+  padding: 40px;
+  text-align: center;
+}
+
+.feature-card
+{
+  text-align: left!important;
+  margin:10px!important;
+}
+
+.code-green
+{
+  color:#3eaf7c!important;
+}

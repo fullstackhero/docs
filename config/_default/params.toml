@@ -12,7 +12,7 @@ navBarLogo = "/images/navbar-logo.png"
 # docsVersion = "1"
 
 # Search
-mainSections = ["blog", "docs", "dotnet-webapi-boilerplate"]
+mainSections = ["blog", "docs", "dotnet-webapi-boilerplate", "basics"]
 
 ## Open Graph
 images = ["doks.png"]

@@ -1,6 +1,6 @@
 {{ define "main" }}
 <div class="row flex-xl-nowrap">
-  <div class="col-lg-5 col-xl-4 docs-sidebar">
+  <div class="col-lg-5 col-xl-4 docs-sidebar d-none d-lg-block">
     <nav class="docs-links" aria-label="Main navigation">
       {{ partial "sidebar/webapi-menu.html" . }}
     </nav>
@@ -11,9 +11,9 @@
   </nav>
   {{ end -}}
   {{ if .Params.toc -}}
-  <main class="docs-content col-lg-11 col-xl-11">
+  <main class="col-md-12 col-lg-10 col-xl-10">
     {{ else -}}
-    <main class="docs-content col-lg-11 col-xl-11">
+    <main class="col-md-12 col-lg-10 col-xl-10">
       {{ end -}}
       {{ if .Site.Params.options.breadCrumb -}}
       <nav aria-label="breadcrumb">
