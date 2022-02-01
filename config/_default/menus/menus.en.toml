@@ -1,4 +1,9 @@
 [[main]]
+  name = "Contact"
+  url = "/contact/"
+  weight = 40
+
+[[main]]
   name = "Basics"
   url = "/basics/getting-started/"
   weight = 10
