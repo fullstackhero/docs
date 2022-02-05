@@ -11,7 +11,7 @@ menu:
     identifier: "general-getting-started"
     name: "Getting Started"
     parent: "general"
-weight: 10
+weight: 3
 toc: true
 ---
 To start using fullstackhero .NET WebAPI Boilerplate, there are a couple of options.
