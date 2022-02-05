@@ -1,36 +1,9 @@
-{{ $currentPage := . -}}
-{{ range .Site.Menus.docs -}}
-  {{- $active := or (eq $currentPage.RelPermalink .URL) ($currentPage.HasMenuCurrent "docs" .) -}}
-  {{- $collapsible := eq .Name "Reference" }}
-  <h3>
-    {{ if $collapsible -}}
-      <a id="{{ .Name }}-btn"
-         class="docs-link{{ if $active }} active{{ end }}"
-         href="#{{ .Name }}-children"
-         data-bs-toggle="collapse"
-         role="button"
-         aria-expanded="{{ $active }}"
-         aria-controls="{{ .Name }}-children">
-        {{ .Name }}
-        <i class="bi {{ if not $active }} bi-chevron-compact-left{{ else }} bi-chevron-compact-down{{ end }}" style="float: right"></i>
-      </a>
-    {{ else -}}
-      <a class="docs-link{{ if $active }} active{{ end }}" href="{{ .URL | relURL }}">{{ .Name }}</a>
-    {{ end -}}
-  </h3>
-  {{ if .HasChildren -}}
-  <ul id="{{ .Name }}-children" class="list-unstyled{{ if and $collapsible }} collapse{{ end }}{{ if $active }} show{{ end }}">
-    {{ range .Children -}}
-    {{- $active := or ($currentPage.IsMenuCurrent "docs" .) ($currentPage.HasMenuCurrent "docs" .) -}}
-    <li>
-      <a class="docs-link{{ if $active }} active{{ end }}" href="{{ .URL | relURL }}">
-        <span style="vertical-align: middle">{{ .Name }}</span>
-        {{ if .Page.Params.pro -}}
-          <i class="bi bi-star-fill" style="font-size: 0.6rem; vertical-align: middle"></i>
-        {{ end -}}
-      </a>
-    </li>
-    {{ end -}}
-  </ul>
-  {{ end -}}
+{{ if and .Site.Params.menu.section.auto .Site.Params.menu.section.collapsibleSidebar -}}
+  {{ partial "sidebar/auto-collapsible-menu.html" . -}}
+{{ else if and .Site.Params.menu.section.auto (not .Site.Params.menu.section.collapsibleSidebar) -}}
+  {{ partial "sidebar/auto-default-menu.html" . -}}
+{{ else if and (not .Site.Params.menu.section.auto) .Site.Params.menu.section.collapsibleSidebar -}}
+  {{ partial "sidebar/manual-collapsible-menu.html" . -}}
+{{ else if and (not .Site.Params.menu.section.auto) (not .Site.Params.menu.section.collapsibleSidebar) -}}
+  {{ partial "sidebar/manual-default-menu.html" . -}}
 {{ end -}}

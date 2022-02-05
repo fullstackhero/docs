@@ -8,7 +8,7 @@ samp {
 }
 
 code {
-  background: $transparentgreen;
+  background: rgba(62,175,124,0.0901961);
   color: $black;
   padding: 0.25rem 0.5rem;
 }
@@ -28,7 +28,7 @@ pre code {
 }
 
 .hljs {
-  padding: 1.25rem 1.5rem;
+  padding: 1.5rem !important;
 }
 
 @include media-breakpoint-down(sm) {

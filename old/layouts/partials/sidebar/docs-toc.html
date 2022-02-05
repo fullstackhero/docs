@@ -1,0 +1,23 @@
+{{ if ne .Params.toc false -}}
+<div>
+  <h6>SUPPORT THE PROJECT</h6>
+  <p style="font-size: 0.9375rem;">
+    <b>Like fullstackhero?</b> Support the project by buying me a coffee!
+  </p>
+  <a class="btn btn-primary btn-lg px-4 mb-2" style="font-size: medium;"
+    href="https://www.buymeacoffee.com/codewithmukesh" target="_blank" role="button"><i style="margin-right: 5px;"
+      class="fas fa-mug-hot"> </i> Buy me
+    a Coffee</a>
+  <a class="btn btn-primary btn-lg px-4 mb-2" style="font-size: medium;" href="https://opencollective.com/fullstackhero"
+    target="_blank" role="button"><i style="margin-right: 5px;" class="fas fa-star"></i> Sponsor</a>
+    <a class="btn btn-primary btn-lg px-4 mb-2" style="font-size: medium;" href="https://discord.gg/HkhnYb3mCN"
+      target="_blank" role="button"><i style="margin-right: 5px;" class="fas fa-inbox"></i> Join Discord</a>
+</div>
+{{ if ge (len .TableOfContents) 100 }}
+<div class="page-links">
+  <h3>On this page</h3>
+  {{ .TableOfContents }}
+</div>
+{{ end }}
+
+{{ end -}}

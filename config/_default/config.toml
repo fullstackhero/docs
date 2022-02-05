@@ -10,6 +10,11 @@ paginate = 7
 rssLimit = 10
 googleAnalytics = "G-V1XWX7CJF6"
 
+# Multilingual
+defaultContentLanguage = "en"
+disableLanguages = ["de", "nl"]
+# defaultContentLanguageInSubdir = true
+
 # add redirects/headers
 [outputs]
 home = ["HTML", "RSS", "REDIRECTS", "HEADERS"]
@@ -43,28 +48,10 @@ isPlainText = true
 noUgly = true
 rel  = "sitemap"
 
-[markup]
-  [markup.goldmark]
-    [markup.goldmark.extensions]
-      linkify = true
-    [markup.goldmark.parser]
-      autoHeadingID = true
-      autoHeadingIDType = "github"
-      [markup.goldmark.parser.attribute]
-        block = true
-        title = true
-    [markup.goldmark.renderer]
-      unsafe = true
-  [markup.highlight]
-    codeFences = false
-    guessSyntax = true
-    hl_Lines = ""
-    lineNoStart = 1
-    lineNos = false
-    lineNumbersInTable = false
-    noClasses = true
-    style = "dracula"
-    tabWidth = 4
+[caches]
+  [caches.getjson]
+    dir = ":cacheDir/:project"
+    maxAge = "10s"
 
 [sitemap]
   changefreq = "daily"
@@ -76,6 +63,7 @@ rel  = "sitemap"
 
 [permalinks]
   blog = "/blog/:title/"
+# docs = "/docs/1.0/:sections[1:]/:title/"
 
 [minify.tdewolff.html]
   keepWhitespace = false
@@ -100,8 +88,3 @@ rel  = "sitemap"
   [[module.mounts]]
     source = "node_modules/mermaid"
     target = "assets/js/vendor/mermaid"
-
-[imaging]
-resampleFilter = "Lanczos"
-quality = 100
-anchor = "smart"

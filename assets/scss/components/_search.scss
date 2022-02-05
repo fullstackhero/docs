@@ -4,16 +4,21 @@
 
 #suggestions {
   position: absolute;
-  right: 0;
+  left: 0;
   margin-top: 0.5rem;
   width: calc(100vw - 3rem);
+  z-index: $zindex-dropdown;
+}
+
+#suggestions a,
+.suggestion__no-results {
+  padding: 0.75rem;
+  margin: 0 0.5rem;
 }
 
 #suggestions a {
   display: block;
   text-decoration: none;
-  padding: 0.75rem;
-  margin: 0 0.5rem;
 }
 
 #suggestions a:focus {
@@ -42,34 +47,36 @@
   font-size: $font-size-base;
 }
 
-#suggestions span:first-child {
+.suggestion__title {
   font-weight: $headings-font-weight;
   color: $black;
 }
 
-#suggestions span:nth-child(2) {
+.suggestion__description,
+.suggestion__no-results {
   color: $gray-700;
 }
 
 @include media-breakpoint-up(sm) {
   #suggestions {
-    width: 30rem;
+    width: 31.125rem;
   }
 
   #suggestions a {
     display: flex;
   }
 
-  #suggestions span:first-child {
+  .suggestion__title {
     width: 9rem;
     padding-right: 1rem;
     border-right: 1px solid $gray-200;
     display: inline-block;
-    text-align: right;
+    text-align: left;
   }
 
-  #suggestions span:nth-child(2) {
+  .suggestion__description {
     width: 19rem;
     padding-left: 1rem;
+    font-style: italic;
   }
 }

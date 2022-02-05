@@ -1,0 +1,78 @@
+# Meta Data for SEO
+
+## Homepage
+title = "fullstackhero"
+logo = "/images/full-stack-hero-logo.png"
+navBarLogo = "/images/navbar-logo.png"
+titleSeparator = "-"
+titleAddition = "Open-Source Boilerplates for Modern Web Applications"
+description = "fullstackhero is a collection of Enterprise Level Boilerplates for Modern Web Applications that gets you started with premium application development in no-time!"
+
+# Search
+mainSections = ["dotnet-webapi-boilerplate","blog","contact"]
+
+## Open Graph
+images = ["doks.png"]
+ogLocale = "en_US"
+domainTLD = "doks.netlify.app"
+titleHome = "Doks Theme"
+
+## Twitter Cards
+twitterSite = "@codewithmukesh"
+twitterCreator = "@iammukeshm"
+
+## JSON-LD
+# schemaType = "Person"
+schemaType = "Organization"
+schemaName = "fullstackhero"
+schemaAuthor = "Mukesh Murugan"
+schemaAuthorTwitter = "https://twitter.com/iammukeshm"
+schemaAuthorLinkedIn = "https://www.linkedin.com/in/iammukeshm/"
+schemaAuthorGitHub = "https://github.com/iammukeshm"
+schemaLocale = "en-US"
+schemaLogo = "logo-doks.png"
+schemaLogoWidth = 512
+schemaLogoHeight = 512
+schemaImage = "doks.png"
+schemaImageWidth = 1280
+schemaImageHeight = 640
+schemaTwitter = "https://twitter.com/codewithmukesh"
+schemaLinkedIn = ""
+schemaGitHub = "https://github.com/fullstackhero"
+schemaSection = "blog"
+
+## Sitelinks Search Box
+siteLinksSearchBox = true
+
+## Chrome Browser
+themeColor = "#fff"
+
+# Images
+quality = 85
+bgColor = "#fff"
+landscapePhotoWidths = [900, 800, 700, 600, 500]
+portraitPhotoWidths = [800, 700, 600, 500]
+lqipWidth = "20x"
+
+# Footer
+footer = "Developed & Maintained by <a href=\"https://www.codewithmukesh.com/\">Mukesh Murugan</a>"
+copyRight = "Copyright (c) 2020-2021 Mukesh Murugan"
+
+# Alert
+alert = true
+alertText = "<a target=\"_blank\" class=\"alert-link\" href=\"https://buymeacoffee.com/codewithmukesh\">Support the project by buying me a coffee!</a>"
+
+# Edit Page
+docsRepo = "https://github.com/fullstackhero/docs"
+editPage = true
+
+[options]
+  lazySizes = true
+  clipBoard = true
+  instantPage = true
+  flexSearch = true
+  darkMode = true
+  bootStrapJs = false
+  breadCrumb = true
+  highLight = true
+  kaTex = true

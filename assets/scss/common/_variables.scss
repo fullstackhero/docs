@@ -15,16 +15,14 @@ $black:    #000;
 $yellow:   #ffe000;
 $black:    #1d2d35;
 $beige:    #fbf7f0;
-$red:      #e55235;
+
 $purple:   #5d2f86;
 $brown:    #aa9c84;
-$blue:     #009eec;
+$green:    #3eaf7c;
 
 $blue-300: #8ed6fb;
+$pink-100: #fcfaff;
 $pink-500: #d32e9d;
-
-$green :#3eaf7c;
-$transparentgreen : #3eaf7c17;
 
 $primary: $green;
 
@@ -38,7 +36,7 @@ $color-btn-text: $white;
 
 $enable-caret:                true;
 $enable-rounded:              true;
-$enable-shadows:              true;
+$enable-shadows:              false;
 $enable-gradients:            false;
 $enable-transitions:          true;
 $enable-reduced-motion:       true;
@@ -59,7 +57,7 @@ $navbar-light-toggler-icon-bg: none;
 //
 // Quickly modify global styling by enabling or disabling optional features.
 
- $enable-responsive-font-sizes: true;
+// $enable-responsive-font-sizes: true;
 
 // Body
 //
@@ -80,11 +78,11 @@ $link-decoration:                         none;
 // Define the maximum width of `.container` for different screen sizes.
 
 $container-max-widths: (
-  sm: 95%,
-  md: 95%,
-  lg: 95%,
-  xl: 95%,
-  xxl: 95%
+  sm: 540px,
+  md: 720px,
+  lg: 960px,
+  xl: 1240px,
+  xxl: 1320px
 );
 
 @include _assert-ascending($container-max-widths, "$container-max-widths");
@@ -119,12 +117,12 @@ $font-size-lg:                $font-size-base * 1.25;
 $font-size-md:                $font-size-base * 1.125;
 $font-size-sm:                $font-size-base * 0.875;
 
-$line-height-base:            1.5;
+// $line-height-base:            1.5;
 
 $headings-font-family:        null;
-$headings-font-weight:        100;
+$headings-font-weight:        400;
 
-$lead-font-weight:            100;
+$lead-font-weight:            300;
 
 // Spacing
 //
@@ -163,3 +161,30 @@ $alert-border-width:                0;
 $alert-bg-scale:                    0;
 $alert-border-scale:                0;
 $alert-color-scale:                 0;
+
+// docsearch
+$dropdown-config: (
+  main-color: $purple,
+  layout-type: normal,
+  layout-width: normal,
+  layout-alignment: align,
+  background-color: $white,
+  border-radius: 4,
+  border-width: 1,
+  border-color: $gray-200,
+  box-shadow: none,
+  branding-position: bottom,
+  spacing: normal,
+  include-desc: yes,
+  background-category-header: $white,
+  font-size: normal,
+  header-color: $black,
+  title-color: $black,
+  subtitle-color: $black,
+  text-color: $black,
+  highlight-color: $purple,
+  highlight-opacity: 0.1,
+  highlight-type: underline
+);
+
+$input-btn-focus-width:       0;
