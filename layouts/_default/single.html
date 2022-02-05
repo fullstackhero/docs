@@ -3,6 +3,7 @@
   <div class="col-md-12 col-lg-10 col-xl-8">
     <article>
       <h1>{{ .Title }}</h1>
+      {{ partial "main/view-counter.html" . }}
       {{ .Content }}
     </article>
   </div>

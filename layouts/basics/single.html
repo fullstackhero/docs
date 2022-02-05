@@ -25,6 +25,7 @@
 				</nav>
 			{{ end }}
 			<h1>{{ .Title }}</h1>
+      {{ partial "main/view-counter.html" . }}
 			<p class="lead">{{ .Params.lead | safeHTML }}</p>
 			{{ if ne .Params.toc false -}}
 			<nav class="d-xl-none" aria-label="Quaternary navigation">
