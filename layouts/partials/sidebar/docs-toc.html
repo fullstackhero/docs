@@ -1,21 +1,23 @@
-<div>
-  <h6>SUPPORT THE PROJECT</h6>
-  <p style="font-size: 0.9375rem;">
-    Here is what you can do to show your support!
-  </p>
-  <a class="btn btn-primary btn-lg px-4 mb-2" style="font-size: medium;"
-    href="https://www.buymeacoffee.com/codewithmukesh" target="_blank" role="button"><i style="margin-right: 5px;"
-      class="fas fa-mug-hot"> </i> Buy me
-    a Coffee</a>
-  <a class="btn btn-primary btn-lg px-4 mb-2" style="font-size: medium;" href="https://opencollective.com/fullstackhero"
-    target="_blank" role="button"><i style="margin-right: 5px;" class="fas fa-star"></i> Sponsor</a>
-</div>
+<section class="section section-sm bg-light" style="padding: 0px;">
+  <div style="padding-left: 20px;padding-right: 20px;padding-bottom: 10px;margin-bottom: 20px;padding-top: 20px;margin-top: 20px;">
+    <h6 style="margin-top: 0px;">SUPPORT THE PROJECT</h6>
+    <p style="font-size: 0.9375rem;">
+      Here is what you can do to show your support!
+    </p>
+    <a class="btn btn-primary btn-lg px-4 mb-2" style="font-size: medium;"
+      href="https://www.buymeacoffee.com/codewithmukesh" target="_blank" role="button"><i style="margin-right: 5px;"
+        class="fas fa-mug-hot"> </i> Buy me
+      a Coffee</a>
+    <a class="btn btn-primary btn-lg px-4 mb-2" style="font-size: medium;"
+      href="https://opencollective.com/fullstackhero" target="_blank" role="button"><i style="margin-right: 5px;"
+        class="fas fa-star"></i> Sponsor</a>
+  </div>
+</section>
 <section class="section section-sm bg-light" style="padding: 0px;">
   {{ if and (ne .Params.toc false) (ne .TableOfContents "<nav id=\"TableOfContents\"></nav>") -}}
   <div style="padding-left: 20px;padding-right: 20px;padding-bottom: 10px;margin-bottom: 20px;" class="page-links">
     <h3>Contents On this page</h3>
     {{ .TableOfContents }}
   </div>
-{{ end -}}
+  {{ end -}}
 </section>
-
