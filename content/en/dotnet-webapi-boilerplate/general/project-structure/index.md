@@ -7,7 +7,7 @@ lastmod: 2021-11-28T17:35:38+05:30
 draft: false
 images: []
 menu:
-  webapi:
+  dotnet-webapi-boilerplate:
     identifier: "general-project-structure"
     name: "Project Structure"
     parent: "general"
