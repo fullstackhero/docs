@@ -15,7 +15,7 @@ navBarLogo = "/images/navbar-logo.png"
 mainSections = ["blog", "docs", "dotnet-webapi-boilerplate", "basics"]
 
 ## Open Graph
-images = ["doks.png"]
+images = ["fullstackhero.png"]
 ogLocale = "en_US"
 domainTLD = "doks.netlify.app"
 titleHome = "Doks Theme"
@@ -27,16 +27,16 @@ twitterCreator = "@iammukeshm"
 ## JSON-LD
 # schemaType = "Person"
 schemaType = "Organization"
-schemaName = "Doks"
+schemaName = "fullstackhero"
 schemaAuthor = "Mukesh Murugan"
 schemaAuthorTwitter = "https://twitter.com/iammukeshm"
 schemaAuthorLinkedIn = "https://www.linkedin.com/in/iammukeshm/"
 schemaAuthorGitHub = "https://github.com/iammukeshm"
 schemaLocale = "en-US"
-schemaLogo = "logo-doks.png"
+schemaLogo = "logo-fullstackhero.png"
 schemaLogoWidth = 512
 schemaLogoHeight = 512
-schemaImage = "doks.png"
+schemaImage = "fullstackhero.png"
 schemaImageWidth = 1280
 schemaImageHeight = 640
 schemaTwitter = "https://twitter.com/codewithmukesh"
@@ -51,12 +51,12 @@ siteLinksSearchBox = false
 themeColor = "#fff"
 
 # Images
-quality = 85
+quality = 100
 bgColor = "#fff"
-landscapePhotoWidths = [900, 800, 700, 600, 500]
+landscapePhotoWidths = [2000, 1000, 900, 800, 700, 600, 500]
 portraitPhotoWidths = [800, 700, 600, 500]
 lqipWidth = "20x"
-smallLimit = "300"
+smallLimit = "30"
 
 # Footer
 footer = "Developed & Maintained by <a href=\"https://www.codewithmukesh.com/\">Mukesh Murugan</a>"

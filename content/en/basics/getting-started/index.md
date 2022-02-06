@@ -24,9 +24,8 @@ over 200+ hours of Development and Research Time for Developers and Teams.</p>
 <p>Here are the awesome fullstackhero projects!</p>
 </div>
 <div>
-    <div class="row justify-content-center text-center">
+    <div class="row justify-content-center text-center" style="padding:10px!important">
       <div class="card feature-card" style="padding:0px!important">
-        <img src="https://codewithmukesh.com/wp-content/uploads/2022/02/fullstackhero-dotnet-webapi-banner.png" alt="fullstackhero dotnet webapi">
         <div style="padding:20px">
           <h2 class="h4">.NET 6 Web API Boilerplate</h2>
           <p>Get to work with the latest and greatest of Microsoft's .NET 6 Web API fused with the goodness of fullstackhero.</p>
@@ -34,7 +33,6 @@ over 200+ hours of Development and Research Time for Developers and Teams.</p>
         </div>
       </div>
       <div class="card feature-card" style="padding:0px!important">
-        <img src="https://codewithmukesh.com/wp-content/uploads/2022/02/fullstackhero-blazor-wasm-banner.png" alt="fullstackhero blazor wasm">
         <div style="padding:20px">
           <h2 class="h4">Blazor WebAssembly Boilerplate</h2>
           <p>Clean Architecture Boilerplate Template for .NET 6.0 Blazor WebAssembly built for FSH WebAPI with the goodness of MudBlazor Components.</p>

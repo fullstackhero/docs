@@ -14,23 +14,27 @@ menu:
 weight: 3
 toc: true
 ---
-To start using fullstackhero .NET WebAPI Boilerplate, there are a couple of options.
 
-But before that, make sure that you have already setup your development environment that runs the prerequisite tools and SDKs. Refer [Development Environment](/dotnet-webapi-boilerplate/general/development-environment/) for details.
+Firstly, make sure that you have already setup your development environment that runs the prerequisite tools and SDKs. Refer [Development Environment](/dotnet-webapi-boilerplate/general/development-environment/) for details.
 
 This guide will take you right from installing the `fullstackhero .NET WebAPI Boilerplate` package to testing the API using the provided Postman Collection!
 
 ## Installing NuGet Package
 
-This is by far the easiest and the most streamlined way of getting the latest available release version of fullstackhero .NET WebApi Boilerplate.
+This is by far the easiest and the most streamlined way of getting the latest available `Release version` of fullstackhero .NET WebApi Boilerplate.
 
 Open up your Command Prompt / Powershell and run the following command to install the solution template.
 
 ```powershell
-dotnet new --install FullStackHero.WebAPI.Boilerplate::0.0.5-rc
+dotnet new -i FullStackHero.WebAPI.Boilerplate
+```
+or, if you want to use a specific version of the boilerplate, use
+
+```powershell
+dotnet new -i FullStackHero.WebAPI.Boilerplate::0.0.5-rc
 ```
 
-{{< img src="install-fullstackhero.jpg" >}}
+{{< img src="install-fullstackhero.png" >}}
 
 This would install the `fullstackhero .NET WebAPI Boilerplate` template globally on your machine. Do note that, at the time of writing this documentation, the latest available version is **0.0.5-rc** which is also one of the first pre-release version of the package. It is highly likely that there is already a newer version available when you are reading this.
 
