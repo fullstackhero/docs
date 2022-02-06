@@ -7,24 +7,3 @@ lastmod: 2021-08-24T12:44:46+05:30
 draft: false
 images: []
 ---
-
-## Benefits of fullstackhero
-
-* Given that fullstackhero is a collection of open source projects, it's completely free to use and distribute.
-
-
-## Projects
-
-### .NET WebAPI
-
-[Read Documentation →](/dotnet-webapi-boilerplate/)
-
-### Angular Material
-
-### .NET MVC
-
-### Blazor WebAssembly
-
-
-## Contact
-
