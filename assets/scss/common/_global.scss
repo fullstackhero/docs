@@ -94,7 +94,7 @@ a.btn:focus {
 
 .section-sm {
   padding-top: 1rem;
-  padding-bottom: 1rem;
+  padding-bottom: 2rem;
 }
 
 /*
@@ -328,4 +328,25 @@ body {
 .code-green
 {
   color:#3eaf7c!important;
+}
+
+.tablet
+{
+  background: $primary;
+  border-radius: 10px;
+  color: white;
+  width: fit-content;
+  padding: 5px;
+  font-size: 13px;
+  margin-right: 10px;
+}
+.tablet-secondary
+{
+  background: $secondary;
+}
+
+.tablet-group
+{
+  margin-bottom: 10px;
+  display: flex;
 }

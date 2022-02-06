@@ -38,9 +38,10 @@ dotnet new -i FullStackHero.WebAPI.Boilerplate::0.0.5-rc
 
 This would install the `fullstackhero .NET WebAPI Boilerplate` template globally on your machine. Do note that, at the time of writing this documentation, the latest available version is **0.0.5-rc** which is also one of the first pre-release version of the package. It is highly likely that there is already a newer version available when you are reading this.
 
-*To get the latest version of the package, visit [nuget.org](https://www.nuget.org/packages/FullStackHero.WebAPI.Boilerplate)*
+> *To get the latest version of the package, visit [nuget.org](https://www.nuget.org/packages/FullStackHero.WebAPI.Boilerplate)*
+>
+> *FullStackHero.WebAPI.Boilerplate is now in pre-release state. You can find the latest version on NuGet.org*
 
-{{< alert text="FullStackHero.WebAPI.Boilerplate is now in pre-release state. You can find the latest version on NuGet.org" />}}
 
 ## Creating your First Solution
 
