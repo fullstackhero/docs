@@ -7,3 +7,5 @@ lastmod: 2021-08-24T12:44:46+05:30
 draft: false
 images: []
 ---
+
+{{< img src="fullstackhero.png" >}}

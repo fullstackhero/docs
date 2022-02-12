@@ -16,6 +16,8 @@ toc: true
 ---
 <div>
 
+{{< img src="fullstackhero.png" >}}
+
 ## Problem Statement
 
 <p>Ever gone through the pain of setting up new Projects from scratch each and every time? fullstackhero aims to
