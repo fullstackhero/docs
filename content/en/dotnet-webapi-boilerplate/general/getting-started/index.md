@@ -19,6 +19,21 @@ Firstly, make sure that you have already setup your development environment that
 
 This guide will take you right from installing the `fullstackhero .NET WebAPI Boilerplate` package to testing the API using the provided Postman Collection!
 
+To get started with this Boilerplate, here are the avaiable options.
+
+- Fork the Repository. Use this if you want to always keep your version of the Boilerplate up-to date with the latest changes.
+- Install using dotnet new . Use this for release versions of the Boilerplate only.
+
+## Forking the Repository
+
+You would probably need to take this approach if you want to keep your source code upto date with the latest changes. To get started based on this repository, you need to get a copy locally. You have three options: fork, clone, or download.
+
+- Make a fork of this repository in your Github account.
+- Create your new `dotnet-webapi-boilerplate` personal project by cloning the forked repository on your personal github.
+- Setup an upstream remote on your personal project pointing to your forked repository using command `git remote add upstream https://github.com/{githubuseraccount}/dotnet-webapi-boilerplate` and `git remote set-url --push upstream DISABLE`
+
+For step by step instructions, follow this and this.
+
 ## Installing NuGet Package
 
 This is by far the easiest and the most streamlined way of getting the latest available `Release version` of fullstackhero .NET WebApi Boilerplate.
