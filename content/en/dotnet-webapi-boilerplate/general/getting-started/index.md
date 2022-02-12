@@ -32,7 +32,8 @@ You would probably need to take this approach if you want to keep your source co
 - Create your new `dotnet-webapi-boilerplate` personal project by cloning the forked repository on your personal github.
 - Setup an upstream remote on your personal project pointing to your forked repository using command `git remote add upstream https://github.com/{githubuseraccount}/dotnet-webapi-boilerplate` and `git remote set-url --push upstream DISABLE`
 
-For step by step instructions, follow this and this.
+For step by step instructions, [follow this](https://discord.com/channels/878181478972928011/892573122186838046/933513103688224838) and [this](https://gist.github.com/0xjac/85097472043b697ab57ba1b1c7530274).
+
 
 ## Installing NuGet Package
 
