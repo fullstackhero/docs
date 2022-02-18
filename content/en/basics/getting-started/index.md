@@ -26,14 +26,14 @@ over 200+ hours of Development and Research Time for Developers and Teams.</p>
 
 ## Solution
 
-<p>fullstackhero offers Boilerplates with latest packages and services that your projects will ever need. We intend to provide Clean and Well structured Boilerplates with top-notch quality following standard coding practices and Clean Architecture principles that makes your development experience seemless.
+<p>fullstackhero offers Boilerplates with latest packages and services that your projects will ever need. We intend to provide Clean and Well structured Boilerplates with top-notch quality following standard coding practices and Clean Architecture principles that makes your development experience seamless.
 </p>
 <p class="code-green">Most importantly, fullstackhero is completely FREE to use!</p>
 
 
 ## Vision
 
-fullstackhero is not a single repository or project, rather a collection of boilerplates out of which you get to choose your preference. In the long term, fullstackhero would ideally have multiple API projects that are written in various technologies like Node.js, GoLang and multiple client applications that are built on awesome tech like Vue.js, React, Angular and so on.
+fullstackhero is not a single repository or project, rather a collection of boilerplates out of which you get to choose your preference. In the long term, fullstackhero would ideally have multiple API projects that are written in various technologies like .NET, Node.js, GoLang and multiple client applications that are built on awesome tech like Blazor, Vue.js, React, Angular and so on.
 
 fullstackhero should be the one-stop that caters to the needs of various developers in various technology. This obviously would require a lot of community adaptation and contributions.
 
