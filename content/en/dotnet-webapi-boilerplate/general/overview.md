@@ -15,32 +15,75 @@ weight: 1
 toc: true
 ---
 
-## About
+## What's fullstackhero's .NET Web API Boilerplate?
 
-`dotnet-webapi-boilerplate` is the integral part of the `fullstackhero` project.
+fullstackhero's .NET Web API Boilerplate is a starting point for your next `.NET 6 Clean Architecture Project` that incorporates the most essential packages and features your projects will ever need including out of the box Multi-Tenancy support. This project can save well over `200+ hours` of development time for your team.
 
-`fullstackhero` is a venture to develop industry leading boilerplate templates for the dotnet stack as the backend (Web API) along with modern client frameworks like Angular, MVC and Blazor.
+> As the name suggests, this is an API / Server Boilerplate. You can find other Client Boilerplates that consume this API under `@fullstackhero` handle.
+> - Find `Blazor WebAssembly Boilerplate` here - https://github.com/fullstackhero/blazor-wasm-boilerplate
 
-This repository contains the WebApi Project of `fullstackhero`.
+## Goals
 
-## Release Planning
+The goal of this repository is to provide a complete and feature-rich starting point for any .NET Developer / Team to kick-start their next major project using .NET 6 Web API. This also serves the purpose of learning advanced concepts and implementations such as `Multitenancy, CQRS, Onion Architecture, Clean Coding standards` and so on.
 
-### 0.0.3 RC is available now!
+## Features
 
-- Migration Refresh
-- Security Patches
-- Image Upload Fix
-- Option to Disable Swagger
-- Cleaner Code
-- Activate / Deactivate Tenants
-- Upgrade Tenant Subscription
-- Advanced Search
+- [x] Built on .NET 6.0
+- [x] Follows Clean Architecture Principles
+- [x] Domain Driven Design
+- [ ] Completely Documented at [fullstackhero.net](https://fullstackhero.net)
+- [x] Multi Tenancy Support with Finbuckle
+  - [x] Create Tenants with Multi Database / Shared Database Support
+  - [x] Activate / Deactivate Tenants on Demand
+  - [x] Upgrade Subscription of Tenants - Add More Validity Months to each tenant!
+- [x] Supports MySQL, MSSQL, Oracle & PostgreSQL!
 
-This is the first pre-release version of the `fullstackhero .NET WebAPI Boilerplate` package. Newer versions will be available on a weekly basis with newer updates and patches. [Read the getting-started guide for more.](https://fullstackhero.net/dotnet-webapi-boilerplate/general/getting-started/)
+<details>
+  <summary>Click to See More!</summary>
 
-The Release Version is expected to be out by November 2021 as soon as .NET 6 LTS is launched by Microsoft. Preview versions of this project are available for Initial Developer Testing.
+- [x] Uses Entity Framework Core as DB Abstraction
+- [x] Flexible Repository Pattern
+- [x] Dapper Integration for Optimal Performance
+- [x] Serilog Integration with various Sinks - File, SEQ, Kibana
+- [x] OpenAPI - Supports Client Service Generation
+- [x] Mapster Integration for Quicker Mapping
+- [x] API Versioning
+- [x] Response Caching - Distributed Caching + REDIS
+- [x] Fluent Validations
+- [x] Audit Logging
+- [x] Advanced User & Role Based Permission Management
+- [x] Code Analysis & StyleCop Integration with Rulesets
+- [x] JSON Based Localization with Caching
+- [x] Hangfire Support - Secured Dashboard
+- [x] File Storage Service
+- [x] Test Projects
+- [x] JWT & Azure AD Authentication
+- [x] MediatR - CQRS
+- [x] SignalR Notifications
+- [x] & Much More
+</details>
 
-## Quick Start Guide
+## Getting Started
+
+To get started with this Boilerplate, here are the avaiable options.
+
+- Install using `dotnet new` . Use this for release versions of the Boilerplate only.
+- Fork the Repository. Use this if you want to always keep your version of the Boilerplate up-to date with the latest changes.
+
+> Make sure that your DEV enviroment is setup, [Read the Development Environment Guide](https://fullstackhero.net/dotnet-webapi-boilerplate/general/development-environment/)
+
+### Forking the Repository
+
+You would probably need to take this approach if you want to keep your source code upto date with the latest changes. To get started based on this repository, you need to get a copy locally. You have three options: fork, clone, or download.
+
+- Make a fork of this repository in your Github account.
+- Create your new `dotnet-webapi-boilerplate` personal project by cloning the forked repository on your personal github.
+- Setup an upstream remote on your personal project pointing to your forked repository using command `git remote add upstream https://github.com/{githubuseraccount}/dotnet-webapi-boilerplate` and `git remote set-url --push upstream DISABLE`
+
+For step by step instructions, [follow this](https://discord.com/channels/878181478972928011/892573122186838046/933513103688224838) and [this](https://gist.github.com/0xjac/85097472043b697ab57ba1b1c7530274).
+
+
+### Using the .NET CLI
 
 Open up your Command Prompt / Powershell and run the following command to install the solution template.
 
@@ -73,37 +116,23 @@ Participate in Discussions - [QNA & General Discussions](https://github.com/full
 
 Join our Discord - [fullstackhero @ Discord](https://discord.gg/gdgHRt4mMw)
 
-## Features
+## Changelogs
 
-- [x] Built on .NET 6.0
-- [x] Follows Clean Architecture Principles
-- [ ] Completely Documented at [fullstackhero.net](https://fullstackhero.net)
-- [x] Multi Tenancy Support
-  - [x] Create Tenants with Multi Database / Shared Database Support
-  - [x] Activate / Deactivate Tenants on Demand
-  - [x] Upgrade Subscription of Tenants - Add More Validity Months to each tenant!
-- [x] Supports MySQL, MSSQL & PostgreSQL!
-- [x] Uses Entity Framework Core as DB Abstraction
-- [x] Flexible Repository Pattern
-- [x] Dapper Integration for Optimal Performance
-- [x] Serilog Integration
-- [x] Swagger Support
-- [x] Mapster Integration for Quicker Mapping
-- [x] API Versioning
-- [x] Response Caching - Distributed Caching
-- [x] Fluent Validations
-- [x] Audit Logging
-- [ ] Advanced User & Role Based Permission Management
-- [x] Code Analysis & StyleCop Integration with Rulesets
-- [x] JSON Based Localization with Caching
-- [x] Hangfire Support
-- [x] File Storage Service
-- [ ] Test Projects
-- [ ] & Much More
+[View Complete Changelogs.](https://github.com/fullstackhero/dotnet-webapi-boilerplate/blob/main/Changelogs.md)
 
 ## Community
 
 - Discord [@fullstackhero](https://discord.gg/gdgHRt4mMw)
+- Facebook Page [@codewithmukesh](https://facebook.com/codewithmukesh)
+- Youtube Channel [@codewithmukesh](https://youtube.com/c/codewithmukesh)
+
+## Contributors
+
+Submit your PR and join the elite list!
+
+<a href="https://github.com/fullstackhero/dotnet-webapi-boilerplate/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=fullstackhero/dotnet-webapi-boilerplate" />
+</a>
 
 ## License
 
@@ -119,6 +148,4 @@ Here are a few ways by which you can support.
 -   Do consider endorsing me on LinkedIn for ASP.NET Core - [Connect via LinkedIn](https://codewithmukesh.com/linkedin) 🦸
 -   Or, If you want to support this project in the long run, [consider buying me a coffee](https://www.buymeacoffee.com/codewithmukesh)! ☕
 
-<a class="btn btn-primary btn-lg px-3 mb-2" style="font-size: large;"
-    href="https://www.buymeacoffee.com/codewithmukesh" target="_blank" role="button"><i style="margin-right: 5px;" class="fas fa-mug-hot"> </i> Buy me
-    a Coffee</a>
+<br>
