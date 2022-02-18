@@ -93,4 +93,4 @@ lastMod = true
 [menu]
   [menu.section]
     auto = false
-    collapsibleSidebar = true
+    collapsibleSidebar = false
