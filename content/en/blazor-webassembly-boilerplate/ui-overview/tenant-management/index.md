@@ -11,7 +11,7 @@ menu:
     identifier: "ui-overview-tenant-management"
     name: "Tenant Management"
     parent: "ui-overview"
-weight: 8
+weight: 108
 toc: true
 ---
 

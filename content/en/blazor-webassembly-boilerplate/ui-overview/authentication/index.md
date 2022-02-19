@@ -11,7 +11,7 @@ menu:
     identifier: "ui-overview-authentication"
     name: "Authentication"
     parent: "ui-overview"
-weight: 2
+weight: 101
 toc: true
 ---
 

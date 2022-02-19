@@ -11,7 +11,7 @@ menu:
     identifier: "ui-overview-user-management"
     name: "User Management"
     parent: "ui-overview"
-weight: 6
+weight: 106
 toc: true
 ---
 

@@ -11,7 +11,7 @@ menu:
     identifier: "ui-overview-logs"
     name: "Logs"
     parent: "ui-overview"
-weight: 5
+weight: 105
 toc: true
 ---
 

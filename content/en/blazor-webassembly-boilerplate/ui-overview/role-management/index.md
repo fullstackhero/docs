@@ -11,7 +11,7 @@ menu:
     identifier: "ui-overview-role-management"
     name: "Role Management"
     parent: "ui-overview"
-weight: 7
+weight: 107
 toc: true
 ---
 

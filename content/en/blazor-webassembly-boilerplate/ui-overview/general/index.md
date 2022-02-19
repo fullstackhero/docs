@@ -11,8 +11,33 @@ menu:
     identifier: "ui-overview-general"
     name: "General"
     parent: "ui-overview"
-weight: 1
+weight: 100
 toc: true
 ---
 
+Here are some of the general components, features and pages that you get to see in fullstackhero's Blazor WebAssembly Boilerplate.
+
+## Loading Screen
+
+{{< img src="loading.png" >}}
+
+## Theme Manager
+
+{{< img src="theme-manager.png" >}}
+
+### Dark Mode
+
+{{< img src="dark-mode.png" >}}
+
+### Colors
+
+{{< img src="colors.png" >}}
+
+### Border Radius
+
+{{< img src="border-radius.png" >}}
+
+### Table Customization
+
+{{< img src="table-customization.png" >}}
 

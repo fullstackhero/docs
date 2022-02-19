@@ -11,7 +11,7 @@ menu:
     identifier: "ui-overview-dashboard"
     name: "Dashboard"
     parent: "ui-overview"
-weight: 3
+weight: 103
 toc: true
 ---
 

@@ -11,7 +11,7 @@ menu:
     identifier: "ui-overview-catalog-management"
     name: "Catalog Management"
     parent: "ui-overview"
-weight: 6
+weight: 106
 toc: true
 ---
 
