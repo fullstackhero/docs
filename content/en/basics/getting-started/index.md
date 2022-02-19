@@ -1,5 +1,5 @@
 ---
-title: "Getting Started"
+title: "Getting Started with fullstackhero 🚀"
 description: "Let's get started with fullstackhero!"
 lead: "Let's get started with fullstackhero!"
 date: 2021-08-30T00:59:34+05:30
@@ -9,7 +9,7 @@ images: []
 menu:
   basics:
     identifier: "basics-getting-started"
-    name: "Getting Started"
+    name: "Getting Started 🚀"
     parent: "basics"
 weight: 3
 toc: true
