@@ -12,7 +12,7 @@
 
 [[main]]
   name = "API"
-  url = "/dotnet-webapi-boilerplate/"
+  url = "/dotnet-webapi-boilerplate/general/getting-started/"
   weight = 20
 
 [[dotnet-webapi-boilerplate]]
