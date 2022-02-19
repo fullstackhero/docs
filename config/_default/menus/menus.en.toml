@@ -37,7 +37,7 @@
 
 [[main]]
   name = "Blazor"
-  url = "/blazor-webassembly-boilerplate/general/overview/"
+  url = "/blazor-webassembly-boilerplate/general/introduction/"
   weight = 30
 
 [[social]]
