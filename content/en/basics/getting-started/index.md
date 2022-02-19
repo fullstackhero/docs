@@ -1,5 +1,5 @@
 ---
-title: "Getting Started with fullstackhero 🚀"
+title: "Getting Started 🚀"
 description: "Let's get started with fullstackhero!"
 lead: "Let's get started with fullstackhero!"
 date: 2021-08-30T00:59:34+05:30
