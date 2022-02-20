@@ -1,5 +1,5 @@
 ---
-title: "Basics"
+title: "Fundamentals"
 description: "Exploring fullstackhero's Blazor WebAssembly Boilerplate."
 lead: "Exploring fullstackhero's Blazor WebAssembly Boilerplate."
 date: 2021-08-24T11:40:05+05:30
@@ -8,8 +8,8 @@ draft: false
 images: []
 menu:
   blazor-webassembly-boilerplate:
-    identifier: "ui-overview-basics"
-    name: "Basics"
+    identifier: "ui-overview-fundamentals"
+    name: "Fundamentals"
     parent: "ui-overview"
 weight: 100
 toc: true
