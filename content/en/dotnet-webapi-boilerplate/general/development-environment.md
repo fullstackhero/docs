@@ -18,11 +18,11 @@ fullstackhero's **.NET WebApi Boilerplate** Project Development needs you to hav
 
 ## .NET SDK
 
-As mentioned earlier, this project is built with the latest available .NET SDK, which is .NET 6.0. Since the SDK is currently at preview, the project will be released by Mid-November as soon as Microsoft launches .NET 6.0 LTS SDK. But that doesn't stop you from testing out the application!
+As mentioned earlier, this project is built with the latest available .NET SDK, which is .NET 6.0.
 
 Ensure that you have the latest version of the SDK available - [Download from Microsoft](https://dotnet.microsoft.com/download/dotnet/6.0)
 
-{{< alert icon="💡" text="Note : At the time of compiling this documentation, the latest version available was dotnet-sdk-6.0.100-rc.2.21505.57" />}}
+{{< alert icon="💡" text="Note : At the time of compiling this documentation, the latest version available was SDK 6.0.200" />}}
 
 
 ## IDE
