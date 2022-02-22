@@ -25,6 +25,22 @@ You can tweak around the appearance by modifying `\src\Client\wwwroot\index.html
 
 {{< img src="loading.png" >}}
 
+## Basic Layout
+
+By default, the boilerplate sports an ADMIN Dashboard template that is mostly used for Management of Entities.
+
+### Navigation Bar
+
+{{< img src="nav-bar.png" >}}
+
+### Side Menu
+
+{{< img src="nav-menu.png" >}}
+
+### Body
+
+{{< img src="body.png" >}}
+
 ## Theme Manager
 
 fullstackhero's Blazor WebAssembly Boilerplate comes with a built-in theme manager that helps you customize various UI aspects right from primary colors to the radius of the containers with ease. You can view the Theme Manager component by clicking on the Paint Icon that you would see on every page of the boilerplate.

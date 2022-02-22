@@ -16,3 +16,4 @@ toc: true
 ---
 
 
+{{< img src="home.png" >}}
