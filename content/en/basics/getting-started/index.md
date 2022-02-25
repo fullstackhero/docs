@@ -11,7 +11,7 @@ menu:
     identifier: "basics-getting-started"
     name: "Getting Started 🚀"
     parent: "basics"
-weight: 3
+weight: 1
 toc: true
 ---
 <div>
@@ -29,6 +29,8 @@ over 200+ hours of Development and Research Time for Developers and Teams.</p>
 <p>fullstackhero offers Boilerplates with latest packages and services that your projects will ever need. We intend to provide Clean and Well structured Boilerplates with top-notch quality following standard coding practices and Clean Architecture principles that makes your development experience seamless.
 </p>
 <p class="code-green">Most importantly, fullstackhero is completely FREE to use!</p>
+
+As the name suggests, the idea is to provide a full-stack end to end solution to kick start products of any scale following a modularized monolith architecture with well cut designs, code readability, scalability as the out-of-the-box features. Bottomline, using fullstackhero, your new projects will be up and running in no time.
 
 
 ## Vision
