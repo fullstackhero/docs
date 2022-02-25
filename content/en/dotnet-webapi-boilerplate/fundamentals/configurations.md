@@ -28,7 +28,9 @@ Within the Host boot project there is a folder called "Configurations". where th
 │   |   ├── logger.json
 │   |   ├── mail.json
 │   |   ├── middleware.json
+│   |   ├── openapi.json
 │   |   ├── security.json
+│   |   ├── securityheaders.json
 │   |   └── signalr.json
 |   ├── appsettings.json
 |
