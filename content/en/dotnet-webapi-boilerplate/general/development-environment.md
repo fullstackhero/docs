@@ -45,7 +45,7 @@ Incase you intend to use Visual Studio Code for development, here are a bunch of
 
 ## Database Servers
 
-fullstackhero's .NET WebApi Boilerplate gives you the freedom to choose between the following 3 popular Database Providers. Please note that with the current architecture of the API Project, it would rather be easy to add in support for more DB Providers with minimal change of code. But as of now, here are the 3 Supported Database Providers! By default, MSSQL is chosen as the Database Provider.
+fullstackhero's .NET WebApi Boilerplate gives you the freedom to choose between the following 4 popular Database Providers. Please note that with the current architecture of the API Project, it would rather be easy to add in support for more DB Providers with minimal change of code. But as of now, here are the 4 Supported Database Providers! By default, MSSQL is chosen as the Database Provider.
 
 {{< alert text="Make sure that you have at least one of these servers installed, along with a Database Management tool like Azure Data Studio / PostgreSQL pgAdmin / MySQL Workbench " />}}
 
@@ -69,14 +69,12 @@ There are high chances that you already have this installed on your machine. Thi
 Probably the best Open Source Database Server with lots of Enterprise level features.
 - Download postgresql Installer - [Get from postgresql.org](https://www.postgresql.org/download/)
 
+### Oracle
+
+- [Download](https://www.oracle.com/in/database/technologies/oracle19c-windows-downloads.html)
+
 ## API Testing
 
 When it comes to API Testing, Postman is the recommended tool. I have made sure to include a Postman Collection within the Repository under **/postman** folder to make sure you can test out all the existing endpoints. Note that there will be a detailed guide on how to use the given Postman Collection.
 - Download Postman - [Get from postman.com](https://www.postman.com/downloads/)
-
-## Community Tools
-
-## Optionals
-
-### Docker
 
