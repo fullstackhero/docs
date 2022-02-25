@@ -17,16 +17,16 @@ toc: true
 
 Firstly, make sure that you have already setup your development environment that runs the prerequisite tools and SDKs. Refer [Development Environment](/dotnet-webapi-boilerplate/general/development-environment/) for details.
 
-This guide will take you right from installing the `fullstackhero .NET WebAPI Boilerplate` package to testing the API using the provided Postman Collection!
+This guide will take you right from strating up your own .NET Web API Project using `fullstackhero .NET WebAPI Boilerplate` package / repository to testing the API using the provided Postman Collection!
 
 To get started with this Boilerplate, here are the avaiable options.
 
-- Fork the Repository. Use this if you want to always keep your version of the Boilerplate up-to date with the latest changes.
-- Install using dotnet new . Use this for release versions of the Boilerplate only.
+- Forking the Repository. Use this if you want to always keep your version of the Boilerplate up-to date with the latest changes.
+- Install using dotnet new . Use this for release versions of the Boilerplate only. It might be very hard to update to the latest version of the Boilerplate using this option.
 
-## Forking the Repository
+## Forking the Repository & Creating your New Solution!
 
-You would probably need to take this approach if you want to keep your source code upto date with the latest changes. To get started based on this repository, you need to get a copy locally. You have three options: fork, clone, or download.
+You would probably need to take this approach if you want to keep your source code upto date with the latest changes. To get started based on this repository, you need to get a copy locally.
 
 - Make a fork of fullstackhero's `dotnet-webapi-boilerplate` repository in your Github account.
 - Next, since you need to start your private personal project, create your new `dotnet-webapi-boilerplate` personal project by cloning the forked repository on your personal github. This could be done as simple as running `git clone https://github.com/{yourgithubuseraccount}/dotnet-webapi-boilerplate.git` locally on your development machine.
@@ -49,19 +49,21 @@ dotnet new -i FullStackHero.WebAPI.Boilerplate
 or, if you want to use a specific version of the boilerplate, use
 
 ```powershell
-dotnet new -i FullStackHero.WebAPI.Boilerplate::0.0.5-rc
+dotnet new -i FullStackHero.WebAPI.Boilerplate::0.0.6-rc
 ```
 
 {{< img src="install-fullstackhero.png" >}}
 
-This would install the `fullstackhero .NET WebAPI Boilerplate` template globally on your machine. Do note that, at the time of writing this documentation, the latest available version is **0.0.5-rc** which is also one of the first pre-release version of the package. It is highly likely that there is already a newer version available when you are reading this.
+This would install the `fullstackhero .NET WebAPI Boilerplate` template globally on your machine. Do note that, at the time of writing this documentation, the latest available version is **0.0.6-rc** which is also one of the first stable pre-release version of the package. It is highly likely that there is already a newer version available when you are reading this.
 
 > *To get the latest version of the package, visit [nuget.org](https://www.nuget.org/packages/FullStackHero.WebAPI.Boilerplate)*
 >
 > *FullStackHero.WebAPI.Boilerplate is now in pre-release state. You can find the latest version on NuGet.org*
 
 
-## Creating your First Solution
+### Creating your First Solution
+
+> Note that this is not valid only if you have installed the NuGet package of this Boilerplate.
 
 Now that you have installed the template locally on your machine, let's see how you can start generating complete .NET WebAPI Solutions seamlessly.
 
@@ -81,7 +83,9 @@ Here are the folders and files created for you.
 
 {{< img src="folder-structure.jpg" >}}
 
-## Alternatively..
+### Alternatively..
+
+> Note that this is valid only if you have installed the NuGet package of this Boilerplate.
 
 When you installed the NuGet package, there is also an entry that has been created into your Visual Studio Template for fullstackhero's .NET WebAPI Boilerplate. If you find it easier to work with Visual Studio rather than CLI Commands to generate new solutions, you are free to do so.
 
@@ -108,6 +112,7 @@ code .
 This opens up the solution via Visual Code. Make sure that you have the prerequisite tools and SDKs setup.
 
 ### Setting up the Connection String
+
 Next, let's set up some valid connection strings. Navigate to `src/Host/Configurations` and open up `database.json`. Here you would have to provide a valid connection string under the `DatabaseSettings` to either MSSQL,  MySQL or PostgreSQL instance. Below are some sample settings for each of the DB Providers.
 
 Details on the usage of other Settings will be explained in the upcoming documentations.
@@ -162,9 +167,9 @@ Now you need to navigate to the `Host (API) Project` directory via CMD or VSCode
 
 As you can see from the logs, a couple of operations happen as soon as you launch the application. Let me give a brief idea on what happens when you run the application for the very first time.
 
-- The Migrations that already come out-of-the-box with the application gets applied. Note that you do not have to update the database.
-- The Application is programmed to seed a default Tenant named `root`, that is basically the super-admin of the entire application and has permissions to manage tenants.
-- Once Tenant record is seeded, the tenant admin , roles and permissions are also seeded. Note that the default credentials for the root tenant admin is as follows.
+- The Migrations that already come out-of-the-box with the application gets applied. Note that you do not have to manually update the database using code.
+- Being a Multitenant solution, the Application is programmed to seed a default Tenant named `root`, that is basically the super-admin of the entire application and has permissions to manage tenants.
+- Once Tenant record is seeded, the tenant admin , roles and permissions are also seeded. Note that the default credentials for the root tenant admin are as follows.
 
 ```powershell
 {
