@@ -64,6 +64,10 @@ toc: true
 
 0.0.6-rc - Current
 
+Released on `2022-02-26`
+
+Release Tag - https://github.com/fullstackhero/dotnet-webapi-boilerplate/tree/0.0.6-rc
+
 - AD Authentication Support
 - Oracle DB Provider for EFCore support
 - Code Refactors
