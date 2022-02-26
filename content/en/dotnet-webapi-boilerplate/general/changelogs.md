@@ -15,8 +15,37 @@ weight: 7
 toc: true
 ---
 
-### 0.0.5-rc
-`Current Stable Version` `28/11/2021`
+0.0.1-rc
+
+- Initial release
+
+0.0.2-rc
+
+- Migration Refresh
+- Security Patches
+- Image Upload Fix
+- Option to Disable Swagger
+- Cleaner Code
+- Activate / Deactivate Tenants
+- Upgrade Tenant Subscription
+- Advanced Search
+
+0.0.3-rc
+
+- Security Patches
+
+0.0.4-rc - Current Stable Version
+
+- Bug fix in Repository / Update method.
+- Endpoint changes for Update / Delete Methods. (Postman Collection Updated)
+- Fixed bug in Request Logging Middleware.
+- Disabled Request Logger by default to save log space.
+- Adds default Role (Basic) to any new registered user.
+- Basic User has default View / Search Permissions
+- Code Cleanups
+- Templated Emails for User Registrations
+
+0.0.5-rc
 
 - Fixed Password Reset / Forgot
 - Fixed Omnisharp Warnings / Code Cleanup
@@ -32,40 +61,24 @@ toc: true
 - Entity Database Seeding Simplified
 - File-Scoped namespaces and implicit usings
 - Better Folder Structure / Modular
-- Minimal API
 
-### 0.0.4-rc
+0.0.6-rc - Current
 
-- Bug fix in Repository / Update method.
-- Endpoint changes for Update / Delete Methods. (Postman Collection Updated)
-- Fixed bug in Request Logging Middleware.
-- Disabled Request Logger by default to save log space.
-- Adds default Role (Basic) to any new registered user.
-- Basic User has default View / Search Permissions
-- Code Cleanups
-- Templated Emails for User Registrations
-
-### 0.0.3-rc
-
-- Security Patches
-
-### 0.0.2-rc
-
-- Migration Refresh
-- Security Patches
-- Image Upload Fix
-- Option to Disable Swagger
-- Cleaner Code
-- Activate / Deactivate Tenants
-- Upgrade Tenant Subscription
-- Advanced Search
-
-### 0.0.1-rc
-
-- Initial release
-
-
-
-
-
-
+- AD Authentication Support
+- Oracle DB Provider for EFCore support
+- Code Refactors
+- Added ElasticSearch + Kibana for Logging
+- Added Docker Compose for ElasticSearch + Kibana Container
+- Integrated Finbucke Multitenant packages
+- Solution Restructure
+- Added Scripts for Generating Migrations
+- Introduced CQRS Pattern with MediatR
+- Better Configuration Files
+- Added .rest file for API Testing
+- Updated Postman Collection
+- Code Cleanup
+- Updated all Packages
+- Serilog Startup fix
+- Export to Excel Support
+- Specification Pattern using Ardalis packages
+- OpenAPI Client Generation
