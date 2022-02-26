@@ -1,9 +1,9 @@
 ---
 title: "Overview"
-description: ".NET WebAPI Boilerplate Template built with .NET 6.0. Incorporates the most essential Packages your projects will ever need. Follows Clean Architecture Principles."
-lead: ".NET WebAPI Boilerplate Template built with .NET 6.0. Incorporates the most essential Packages your projects will ever need. Follows Clean Architecture Principles."
+description: "Built with .NET 6.0 and the goodness of MudBlazor Component Library. Incorporates the most essential Packages your projects will ever need. Follows Clean Architecture Principles."
+lead: "Built with .NET 6.0 and the goodness of MudBlazor Component Library. Incorporates the most essential Packages your projects will ever need. Follows Clean Architecture Principles."
 date: 2021-08-24T11:40:05+05:30
-lastmod: 2021-10-26T08:03:38+05:30
+lastmod: 2022-02-26T20:18:26+05:30
 draft: false
 images: []
 menu:
@@ -15,8 +15,6 @@ weight: 1
 toc: true
 ---
 
-# Blazor WebAssembly Boilerplate
-Built with .NET 6.0 and the goodness of MudBlazor Component Library. Incorporates the most essential Packages your projects will ever need. Follows Clean Architecture Principles.
 
 ## Goals
 
