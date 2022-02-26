@@ -57,6 +57,8 @@ This would install the `fullstackhero Blazor WebAssembly Boilerplate` template g
 
 {{< alert text="FullStackHero.BlazorWebAssembly.Boilerplate::0.0.1-rc is compatible only with FullStackHero.WebAPI.Boilerplate::0.0.6-rc and above." />}}
 
+
+
 Get the .NET WebApi Boilerplate by running the following command
 
 ```
