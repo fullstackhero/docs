@@ -15,11 +15,11 @@ weight: 7
 toc: true
 ---
 
-0.0.1-rc
+## 0.0.1-rc
 
 - Initial release
 
-0.0.2-rc
+## 0.0.2-rc
 
 - Migration Refresh
 - Security Patches
@@ -30,11 +30,11 @@ toc: true
 - Upgrade Tenant Subscription
 - Advanced Search
 
-0.0.3-rc
+## 0.0.3-rc
 
 - Security Patches
 
-0.0.4-rc - Current Stable Version
+## 0.0.4-rc
 
 - Bug fix in Repository / Update method.
 - Endpoint changes for Update / Delete Methods. (Postman Collection Updated)
@@ -45,7 +45,7 @@ toc: true
 - Code Cleanups
 - Templated Emails for User Registrations
 
-0.0.5-rc
+## 0.0.5-rc
 
 - Fixed Password Reset / Forgot
 - Fixed Omnisharp Warnings / Code Cleanup
@@ -62,7 +62,7 @@ toc: true
 - File-Scoped namespaces and implicit usings
 - Better Folder Structure / Modular
 
-0.0.6-rc - Current
+## 0.0.6-rc `Current`
 
 Released on `2022-02-26`
 
