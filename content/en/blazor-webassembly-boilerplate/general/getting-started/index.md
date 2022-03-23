@@ -97,4 +97,4 @@ Once the build process is complete, the application would be reachable by access
 
 By default, the API Server is set to be running on port 5001 of your local machine. If for some port related reason, you have to run the API on another port or so, navigate to `src\Client\wwwroot\appsettings.json` of the Blazor Project and change the API Base URL Property and set the value to the port that's exposing the API. This is the default configuration `"ApiBaseUrl": "https://localhost:5001/"`.
 
-Simalarly, the Blazor Project by default is set to run on port 5003 of your local machine. Incase you change this to something else, ensure that you have updated the cors.json configuration file on your API project. This makes sure that there is no CORS related issues while the Blazor project tries to access the API Endpoints.
+Similarly, the Blazor Project by default is set to run on port 5003 of your local machine. Incase you change this to something else, ensure that you have updated the cors.json configuration file on your API project. This makes sure that there is no CORS related issues while the Blazor project tries to access the API Endpoints.
