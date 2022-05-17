@@ -67,7 +67,7 @@ copyRight = "Copyright (c) 2021-2022 Mukesh Murugan"
 # Alert
 alert = true
 alertDismissable = false
-alertText = "Documentations are currently being updated 😁 <a target=\"_blank\" class=\"alert-link\" href=\"https://buymeacoffee.com/codewithmukesh\">Support the project by buying me a coffee 😎☕</a>"
+alertText = "Writing an eBook on #aspnetcore #webapi #cleanarchitecture. 🚀 Launching by June 😁 <a target=\"_blank\" class=\"alert-link\" href=\"https://twitter.com/iammukeshm\">Follow me on twitter for updates! 😎☕</a>"
 
 # Edit Page
 repoHost = "GitHub"
