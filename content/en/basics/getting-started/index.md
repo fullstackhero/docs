@@ -39,7 +39,7 @@ fullstackhero is not a single repository or project, rather a collection of boil
 
 fullstackhero should be the one-stop that caters to the needs of various developers in various technology. This obviously would require a lot of community adaptation and contributions.
 
-As of the initial releases, fullstackhero sports an API Project built on Microsoft's newest .NET 6 and the front-end application (that consumes the .NET 6 Web API) built with Blazor WebAssembly!
+As of the initial releases, fullstackhero supports an API Project built on Microsoft's newest .NET 6 and the front-end application (that consumes the .NET 6 Web API) built with Blazor WebAssembly!
 
 ## Projects
 
