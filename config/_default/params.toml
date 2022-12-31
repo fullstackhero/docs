@@ -67,7 +67,7 @@ copyRight = "Copyright (c) 2021-2022 Mukesh Murugan"
 # Alert
 alert = true
 alertDismissable = false
-alertText = "Writing an eBook on #aspnetcore #webapi #cleanarchitecture. 🚀 Launching by June 😁 <a target=\"_blank\" class=\"alert-link\" href=\"https://twitter.com/iammukeshm\">Follow me on twitter for updates! 😎☕</a>"
+alertText = ".NET 7 Microservices Boilerplate. 🚀 Coming Soon! 😁 <a target=\"_blank\" class=\"alert-link\" href=\"https://github.com/fullstackhero/dotnet-microservices-boilerplate\">Click here to Star the Repository! 😎☕</a>"
 
 # Edit Page
 repoHost = "GitHub"
