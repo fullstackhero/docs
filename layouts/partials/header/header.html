@@ -52,6 +52,7 @@
             {{- $active = or $active (eq .Name $current.Title) -}}
             {{- $active = or $active (and (eq .Name ($section | humanize)) (eq $current.Section $section)) -}}
             {{- $active = or $active (and (eq .Name "API") (eq $current.Section "dotnet-webapi-boilerplate")) -}}
+            {{- $active = or $active (and (eq .Name "Microservices🔥") (eq $current.Section "dotnet-microservices-boilerplate")) -}}
             {{- $active = or $active (and (eq .Name "Blazor") (eq $current.Section "blazor-webassembly-boilerplate"))
             -}}
             <li class="nav-item">

@@ -1,7 +1,7 @@
 [[main]]
   name = "Contact"
   url = "/contact/"
-  weight = 40
+  weight = 50
 
 [[main]]
   name = "Basics"
@@ -14,6 +14,11 @@
   name = "API"
   url = "/dotnet-webapi-boilerplate/general/getting-started/"
   weight = 20
+
+[[main]]
+  name = "Microservices🔥"
+  url = "/dotnet-microservices-boilerplate/"
+  weight = 30
 
 [[dotnet-webapi-boilerplate]]
   name = "General"
@@ -38,7 +43,7 @@
 [[main]]
   name = "Blazor"
   url = "/blazor-webassembly-boilerplate/general/getting-started/"
-  weight = 30
+  weight = 40
 
 [[social]]
   name = "GitHub"
