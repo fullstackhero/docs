@@ -149,3 +149,14 @@ CommitMessage : Enter a commit message here.
 Provider : Enter the available DB Provider name. MSSQL , MySQL , PostgreSQL , Oracle
 
 While adding migrations for a particular provider, ensure that you have configured a valid connection string to the provider's database at both `src/Host/Configurations/database.json` and `src/Host/Configurations/hangfire.json`.
+
+## Docker Compose
+
+This project also comes with examples of docker compose files, where you can spin up the webapi and database instance in your local containers with the following commands.
+
+```powershell
+make dcu #docker compose up - Boots up the webapi & postgresql container
+make dcd #docker compose down - Shuts down the webapi & postgresql containers
+```
+
+There are also examples for mysql & mssql variations of the fsh webapi. You can find the other docker-compose files under the ./docker-compose folder. Read more about [fullstackhero's docker-compose instructions & files here](https://github.com/fullstackhero/dotnet-webapi-boilerplate/blob/main/docker-compose/README.md)
