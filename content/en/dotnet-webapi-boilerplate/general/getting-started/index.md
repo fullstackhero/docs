@@ -15,14 +15,47 @@ weight: 3
 toc: true
 ---
 
+  <img src="https://raw.githubusercontent.com/fullstackhero/dotnet-webapi-boilerplate/main/media/fullstack-hero-dotnet-7-webapi-boilerplate-banner.png" />
+  <p>
+
 Firstly, make sure that you have already setup your development environment that runs the prerequisite tools and SDKs. Refer [Development Environment](/dotnet-webapi-boilerplate/general/development-environment/) for details.
 
-This guide will take you right from strating up your own .NET Web API Project using `fullstackhero .NET WebAPI Boilerplate` package / repository to testing the API using the provided Postman Collection!
+This guide will take you right from strating up your own .NET Web API Project using `fullstackhero .NET WebAPI Boilerplate` package / repository to testing the API using the provided Postman/ThunderClient Collection!
 
-To get started with this Boilerplate, here are the avaiable options.
+To get started with this Boilerplate, here are the available options.
 
-- Forking the Repository. Use this if you want to always keep your version of the Boilerplate up-to date with the latest changes.
-- Install using dotnet new . Use this for release versions of the Boilerplate only. It might be very hard to update to the latest version of the Boilerplate using this option.
+- Install using the `FSH CLI` tool. Use this for release versions of the Boilerplate only.
+- Fork the Repository. Use this if you want to always keep your version of the Boilerplate up-to date with the latest changes.
+
+> Make sure that your DEV enviroment is setup, [Read the Development Environment Guide](https://fullstackhero.net/dotnet-webapi-boilerplate/general/development-environment/)
+
+## FSH CLI Tool
+
+### Prerequisites
+
+Before creating your first fullstackhero solution, you should ensure that your local machine has:
+
+- **.NET 7** You can find the download [here](https://dotnet.microsoft.com/en-us/download/dotnet/7.0).
+- **NodeJS (16+)** You can find the download [here](https://nodejs.org/en/download).
+
+### Installation
+
+After you have installed .NET, you will need to install the `fsh` console tool.
+
+```bash
+dotnet tool install --global FSH.CLI
+fsh install
+```
+
+This install the FSH CLI tools and the associated Templates globally on your machine. You are now ready to create your first FSH project!
+
+Do note that, at the time of writing this documentation, the latest available version is **1.0.0** which is also one of the first stable versions of the package. It is highly likely that there is already a newer version available when you are reading this.
+
+> *To get the latest version of the package, visit [nuget.org](https://www.nuget.org/packages/FullStackHero.WebAPI.Boilerplate)*
+>
+> *FullStackHero.WebAPI.Boilerplate is now in release state. You can find the latest version on NuGet.org*
+
+To learn more about the FSH CLI tool, [read here](https://github.com/fullstackhero/dotnet-webapi-boilerplate/blob/main/fsh-cli/README.md)
 
 ## Forking the Repository & Creating your New Solution!
 
@@ -37,33 +70,9 @@ Now, whenever there is a new update on fullstackhero's `dotnet-webapi-boilerplat
 For step by step instructions, [follow this](https://discord.com/channels/878181478972928011/892573122186838046/933513103688224838) and [this](https://gist.github.com/0xjac/85097472043b697ab57ba1b1c7530274).
 
 
-## Installing NuGet Package
-
-This is by far the easiest and the most streamlined way of getting the latest available `Release version` of fullstackhero .NET WebApi Boilerplate.
-
-Open up your Command Prompt / Powershell and run the following command to install the solution template.
-
-```powershell
-dotnet new -i FullStackHero.WebAPI.Boilerplate
-```
-or, if you want to use a specific version of the boilerplate, use
-
-```powershell
-dotnet new -i FullStackHero.WebAPI.Boilerplate::0.0.6-rc
-```
-
-{{< img src="install-fullstackhero.png" >}}
-
-This would install the `fullstackhero .NET WebAPI Boilerplate` template globally on your machine. Do note that, at the time of writing this documentation, the latest available version is **0.0.6-rc** which is also one of the first stable pre-release version of the package. It is highly likely that there is already a newer version available when you are reading this.
-
-> *To get the latest version of the package, visit [nuget.org](https://www.nuget.org/packages/FullStackHero.WebAPI.Boilerplate)*
->
-> *FullStackHero.WebAPI.Boilerplate is now in pre-release state. You can find the latest version on NuGet.org*
-
-
 ### Creating your First Solution
 
-> Note that this is not valid only if you have installed the NuGet package of this Boilerplate.
+> Note that this is not valid only if you have installed the fsh cli tool.
 
 Now that you have installed the template locally on your machine, let's see how you can start generating complete .NET WebAPI Solutions seamlessly.
 
@@ -72,16 +81,16 @@ Simply navigate to a new directory (wherever you want to place your new solution
 Run the following command. Note that, in this demonstration I am naming my new solution as `FSH.Starter`.
 
 ```powershell
-dotnet new fsh-api -o FSH.Starter
+fsh api new FSH.Starter
 ```
 
-{{< img src="generate-solution.jpg" >}}
+{{< img src="generate-solution-via-fsh-cli.png" >}}
 
 Once that is done, your new solution is created for you. As simple as that!
 
 Here are the folders and files created for you.
 
-{{< img src="folder-structure.jpg" >}}
+{{< img src="folder-structure.png" >}}
 
 ### Alternatively..
 
@@ -91,7 +100,7 @@ When you installed the NuGet package, there is also an entry that has been creat
 
 Simply open up Visual Studio 2022 and Click on Create New Project.
 
-{{< img src="visual-studio-support.jpg" >}}
+{{< img src="visual-studio-template.png" >}}
 
 Important - Make sure to check the 'Place solution and project in same directory' option. Else the solution and projects will be created on different folders and there will be build errors stating that few files are not found.
 
@@ -99,7 +108,7 @@ Important - Make sure to check the 'Place solution and project in same directory
 
 Another issue I noticed with creating solutions via Visual Studio is that the Solution structure might be lost. This is a very minor bug, that maybe someone can figure out and fix in our template configuration. Microsoft doesn't seem to have very detailed guide about this.
 
-However, it's always recommended to create new solutions via the Console.
+`However, it's always recommended to create new solutions via the Console.`
 
 ## Running the Application
 
@@ -117,7 +126,18 @@ Next, let's set up some valid connection strings. Navigate to `src/Host/Configur
 
 Details on the usage of other Settings will be explained in the upcoming documentations.
 
-{{< alert text="It is important to update the src/Host/Configurations/hangfire.json connection string / provider as well." />}}
+`By default, FSH WebAPI tempalte ships with pre-configured PostgreSQL connection strings`
+
+{{< alert text="It is also important to update the src/Host/Configurations/hangfire.json connection string / provider as well." />}}
+
+#### PostgreSQL
+
+```powershell
+"DatabaseSettings": {
+    "ConnectionString": "Host=localhost;Database=rootTenantDb;Username=postgres;Password=root;Include Error Detail=true",
+    "DBProvider": "postgresql"
+  }
+```
 
 #### MySQL
 
@@ -135,15 +155,6 @@ Details on the usage of other Settings will be explained in the upcoming documen
     "ConnectionString": "Data Source=(localdb)\\mssqllocaldb;Initial Catalog=rootTenantDb;Integrated Security=True;MultipleActiveResultSets=True"
   }
 ```
-#### PostgreSQL
-
-```powershell
-"DatabaseSettings": {
-    "ConnectionString": "Host=localhost;Database=rootTenantDb;Username=postgres;Password=root;Include Error Detail=true",
-    "DBProvider": "postgresql"
-  }
-```
-
 #### Oracle
 
 ```powershell
@@ -155,15 +166,37 @@ Details on the usage of other Settings will be explained in the upcoming documen
 }
 ```
 
-Now you need to navigate to the `Host (API) Project` directory via CMD or VSCode's native terminal and run the basic build and run command to get the API up and running. Run the following.
+That's all about settings valid connection strings.
 
+Next, let's understand how to build & run the project!
+
+You can definitely use the standard ways of dotnet to build and run the application using the following commands.
 ```powershell
  cd src/Host
  dotnet build
  dotnet run
 ```
 
-{{< img src="running-api.jpg" >}}
+`But`, for a better developer experience, I have included a Makefile within this template. You can find this file at the root `(./Makefile)`. This file contains a bunch of commands for better automation.
+
+Note that you will always have to be at the root of the application to execute the Makefile commands.
+
+## Build
+
+To build the solution,
+```
+make build
+```
+
+Once that's done, let's start up the API server.
+
+```
+make start
+```
+
+{{< img src="running-api-1.png" >}}
+
+{{< img src="running-api-2.png" >}}
 
 As you can see from the logs, a couple of operations happen as soon as you launch the application. Let me give a brief idea on what happens when you run the application for the very first time.
 
