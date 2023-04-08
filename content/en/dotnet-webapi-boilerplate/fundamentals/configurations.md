@@ -39,3 +39,40 @@ Within the Host boot project there is a folder called "Configurations". where th
 > The classic appsettings.json configuration file is still available to manage custom parameters.
 
 The **`Startup` class** inside the folder is responsible for loading all the configuration files described above.
+
+## Cache
+
+By default, the application uses in-memory cache. To enable Distributed caching with Redis, set the `UseDistributedCache` and `PreferRedis` to true and give a valid redis url!
+
+```json
+{
+  "CacheSettings": {
+    "UseDistributedCache": false,
+    "PreferRedis": false,
+    "RedisURL": "localhost:6379"
+  }
+}
+```
+## CORS
+
+Depends on the client consuming the WebAPI.
+
+```json
+{
+  "CorsSettings": {
+    "Angular": "http://localhost:4200",
+    "Blazor": "https://localhost:5002;https://www.mydomain.my",
+    "React": "http://localhost:3000"
+  }
+}
+```
+## Database
+
+```json
+{
+  "DatabaseSettings": {
+    "DBProvider": "postgresql",
+    "ConnectionString": "Host=localhost;Port=5432;Database=fshDb;Username=postgres;Password=admin;Include Error Detail=true"
+  }
+}
+```
