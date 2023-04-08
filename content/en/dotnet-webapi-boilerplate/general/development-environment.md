@@ -83,6 +83,8 @@ When it comes to API Testing, Postman is the recommended tool. I have made sure 
 This is my current personal favorite for testing APIs. It's lightweight when compared to Postman,and also let's you test without leaving the IDE.
 If you are using Visual Code, you would love this! Search for `Thunderclient` under extensions and get it installed.
 
+All the required files for testing the API with thunderclient and present under **/thunder-tests** folder at the root of the solution!
+
 ## Docker (Optional)
 
 Ensure that Docker Desktop is intalled on your machine.
