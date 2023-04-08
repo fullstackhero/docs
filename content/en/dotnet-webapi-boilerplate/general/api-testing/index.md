@@ -3,7 +3,7 @@ title: "API Testing"
 description: "Testing fullstackhero's Web API"
 lead: "Testing fullstackhero's Web API"
 date: 2021-08-30T00:59:34+05:30
-lastmod: 2021-11-23T01:55:29+05:30
+lastmod: 2023-04-08T15:31:51+05:30
 draft: false
 images: []
 menu:
@@ -14,7 +14,7 @@ menu:
 weight: 4
 toc: true
 ---
-fullstackhero's Web API can be tested via Postman as well as the built in Swagger.
+fullstackhero's Web API can be tested via `ThunderClient`, Postman as well as the built in Swagger.
 
 Once the WebAPI is up and running (by default of port 5001 of localhost), here are the ways to test the functionalilty easily.
 
@@ -52,9 +52,34 @@ Once you have the token, simply copy it , click on the Authoize button (found at
 {{< img src="swagger-header.png" >}}
 
 
+## ThunderClient
 
+This is my personal favorite way to test any .NET API that I work with. This will be very helpful to you too if you use Visual Code for .NET development. Make sure that you have the ThunderClient VsCode Extension installed.
+
+I have included the files required for you to test the FSH WebAPI in the **./thunder-tests** folder at the root of the solution.
+
+{{< img src="tc-tests.png" >}}
+
+### Get Authentication Token
+
+As mentioned earlier, to the /api/tokens endpoint we POST a request with the following body and add a `tenantId = root` key to the request header. This should return a valid token from the webapi.
+
+```
+{
+  "email": "admin@root.com",
+  "password": "123Pa$$word!"
+}
+```
+
+{{< img src="get-token.png" >}}
+
+### Environment Variables
+
+{{< img src="tc-env.png" >}}
 
 ## Postman
+
+Postman is also supported!
 
 Now that our application is up and running, let's fire up POSTMAN and run some basic requests. You can find the updated Postman collection under the /postman folder of your solution or [here](https://github.com/fullstackhero/dotnet-webapi-boilerplate/blob/main/postman/dotnet.webapi.boilerplate.postman_collection.json). Import this postman collection on to your local Postman.
 
