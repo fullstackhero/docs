@@ -15,7 +15,22 @@ weight: 7
 toc: true
 ---
 
-## 0.0.6-rc `Current`
+## 1.0.0
+
+Release Tag [1.0.0](https://github.com/fullstackhero/dotnet-webapi-boilerplate/tree/1.0.0) released on `2023-04-08`
+
+- .NET 7 Upgrade
+- FSH CLI Support
+- Bug Fixes
+- Code Cleanups
+- Package Upgrades
+- Makefile
+- Built-In Docker Support
+- Docker-Compose files
+- Terraform for AWS ECS Deployment
+- Switched Default Database Provider as PostgreSQL
+
+## 0.0.6-rc
 
 Release Tag [0.0.6-rc](https://github.com/fullstackhero/dotnet-webapi-boilerplate/tree/0.0.6-rc) released on `2022-02-26`
 
