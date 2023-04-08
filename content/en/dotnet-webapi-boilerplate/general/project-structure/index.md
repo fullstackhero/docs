@@ -15,7 +15,7 @@ weight: 6
 toc: true
 ---
 
-fullstackhero's .NET WebApi Boilerplate is based on Clean Architecture. In other words, Onion / Hexagonal Architecture. [Read about the advantages and principles of Onion Architecture here →]("https://codewithmukesh.com/blog/onion-architecture-in-aspnet-core/")
+fullstackhero's .NET WebApi Boilerplate is based on Clean Architecture. In other words, Onion / Hexagonal Architecture. [Read about the advantages and principles of Onion Architecture here →](https://codewithmukesh.com/blog/onion-architecture-in-aspnet-core/)
 
 ## General Structure
 
