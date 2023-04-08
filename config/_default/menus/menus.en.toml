@@ -11,12 +11,12 @@
 ##############################
 
 [[main]]
-  name = "API"
+  name = ".NET 7 API 🔥"
   url = "/dotnet-webapi-boilerplate/general/getting-started/"
   weight = 20
 
 [[main]]
-  name = "Microservices🔥"
+  name = "Microservices (soon)"
   url = "/dotnet-microservices-boilerplate/"
   weight = 30
 
