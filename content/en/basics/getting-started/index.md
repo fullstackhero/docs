@@ -39,7 +39,7 @@ fullstackhero is not a single repository or project, rather a collection of boil
 
 fullstackhero should be the one-stop that caters to the needs of various developers in various technology. This obviously would require a lot of community adaptation and contributions.
 
-As of the initial releases, fullstackhero sports an API Project built on Microsoft's newest .NET 6 and the front-end application (that consumes the .NET 6 Web API) built with Blazor WebAssembly!
+As of the initial releases, fullstackhero sports an API Project built on Microsoft's newest .NET 7 and the front-end application (that consumes the .NET 7 Web API) built with Blazor WebAssembly!
 
 ## Projects
 
@@ -49,13 +49,25 @@ As of the initial releases, fullstackhero sports an API Project built on Microso
     <div class="row justify-content-center text-center" style="padding:10px!important">
       <div class="card feature-card" style="padding:0px!important">
         <div style="padding:20px">
-          <h2 class="h4">.NET 6 Web API Boilerplate</h2>
+          <h2 class="h4">.NET 7 Microservices Boilerplate</h2>
+          <div class="tablet-group">
+              <div class="tablet">server</div>
+              <div class="tablet tablet-secondary">dotnet</div>
+              <div class="tablet">microservices</div>
+            </div>
+          <p>Coming soon.</p>
+          <p><a href="https://github.com/fullstackhero/dotnet-microservices-boilerplate">View Github Repository</a> | <a href="https://fullstackhero.net/dotnet-microservices-boilerplate/">Read Getting Started Guide</a></p>
+        </div>
+      </div>
+      <div class="card feature-card" style="padding:0px!important">
+        <div style="padding:20px">
+          <h2 class="h4">.NET 7 Web API Boilerplate</h2>
           <div class="tablet-group">
               <div class="tablet">server</div>
               <div class="tablet tablet-secondary">dotnet</div>
               <div class="tablet">multitenancy</div>
             </div>
-          <p>Get to work with the latest and greatest of Microsoft's .NET 6 Web API fused with the goodness of fullstackhero.</p>
+          <p>Get to work with the latest and greatest of Microsoft's .NET 7 Web API fused with the goodness of fullstackhero.</p>
           <p><a href="https://github.com/fullstackhero/dotnet-webapi-boilerplate">View Github Repository</a> | <a href="https://fullstackhero.net/dotnet-webapi-boilerplate/general/getting-started/">Read Getting Started Guide</a></p>
         </div>
       </div>

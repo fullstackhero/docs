@@ -3,7 +3,7 @@ title: "Development Environment"
 description: "Setting up the Development Environment for the .NET WebApi Boilerplate"
 lead: "Let's get started with setting up the Development Environment for .NET WebApi Boilerplate Development!"
 date: 2021-08-30T00:59:34+05:30
-lastmod: 2021-10-15T08:54:03+05:30
+lastmod: 2023-04-08T13:24:47+05:30
 draft: false
 images: []
 menu:
@@ -18,11 +18,11 @@ fullstackhero's **.NET WebApi Boilerplate** Project Development needs you to hav
 
 ## .NET SDK
 
-As mentioned earlier, this project is built with the latest available .NET SDK, which is .NET 6.0.
+As mentioned earlier, this project is built with the latest available .NET SDK, which is .NET 7.0.
 
-Ensure that you have the latest version of the SDK available - [Download from Microsoft](https://dotnet.microsoft.com/download/dotnet/6.0)
+Ensure that you have the latest version of the SDK available - [Download from Microsoft](https://dotnet.microsoft.com/download/dotnet/7.0)
 
-{{< alert icon="💡" text="Note : At the time of compiling this documentation, the latest version available was SDK 6.0.200" />}}
+{{< alert icon="💡" text="Note : At the time of compiling this documentation, the latest version available was SDK 7.0.200" />}}
 
 
 ## IDE
@@ -45,10 +45,14 @@ Incase you intend to use Visual Studio Code for development, here are a bunch of
 
 ## Database Servers
 
-fullstackhero's .NET WebApi Boilerplate gives you the freedom to choose between the following 4 popular Database Providers. Please note that with the current architecture of the API Project, it would rather be easy to add in support for more DB Providers with minimal change of code. But as of now, here are the 4 Supported Database Providers! By default, MSSQL is chosen as the Database Provider.
+fullstackhero's .NET WebApi Boilerplate gives you the freedom to choose between the following 4 popular Database Providers. Please note that with the current architecture of the API Project, it would rather be easy to add in support for more DB Providers with minimal change of code. But as of now, here are the 4 Supported Database Providers! By default, `PostgreSQL` is chosen as the Database Provider.
 
 {{< alert text="Make sure that you have at least one of these servers installed, along with a Database Management tool like Azure Data Studio / PostgreSQL pgAdmin / MySQL Workbench " />}}
 
+### PostgreSQL
+
+Probably the best Open Source Database Server with lots of Enterprise level features.
+- Download postgresql Installer - [Get from postgresql.org](https://www.postgresql.org/download/)
 
 ### MSSQL
 
@@ -58,23 +62,30 @@ There are high chances that you already have this installed on your machine. Thi
 - Download SQL Server Management Studio (SSMS) - [Get from Microsoft](https://docs.microsoft.com/en-us/sql/ssms/download-sql-server-management-studio-ssms?view=sql-server-ver15)
 - Download Azure Data Studio to browse your MSSQL Databases - [Get from Microsoft](https://docs.microsoft.com/en-us/sql/azure-data-studio/download-azure-data-studio)
 
-
 ### MySQL
 
 - Check out the Community versions of this Server - [Get from mysql](https://dev.mysql.com/downloads/mysql/)
 - Download MySQL Workbench - [Get from mysql](https://dev.mysql.com/downloads/workbench/)
 
-### PostgreSQL
-
-Probably the best Open Source Database Server with lots of Enterprise level features.
-- Download postgresql Installer - [Get from postgresql.org](https://www.postgresql.org/download/)
-
 ### Oracle
 
 - [Download](https://www.oracle.com/in/database/technologies/oracle19c-windows-downloads.html)
 
-## API Testing
+## API Testing Tools
+
+### POSTMAN
 
 When it comes to API Testing, Postman is the recommended tool. I have made sure to include a Postman Collection within the Repository under **/postman** folder to make sure you can test out all the existing endpoints. Note that there will be a detailed guide on how to use the given Postman Collection.
 - Download Postman - [Get from postman.com](https://www.postman.com/downloads/)
+
+### Thunderclient Extension
+
+This is my current personal favorite for testing APIs. It's lightweight when compared to Postman,and also let's you test without leaving the IDE.
+If you are using Visual Code, you would love this! Search for `Thunderclient` under extensions and get it installed.
+
+## Docker (Optional)
+
+Ensure that Docker Desktop is intalled on your machine.
+
+[Get from docker.com](https://www.docker.com/products/docker-desktop/)
 
