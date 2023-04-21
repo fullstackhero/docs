@@ -67,7 +67,7 @@ copyRight = "Copyright (c) 2021-2022 Mukesh Murugan"
 # Alert
 alert = true
 alertDismissable = false
-alertText = ".NET 7 WebAPI Boilerplate Released 🚀😁 <a target=\"_blank\" class=\"alert-link\" href=\"https://fullstackhero.net/dotnet-webapi-boilerplate/general/getting-started/\">Click here to get started! 😎☕</a>"
+alertText = ".NET 7 WebAPI Boilerplate Released 🚀😁 <a target=\"_blank\" class=\"alert-link\" href=\"https://www.youtube.com/watch?v=a1mWRLQf9hY&ab_channel=MukeshMurugan/\">Click here to get started! 😎☕</a>"
 
 # Edit Page
 repoHost = "GitHub"
