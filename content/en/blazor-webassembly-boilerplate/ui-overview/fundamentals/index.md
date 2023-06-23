@@ -19,7 +19,7 @@ Here are some of the general components, features and pages that you get to see 
 
 ## Loading Screen
 
-The following is the dedault loading screen of the template.
+The following is the default loading screen of the template.
 
 You can tweak around the appearance by modifying `\src\Client\wwwroot\index.html`.
 
