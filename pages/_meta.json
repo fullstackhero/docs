@@ -1,0 +1,27 @@
+{
+    "index": {
+        "type": "page",
+        "title": "fullstackhero",
+        "display": "hidden",
+        "theme": {
+            "layout": "raw"
+        }
+    },
+    "docs": {
+        "type": "page",
+        "title": "Documentation"
+    },
+    "about": {
+        "type": "page",
+        "title": "About",
+        "theme": {
+            "typesetting": "article"
+        }
+    },
+    "contact": {
+        "title": "Contact ↗",
+        "type": "page",
+        "href": "https://twitter.com/iammukeshm",
+        "newWindow": true
+    }
+}
