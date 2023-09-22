@@ -93,3 +93,13 @@
      @apply px-4;
    }
  }
+.gridContainer {
+  display: grid;
+  row-gap: 10px;
+  grid-template-columns: auto auto auto;
+  padding: 10px;
+}
+
+.gridItem {
+  padding: 5px;
+}
