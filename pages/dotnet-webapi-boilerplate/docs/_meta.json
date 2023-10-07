@@ -1,9 +1,8 @@
 {
-    "index": "Introduction",
-    "guide": "",
-    "-- Themes": {
+    "index": "Overview",
+    "-- Basics": {
         "type": "separator",
-        "title": "Themes"
+        "title": "Basics"
     },
     "docs-theme": "",
     "blog-theme": "",

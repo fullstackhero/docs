@@ -7,21 +7,24 @@
             "layout": "raw"
         }
     },
-    "docs": {
+    "dotnet-webapi-boilerplate": {
         "type": "page",
-        "title": "Documentation"
+        "display": "hidden"
     },
-    "about": {
-        "type": "page",
-        "title": "About",
-        "theme": {
-            "typesetting": "article"
+    "products": {
+        "title": "Products 🚀",
+        "type": "menu",
+        "items": {
+            "dotnet-webapi-boilerplate": {
+                "title": ".NET Web API Boilerplate",
+                "href": "/dotnet-webapi-boilerplate"
+            }
         }
     },
-    "contact": {
-        "title": "Contact ↗",
+    "sponsor": {
+        "title": "Sponsor ❤️",
         "type": "page",
-        "href": "https://twitter.com/iammukeshm",
+        "href": "https://opencollective.com/fullstackhero",
         "newWindow": true
     }
 }

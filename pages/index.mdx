@@ -8,42 +8,81 @@ import { ArrowRightIcon } from "@radix-ui/react-icons"
 import { cn } from "../libs/utils"
 import { siteConfig } from "../config/site"
 import {
-  PageHeader,
-  PageHeaderDescription,
-  PageHeaderHeading,
+PageHeader,
+PageHeaderDescription,
+PageHeaderHeading,
 } from "../components/ui/page-header"
 import { Icons } from "../components/ui/icons"
-import { buttonVariants } from "../components/ui/button"
+import { Button,buttonVariants } from "../components/ui/button"
+import { Badge } from "../components/ui/badge"
+import { badgeVariants } from "../components/ui/badge"
+import { Section } from "../components/ui/section"
+import { BellIcon, EyeNoneIcon, PersonIcon, CircleIcon, StarIcon } from "@radix-ui/react-icons"
+import { DotNetWebApiProject } from "../components/projects/dotnet-webapi";
 
+import {
+Card,
+CardContent,
+CardDescription,
+CardHeader,
+CardTitle,
+CardFooter
+} from "../components/ui/card"
 
-<div className="container relative">
-      <PageHeader className="pb-8">
-        <Link
-          href="/docs/changelog"
-          className="inline-flex items-center rounded-lg bg-muted px-3 py-1 text-sm font-medium"
-        >
-          <span className="sm:inline">
-            🎉 Explore Boilerplates
-          </span>
-          <ArrowRightIcon className="ml-1 h-4 w-4" />
+<Section className="flex">
+  <div className="container relative">
+    <PageHeader className="pb-8">
+      <Link href="/" className={badgeVariants({ variant: "secondary" })}>🎉 Explore Boilerplates<ArrowRightIcon className="ml-1 h-4 w-4" /></Link>
+      <PageHeaderHeading>fullstack<b>hero</b>.</PageHeaderHeading>
+      <PageHeaderDescription>
+        Open Source Boilerplates for Modern Cloud-Ready Applications! 🚀 Customizable. Open Source.
+      </PageHeaderDescription>
+      <div className="flex w-full items-center space-x-4 pb-8 pt-4 md:pb-2">
+        <Link href="/docs" className={cn(buttonVariants())}>
+        Get Started 🚀
         </Link>
-        <PageHeaderHeading>fullstack<b>hero</b>.</PageHeaderHeading>
-        <PageHeaderDescription>
-          Open Source Boilerplates for Modern Cloud-Ready Applications! 🚀 Customizable. Open Source.
-        </PageHeaderDescription>
-        <div className="flex w-full items-center space-x-4 pb-8 pt-4 md:pb-10">
-          <Link href="/docs" className={cn(buttonVariants())}>
-            Get Started
-          </Link>
-          <Link
-            target="_blank"
-            rel="noreferrer"
-            href={siteConfig.links.github}
-            className={cn(buttonVariants({ variant: "outline" }))}
-          >
-            <Icons.gitHub className="mr-2 h-4 w-4" />
-            GitHub
-          </Link>
+        <Link target="_blank" rel="noreferrer" href={siteConfig.links.github} className={cn(buttonVariants({ variant: "outline"
+          }))}>
+        <Icons.gitHub className="mr-2 h-4 w-4" />
+        GitHub
+        </Link>
         </div>
-      </PageHeader>
+      <div className="text-muted-foreground">Join 4,000+ other developers already using fullstackhero.</div>
+    </PageHeader>
     </div>
+</Section>
+<Section className="flex items-center text-center bg-gray-100 dark:bg-slate-700 leading-normal">
+  <div className="container relative">
+    <Link href="/" className={badgeVariants({ variant: "secondary" })}>🎉 Explore Boilerplates</Link>
+    <h2 className="text-2xl leading-tight tracking-tighter md:text-5xl lg:leading-[1.1] pb-5">The fastest way to develop
+      modern web apps.</h2>
+    <span className="text-muted-foreground">
+      Ever gone through the pain of setting up new Project from scratch each and every time? fullstackhero aims to
+      address this pain point by offering Starting Points aka Boilerplates for various technologies that can help save
+      over 200+ hours of Development and Research Time for Developers and Teams.
+
+      fullstackhero offers Boilerplates with latest packages and services that your projects will ever need. We intend
+      to provide Clean and Well structured Boilerplates with top-notch quality following standard coding practices and
+      Clean Architecture principles that makes your development experience seemless.
+    </span>
+    <span className="p-3">
+      Most importantly, fullstackhero is completely FREE to use! 😍
+    </span>
+  </div>
+</Section>
+<Section className="flex items-center text-center leading-normal">
+  <div className="container relative">
+    <h2 className="text-2xl leading-tight tracking-tighter md:text-5xl lg:leading-[1.1] pb-5">Projects.</h2>
+    <div className="hidden items-start justify-center gap-6 rounded-lg p-8 md:grid lg:grid-cols-2 xl:grid-cols-3">
+      <div className="col-span-2 grid items-start gap-6 lg:col-span-1">
+        <DotNetWebApiProject />
+      </div>
+    </div>
+  </div>
+</Section>
+
+<Section className="flex items-center text-center leading-normal">
+  <div className="container relative">
+    <h2 className="text-2xl leading-tight tracking-tighter md:text-5xl lg:leading-[1.1] pb-5">Sponsors.</h2>
+  </div>
+</Section>

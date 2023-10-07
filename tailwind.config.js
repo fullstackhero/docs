@@ -2,8 +2,8 @@
 module.exports = {
   darkMode: ["class"],
   content: [
-    './pages/**/*.{ts,tsx,md,mdx}',
-    './components/**/*.{ts,tsx,md,mdx}'
+    '**/*.{ts,tsx}',
+    '**/*.{md,mdx}',
   ],
   theme: {
     container: {
@@ -63,6 +63,9 @@ module.exports = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: 0 },
         },
+      },
+      boxShadow: {
+        '3xl': '0 35px 60px -15px rgba(0, 0, 0, 0.3)',
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",

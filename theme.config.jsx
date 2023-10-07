@@ -3,11 +3,11 @@
 export const Logo = () => {
     return (
         <span className="gridContainer">
-            <div className="gridItem"><img src="https://fullstackhero.net/images/navbar-logo.png" style={{ maxWidth: 50 }}></img></div>
+        <div className="gridItem"><img src="https://fullstackhero.net/images/navbar-logo.png" style={{ maxWidth: 45 }}></img></div>
 
             <div className="gridItem">
-                <div style={{ fontSize: 20 }}>fullstack<b>hero</b></div>
-                <div style={{ fontSize: 10 }}>production-ready <b>#dotnet #golang</b> boilerplates.❤️</div></div>
+          <div style={{ fontSize: 25 }}>fullstack<b>hero</b></div>
+        </div>
             <style jsx>{`
       span {
         padding: 0.5rem 0.5rem 0.5rem 0;
@@ -28,10 +28,19 @@ export const Logo = () => {
         </span >
     );
 };
-
 export default {
-    logo: Logo,
+  logo: Logo,
+  themeSwitch: {
+    useOptions() {
+      return {
+        light: 'Light',
+        dark: 'Dark',
+        system: 'System'
+      }
+    }
+  },
+  docsRepositoryBase: 'https://github.com/fullstackhero/docs/tree/main',
     project: {
-        link: 'https://github.com/shuding/nextra'
+      link: 'https://github.com/fullstackhero'
     }
 }
