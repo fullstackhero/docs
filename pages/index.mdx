@@ -19,6 +19,7 @@ import { badgeVariants } from "../components/ui/badge"
 import { Section } from "../components/ui/section"
 import { BellIcon, EyeNoneIcon, PersonIcon, CircleIcon, StarIcon } from "@radix-ui/react-icons"
 import { DotNetWebApiProject } from "../components/projects/dotnet-webapi";
+import { OCCollective } from "../components/oc/sponsors";
 
 import {
 Card,
@@ -77,6 +78,12 @@ CardFooter
       <div className="col-span-2 grid items-start gap-6 lg:col-span-1">
         <DotNetWebApiProject />
       </div>
+      <div className="col-span-2 grid items-start gap-6 lg:col-span-1">
+        <DotNetWebApiProject />
+      </div>
+      <div className="col-span-2 grid items-start gap-6 lg:col-span-1">
+        <DotNetWebApiProject />
+      </div>
     </div>
   </div>
 </Section>
@@ -84,5 +91,9 @@ CardFooter
 <Section className="flex items-center text-center leading-normal">
   <div className="container relative">
     <h2 className="text-2xl leading-tight tracking-tighter md:text-5xl lg:leading-[1.1] pb-5">Sponsors.</h2>
+    <span className="text-muted-foreground">
+     The continued development and maintenance of fullstackhero is greatly helped by our generous sponsors.
+    </span>
+    <OCCollective/>
   </div>
 </Section>

@@ -7,7 +7,7 @@ function DotNetWebApiProject({
     ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
     return (
-        <Card className="transform transition duration-1000 hover:scale-110 text-left shadow-xl hover:shadow-2xl border-t-100">
+        <Card className="text-left">
             <CardHeader className="pb-3">
                 <CardTitle>.NET Web API</CardTitle>
                 <CardDescription>
