@@ -1,0 +1,25 @@
+@layer base, starlight, theme, components, utilities;
+
+@import '@astrojs/starlight-tailwind';
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+:root {
+    --sl-font: 'Poppins';
+    --sl-content-width: 80rem;
+}
+
+:root {
+    --custom-file-tree-bg: var(--sl-color-gray-7);
+    /* Light mode fallback */
+}
+
+:root[data-theme='dark'] {
+    --custom-file-tree-bg: var(--sl-color-gray-6);
+    /* Dark mode value */
+}
+
+starlight-file-tree {
+    border: none;
+    background-color: var(--custom-file-tree-bg);
+}
