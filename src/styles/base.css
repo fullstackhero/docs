@@ -1,0 +1,69 @@
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    @apply !font-light;
+}
+
+a {
+    @apply no-underline dark:text-white text-black
+}
+
+.large {
+    @apply !font-normal
+}
+
+:root {
+    --sl-content-width: 120rem !important;
+}
+
+.header {
+    @apply font-normal bg-white dark:bg-slate-950
+}
+
+.site-title {
+    @apply text-black font-normal dark:text-white
+}
+
+.pagination-links a {
+    @apply shadow-none rounded-none
+}
+
+.right-sidebar-container {
+    width: 20rem !important;
+}
+
+.action {
+    border-radius: 10px !important;
+    padding: 12px;
+}
+
+header {
+    border-bottom: 1px solid var(--sl-color-gray-6) !important;
+}
+
+.sidebar-pane {
+    border-right: 1px solid var(--sl-color-gray-6) !important;
+}
+
+*:focus {
+    outline: none;
+}
+
+.copy {
+    @apply items-center;
+}
+
+.stack {
+    @apply text-center items-center;
+}
+
+body:not(:has(#starlight__sidebar)) .content-panel:has(h1#_top) {
+    display: none;
+}
+
+body:not(:has(#starlight__sidebar)) .content-panel {
+    border: none;
+}

@@ -1,0 +1,81 @@
+---
+// Extend Starlight's default footer with a global page view counter.
+import EditLink from 'virtual:starlight/components/EditLink';
+import LastUpdated from 'virtual:starlight/components/LastUpdated';
+import Pagination from 'virtual:starlight/components/Pagination';
+import config from 'virtual:starlight/user-config';
+import PageViewCounter from './PageViewCounter.astro';
+
+const pagePath = Astro.url.pathname || '/';
+---
+
+<footer class="sl-flex">
+	<div class="meta sl-flex">
+		<EditLink />
+		<LastUpdated />
+	</div>
+
+	<div class="sl-flex fshero-footer-extra">
+		<PageViewCounter pageId={pagePath} />
+	</div>
+
+	<Pagination />
+
+	{
+		config.credits && (
+			<a class="kudos sl-flex" href="https://starlight.astro.build">
+				<!-- Keep Starlight credit in place. -->
+				<svg
+					aria-hidden="true"
+					viewBox="0 0 24 24"
+					class="h-3.5 w-3.5 text-orange-400"
+					focusable="false"
+				>
+					<path
+						fill="currentColor"
+						d="M12.001 2 4.5 20.25l.311.257 5.032-4.192a1.5 1.5 0 0 1 1.89 0l5.456 4.542L12.001 2Z"
+					/>
+				</svg>
+				<span>{Astro.locals.t('builtWithStarlight.label')}</span>
+			</a>
+		)
+	}
+</footer>
+
+<style>
+	@layer starlight.core {
+		footer {
+			flex-direction: column;
+			gap: 1.5rem;
+		}
+		.meta {
+			gap: 0.75rem 3rem;
+			justify-content: space-between;
+			flex-wrap: wrap;
+			margin-top: 3rem;
+			font-size: var(--sl-text-sm);
+			color: var(--sl-color-gray-3);
+		}
+		.meta > :global(p:only-child) {
+			margin-inline-start: auto;
+		}
+
+		.fshero-footer-extra {
+			align-items: center;
+			justify-content: flex-start;
+		}
+
+		.kudos {
+			align-items: center;
+			gap: 0.5em;
+			margin: 1.5rem auto;
+			font-size: var(--sl-text-xs);
+			text-decoration: none;
+			color: var(--sl-color-gray-3);
+		}
+		.kudos:hover {
+			color: var(--sl-color-white);
+		}
+	}
+</style>
+

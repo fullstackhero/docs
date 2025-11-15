@@ -1,0 +1,302 @@
+// ----------------------------------------
+// Imports
+
+@use './variables.scss';
+@use './breakpoints.scss';
+
+// ----------------------------------------
+// Default overrides
+
+body {
+  box-sizing: border-box;
+  overscroll-behavior: none;
+
+  &::before {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 140px;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  &:not(:has(#starlight__sidebar)) {
+    &::before {
+      content: '';
+    }
+
+    [data-theme='dark'] & {
+      background-image: radial-gradient(100% 100% at 50% 0%, transparent 60%, rgba(0, 0, 0, 0.4) 100%);
+      &::before {
+        background-image: linear-gradient(transparent 100%, rgba(0, 0, 0, 0.8) 100%);
+      }
+    }
+
+    [data-theme='light'] & {
+      background-image: radial-gradient(100% 100% at 50% 0%, #fff 60%, #eff0f3 100%);
+
+      &::before {
+        background-image: linear-gradient(transparent 60%, rgba(255, 255, 255, 0.8) 100%);
+      }
+    }
+  }
+}
+
+a.site-title img {
+  width: auto;
+  margin-right: 0px;
+}
+
+header.header {
+  border: none;
+}
+
+// don't override <a> text color for home page buttons
+.sl-markdown-content .simple-page-hero__links a:not(:where(.not-content *)) {
+  color: unset;
+}
+
+.content-panel + .content-panel {
+  border: none;
+}
+
+// ----------------------------------------
+// Hide extraneous default elements on home page only.
+// These elements can't be hidden by config or component override.
+
+// `splash` template > top heading text + container
+body:not(:has(#starlight__sidebar)) .content-panel:has(h1#_top) {
+  display: none;
+}
+
+body:not(:has(#starlight__sidebar)) .content-panel {
+  border: none;
+}
+
+// ----------------------------------------
+// Search
+
+site-search button[data-open-modal] {
+  transition: var(--transition-fast);
+  transition-property: border-color, color;
+}
+
+// ----------------------------------------
+// Table of contents
+
+#starlight__on-this-page {
+  margin-bottom: 16px;
+  padding: 0 8px;
+  font-size: 1rem;
+}
+
+.right-sidebar-panel li ul {
+  margin-left: calc(var(--depth) * 16px);
+}
+
+.right-sidebar-panel a {
+  padding: 5px 8px;
+}
+
+// ----------------------------------------
+// Sidebar
+
+.sidebar-pane {
+  border: none;
+}
+
+.group-label .large {
+  display: block;
+  padding: 4px 0;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.sidebar-content {
+  padding-right: calc(var(--sl-sidebar-pad-x) + 16px);
+}
+
+.sidebar-content ul li {
+  margin-left: 0;
+  border: none;
+}
+
+.sidebar-content ul a {
+  padding: 8px 10px;
+  font-size: 0.84rem;
+
+  &[aria-current='page'] {
+    color: var(--custom-color-text-strong);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.032);
+    background-color: rgba(255, 255, 255, 0.032);
+
+    [data-theme='light'] & {
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.04);
+      background-color: rgba(0, 0, 0, 0.024);
+    }
+  }
+}
+
+// ----------------------------------------
+// Markdown content
+
+.sl-markdown-content {
+  font-size: 0.94rem;
+}
+
+.sl-container h1 {
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -1.5px;
+}
+
+.sl-markdown-content h2 {
+  letter-spacing: -0.5px;
+}
+
+// ----------------------------------------
+// Pagination links
+
+.pagination-links a {
+  align-items: flex-start;
+  box-shadow: 0 4px 6px -2px hsl(0, 0%, 0%, 0.1);
+  transition: var(--transition-fast);
+  transition-property: color, border-color;
+
+  & > span {
+    font-size: 0.84rem;
+  }
+
+  span:not(.link-title) {
+    font-size: 0;
+  }
+}
+
+.link-title {
+  display: block;
+  padding: 2px 0;
+  font-size: var(--sl-text-base);
+}
+
+// ----------------------------------------
+// React components page
+
+.limit-code-height > figure > pre {
+  --at-apply: max-h-120;
+  overflow-y: scroll;
+}
+
+.react-example .expressive-code .frame {
+  border-top-left-radius: 0px;
+  border-top-right-radius: 0px;
+}
+
+.react-example .cm-scroller {
+  &::-webkit-scrollbar, &::-webkit-scrollbar-track {
+    background-color: inherit;
+    border-radius: 10px;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--ec-sbThumbCol);
+    border: 4px solid transparent;
+    background-clip: content-box;
+    border-radius: 10px
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background-color: var(--ec-sbThumbHoverCol)
+  }
+}
+
+:root[data-theme='light'] .react-example {
+  --ec-codeBg: #fbfbfb;
+  --ec-codeFg: #403f53;
+  --ec-codeSelBg: #e0e0e0;
+  --ec-gtrFg: #7a8d96;
+  --ec-gtrBrdCol: #7a8d9633;
+  --ec-gtrHlFg: #403f53c3;
+  --ec-uiSelBg: #d3e8f8;
+  --ec-uiSelFg: #403f53;
+  --ec-focusBrd: #93a1a1;
+  --ec-sbThumbCol: #0000001a;
+  --ec-sbThumbHoverCol: #0000005c;
+  --ec-tm-markBg: #0000001a;
+  --ec-tm-markBrdCol: #00000055;
+  --ec-tm-insBg: #8ec77d99;
+  --ec-tm-insDiffIndCol: #336a28d0;
+  --ec-tm-delBg: #ff9c8e99;
+  --ec-tm-delDiffIndCol: #9d4138d0;
+  --ec-frm-shdCol: #d9d9d9;
+  --ec-frm-edActTabBg: var(--sl-color-gray-7);
+  --ec-frm-edActTabIndTopCol: var(--sl-color-accent);
+  --ec-frm-edTabBarBg: var(--sl-color-gray-6);
+  --ec-frm-edBg: var(--sl-color-gray-7);
+  --ec-frm-trmTtbBg: var(--sl-color-gray-6);
+  --ec-frm-trmBg: var(--sl-color-gray-7);
+  --ec-frm-tooltipSuccessBg: #078662
+}
+
+.limit-code-height > figure {
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0px;
+    right: 0px;
+    width: 16px;
+    height: 16px;
+    background: var(--code-background);
+    border-bottom-left-radius: var(--header-border-radius);
+    border-bottom-right-radius: var(--header-border-radius);
+    border: var(--ec-brdWd) solid var(--ec-brdCol);
+    border-top: 0;
+    border-left: 0;
+  }
+}
+
+:root {
+  --sl-content-width: 80rem !important;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight:100 !important;
+}
+
+.right-sidebar-container {
+  width: 20rem !important;
+}
+
+header {
+  border-bottom: 1px solid var(--sl-color-gray-6) !important;
+}
+
+.sidebar-pane {
+  border-right: 1px solid var(--sl-color-gray-6) !important;
+}
+
+*:focus {
+  outline: none;
+}
+
+.site-title{
+  font-weight: 100;
+  gap: 10px;
+}
+
+a{
+  text-decoration: none !important;
+}
+
+.sl-markdown-content a:not(:where(.not-content *)){
+color: #3eaf7c;
+}

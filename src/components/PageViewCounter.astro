@@ -1,0 +1,89 @@
+---
+type Props = {
+	pageId: string;
+};
+
+const { pageId } = Astro.props;
+// Optional backend endpoint to persist views across users.
+// Expose as PUBLIC_ so it can be read on the client.
+const endpoint = import.meta.env.PUBLIC_VIEW_COUNTER_ENDPOINT ?? '';
+---
+
+<div
+	id="fshero-page-views"
+	class="inline-flex items-center gap-2 rounded-full bg-slate-900/70 px-3 py-1 text-xs font-medium text-slate-200 ring-1 ring-slate-700/70 backdrop-blur-sm dark:bg-slate-900/80 dark:text-slate-100"
+	data-page-id={pageId}
+	data-endpoint={endpoint}
+>
+	<span class="inline-flex items-center gap-1 text-[0.7rem] uppercase tracking-wide text-slate-400">
+		<span class="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+		Page views
+	</span>
+	<span class="tabular-nums text-slate-50" data-count>—</span>
+</div>
+
+<script>
+	(() => {
+		if (typeof window === 'undefined') return;
+
+		const container = document.getElementById('fshero-page-views');
+		if (!container) return;
+
+		const countEl = container.querySelector('[data-count]');
+		if (!countEl) return;
+
+		const pageId = container.getAttribute('data-page-id') ?? window.location.pathname;
+		const endpoint = container.getAttribute('data-endpoint') ?? '';
+		const storageKey = `fshero:views:${pageId}`;
+
+		const render = (value) => {
+			if (!countEl) return;
+			const n = Number(value);
+			countEl.textContent = Number.isFinite(n) ? n.toLocaleString() : '—';
+		};
+
+		const incrementLocal = () => {
+			try {
+				const existing = window.localStorage.getItem(storageKey);
+				let current = parseInt(existing ?? '0', 10);
+				if (!Number.isFinite(current)) current = 0;
+				current += 1;
+				window.localStorage.setItem(storageKey, String(current));
+				return current;
+			} catch {
+				return undefined;
+			}
+		};
+
+		const track = async () => {
+			// If a backend endpoint is configured, prefer that.
+			if (endpoint) {
+				try {
+					const res = await fetch(endpoint, {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ pageId }),
+					});
+
+					if (res.ok) {
+						const data = await res.json().catch(() => ({}));
+						const remote =
+							data.count ?? data.views ?? data.total ?? data.value ?? data.pageViews;
+						if (remote != null) {
+							render(remote);
+							return;
+						}
+					}
+				} catch {
+					// Fall through to local fallback.
+				}
+			}
+
+			const local = incrementLocal();
+			if (local != null) render(local);
+		};
+
+		track();
+	})();
+</script>
+

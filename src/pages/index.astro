@@ -1,0 +1,338 @@
+---
+import { Image } from 'astro:assets';
+import logo from '../assets/full-stack-hero-logo.png';
+import '../styles/marketing.css';
+
+const siteName = 'fullstackhero';
+const pageTitle =
+	'FullStackHero .NET 10 Starter Kit for Multi-tenant SaaS & APIs';
+const description =
+	'FullStackHero is an open-source .NET 10 starter kit for building modular, multi-tenant SaaS applications and enterprise APIs with clean architecture, CQRS, and production-ready building blocks.';
+---
+
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>{pageTitle}</title>
+		<meta name="description" content={description} />
+	</head>
+	<body class="min-h-screen bg-slate-950 text-slate-100 antialiased text-[15px] sm:text-base">
+		<div class="relative isolate">
+			<div
+				class="pointer-events-none absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl"
+				aria-hidden="true"
+			>
+				<div
+					class="mx-auto h-72 max-w-3xl bg-gradient-to-r from-emerald-500/40 via-sky-500/30 to-indigo-500/40 opacity-60"
+				/>
+			</div>
+
+			<header class="mx-auto flex w-full items-center justify-between px-6 pb-8 pt-6 lg:px-10 xl:px-16">
+				<a href="/" class="inline-flex items-center gap-4">
+					<Image
+						src={logo}
+						alt="fullstackhero logo"
+						width={250}
+						height={60}
+						loading="eager"
+						class="h-11 w-auto sm:h-20"
+					/>
+					<div class="flex flex-col">
+						<span class="text-xl font-thin tracking-tight text-slate-50 sm:text-4xl">
+							{siteName}
+						</span>
+						<span class="text-xs text-slate-400">.NET 10 Starter Kit</span>
+					</div>
+				</a>
+
+				<nav class="flex items-center gap-3 text-xs font-medium text-slate-300">
+					<a
+						href="/guides/example/"
+						class="rounded-full px-4 py-2 text-sm text-slate-300 transition hover:bg-slate-800/80 hover:text-slate-50"
+					>
+						Docs
+					</a>
+					<a
+						href="https://github.com/fullstackhero/dotnet-starter-kit"
+						class="hidden rounded-full px-4 py-2 text-sm text-slate-300 ring-1 ring-slate-700/70 transition hover:bg-slate-800/80 hover:text-slate-50 sm:inline-flex"
+					>
+						GitHub
+					</a>
+					<a
+						href="/guides/example/"
+						class="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-slate-950 shadow-sm shadow-emerald-500/40 transition hover:bg-emerald-400"
+					>
+						Get started
+						<span class="text-[0.7rem]">↗</span>
+					</a>
+				</nav>
+			</header>
+
+			<main class="mx-auto w-full px-6 pb-20 pt-4 lg:px-10 lg:pb-28 lg:pt-10 xl:px-16">
+				<section class="grid gap-12 lg:grid-cols-2 lg:items-center">
+					<div class="space-y-8">
+						<div
+							class="inline-flex items-center gap-2 rounded-full bg-slate-900/80 px-3 py-1.5 text-xs font-medium text-slate-300 ring-1 ring-slate-700/80"
+						>
+							<span
+								class="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.8)]"
+							/>
+							<span class="uppercase tracking-[0.12em] text-slate-400">
+								Open-source .NET 10 SaaS starter kit
+							</span>
+						</div>
+
+						<div class="space-y-4">
+							<h1
+								class="text-balance text-4xl font-semibold tracking-tight text-slate-50 sm:text-5xl lg:text-6xl"
+							>
+								Build multi-tenant .NET SaaS and enterprise APIs faster.
+							</h1>
+							<p class="max-w-xl text-base leading-relaxed text-slate-300 sm:text-lg">
+								FullStackHero gives you a modular, multi-tenant .NET 10 platform with CQRS,
+								persistence, identity, logging, and cross-cutting concerns already wired. Replace
+								weeks of boilerplate with a production-ready starter kit that follows clean
+								architecture and modern .NET practices.
+							</p>
+						</div>
+
+						<div class="flex flex-wrap items-center gap-4">
+							<a
+								href="/guides/example/"
+								class="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-6 py-3 text-sm font-semibold text-slate-950 shadow-md shadow-emerald-500/40 transition hover:bg-emerald-400"
+							>
+								Explore the docs
+								<span class="text-[0.8rem]">→</span>
+							</a>
+							<a
+								href="https://github.com/fullstackhero/dotnet-starter-kit"
+								class="inline-flex items-center gap-2 rounded-full bg-slate-900/80 px-5 py-3 text-sm font-semibold text-slate-200 ring-1 ring-slate-700/80 transition hover:bg-slate-800/80"
+							>
+								<span class="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+								Star on GitHub
+							</a>
+							<p class="text-xs text-slate-400 sm:text-sm">
+								Ideal for multi-tenant SaaS, B2B platforms, and enterprise-grade APIs.
+							</p>
+						</div>
+
+						<div class="grid gap-4 text-sm text-slate-300 sm:grid-cols-3 sm:text-[0.95rem]">
+							<div class="rounded-xl border border-slate-800/80 bg-slate-900/40 p-4">
+								<p class="text-xs font-semibold uppercase tracking-wide text-slate-400">
+									Modular architecture
+								</p>
+								<p class="mt-1 text-base font-semibold text-slate-50">
+									Vertical slices and feature-first modules.
+								</p>
+								<p class="mt-1 text-xs text-slate-400 sm:text-sm">
+									Organize your solution by business capability using modules, contracts, and
+									architecture tests that keep boundaries clean as your product grows.
+								</p>
+							</div>
+							<div class="rounded-xl border border-slate-800/80 bg-slate-900/40 p-4">
+								<p class="text-xs font-semibold uppercase tracking-wide text-slate-400">
+									Multi-tenant SaaS ready
+								</p>
+								<p class="mt-1 text-base font-semibold text-slate-50">
+									Tenant-aware persistence and migrations.
+								</p>
+								<p class="mt-1 text-xs text-slate-400 sm:text-sm">
+									Use tenant-aware DbContexts, Finbuckle middleware, and per-tenant migrations to
+									deliver true multi-tenant SaaS from day one.
+								</p>
+							</div>
+							<div class="rounded-xl border border-slate-800/80 bg-slate-900/40 p-4">
+								<p class="text-xs font-semibold uppercase tracking-wide text-slate-400">
+									Batteries included
+								</p>
+								<p class="mt-1 text-base font-semibold text-slate-50">
+									CQRS, caching, jobs, mailing &amp; more.
+								</p>
+								<p class="mt-1 text-xs text-slate-400 sm:text-sm">
+									Plug in building blocks for caching, background jobs, email, storage, and web
+									host composition instead of reinventing infrastructure.
+								</p>
+							</div>
+						</div>
+					</div>
+
+					<div class="space-y-4 lg:justify-self-center">
+						<div
+							class="relative overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-950/80 p-4 shadow-[0_18px_45px_rgba(15,23,42,0.85)]"
+						>
+							<div
+								class="absolute inset-x-0 -top-24 -z-10 h-40 bg-gradient-to-b from-emerald-500/15 to-transparent"
+							/>
+							<div
+								class="mb-3 flex items-center justify-between gap-3 text-xs text-slate-400 sm:text-sm"
+							>
+								<div class="inline-flex items-center gap-2">
+									<span class="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+									<span class="font-medium text-slate-200">Playground.Api</span>
+									<span class="text-slate-500">• Program.cs</span>
+								</div>
+								<span
+									class="rounded-full bg-slate-900/70 px-2 py-0.5 text-[0.65rem] text-emerald-300"
+								>
+									Minimal APIs · CQRS
+								</span>
+							</div>
+
+							<pre
+								class="relative max-h-80 overflow-auto rounded-xl bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900/90 p-4 text-[0.78rem] leading-relaxed text-slate-200 ring-1 ring-slate-800/80 sm:text-sm"
+							>
+								<code
+									class="block whitespace-pre font-mono text-[0.78rem] sm:text-[0.8rem]"
+								>{`builder.Services
+  .AddHeroPlatform()
+  .AddModules(assemblies)
+  .AddPersistence()
+  .AddCaching()
+  .AddJobs()
+  .AddMultitenancy();
+
+var app = builder.Build();
+
+app.UseHeroPlatform(p =>
+{
+  p.MapModules = true;
+  p.UseOpenApi = true;
+  p.UseAuditLogging = true;
+});
+
+app.Run();`}</code>
+							</pre>
+						</div>
+
+						<div class="grid gap-3 text-xs text-slate-400 sm:grid-cols-2 sm:text-sm">
+							<div
+								class="flex items-center gap-2 rounded-xl border border-slate-800/80 bg-slate-900/50 px-3 py-2"
+							>
+								<span
+									class="h-6 w-6 rounded-lg bg-emerald-500/20 text-center text-[0.8rem] leading-6 text-emerald-300"
+								>
+									✓
+								</span>
+								<div>
+									<p class="text-xs font-semibold text-slate-200 sm:text-sm">
+										Production-ready defaults
+									</p>
+									<p>Serilog, RFC7807 errors, rate limiting, health checks, and audit logging.</p>
+								</div>
+							</div>
+							<div
+								class="flex items-center gap-2 rounded-xl border border-slate-800/80 bg-slate-900/50 px-3 py-2"
+							>
+								<span
+									class="h-6 w-6 rounded-lg bg-sky-500/20 text-center text-[0.8rem] leading-6 text-sky-300"
+								>
+									◎
+								</span>
+								<div>
+									<p class="text-xs font-semibold text-slate-200 sm:text-sm">
+										Team-friendly workflow
+									</p>
+									<p>Shared MSBuild, analyzers, and architecture tests keep large teams aligned.</p>
+								</div>
+							</div>
+						</div>
+					</div>
+				</section>
+
+				<section class="mt-20 space-y-10 border-t border-slate-800/70 pt-10">
+					<div class="grid gap-10 lg:items-start">
+						<div class="space-y-4">
+							<h2 class="text-2xl font-semibold tracking-tight text-slate-50 sm:text-3xl">
+								Why teams choose fullstackhero for .NET SaaS
+							</h2>
+							<p class="max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">
+								FullStackHero is designed for engineers who want the flexibility of a clean,
+								modular .NET solution with the velocity of a battle-tested starter kit. Start as a
+								modular monolith and evolve toward distributed architecture without rewriting from
+								scratch.
+							</p>
+							<div class="grid gap-4 text-sm text-slate-300 sm:grid-cols-3 sm:text-[0.95rem]">
+								<div class="space-y-1 rounded-xl border border-slate-800/80 bg-slate-950/40 p-4">
+									<p class="text-xs font-semibold uppercase tracking-wide text-emerald-300">
+										Faster project bootstrap
+									</p>
+									<p>Go from git clone to running .NET 10 APIs with auth, tenants, logging, and OpenAPI in minutes.</p>
+								</div>
+								<div class="space-y-1 rounded-xl border border-slate-800/80 bg-slate-950/40 p-4">
+									<p class="text-xs font-semibold uppercase tracking-wide text-emerald-300">
+										Built-in guardrails
+									</p>
+									<p>
+										Architecture tests, analyzers, and conventions help protect your domain model and
+										enforce boundaries over time, even as the team and codebase grow.
+									</p>
+								</div>
+								<div class="space-y-1 rounded-xl border border-slate-800/80 bg-slate-950/40 p-4">
+									<p class="text-xs font-semibold uppercase tracking-wide text-emerald-300">
+										SaaS-ready primitives
+									</p>
+									<p>
+										Tenant management, auditing, and modular endpoints give you a real SaaS
+										foundation instead of a demo app.
+									</p>
+								</div>
+							</div>
+						</div>
+					</div>
+				</section>
+
+				<section class="mt-20 space-y-8 border-t border-slate-800/70 pt-10">
+					<div class="space-y-3">
+						<h2 class="text-2xl font-semibold tracking-tight text-slate-50 sm:text-3xl">
+							Technology stack and patterns developers care about
+						</h2>
+						<p class="max-w-3xl text-sm leading-relaxed text-slate-300 sm:text-base">
+							FullStackHero is built on a modern .NET 10 stack with opinionated patterns that scale. You get a
+							clear architecture and proven libraries, but you still own the code and can extend or replace
+							anything.
+						</p>
+					</div>
+
+					<div class="grid gap-6 text-sm text-slate-300 md:grid-cols-3 md:text-[0.95rem]">
+						<div class="space-y-2 rounded-xl border border-slate-800/80 bg-slate-950/40 p-4">
+							<p class="text-xs font-semibold uppercase tracking-wide text-emerald-300">
+								API surface and patterns
+							</p>
+							<ul class="mt-1 space-y-1 text-xs text-slate-400 sm:text-sm">
+								<li>• Minimal APIs with clear routing, versioning, and tagged endpoints.</li>
+								<li>• Mediator-powered CQRS for commands, queries, and pipeline behaviors.</li>
+								<li>• RFC7807 error responses and opinionated validation flows.</li>
+							</ul>
+						</div>
+						<div class="space-y-2 rounded-xl border border-slate-800/80 bg-slate-950/40 p-4">
+							<p class="text-xs font-semibold uppercase tracking-wide text-emerald-300">
+								Data, multi-tenancy, and storage
+							</p>
+							<ul class="mt-1 space-y-1 text-xs text-slate-400 sm:text-sm">
+								<li>• EF Core with provider-agnostic options and per-tenant migrations.</li>
+								<li>• Finbuckle.MultiTenant strategies (header, claims, optional query) baked in.</li>
+								<li>• Ready-made patterns for audit logs, outbox-style flows, and soft deletes.</li>
+							</ul>
+						</div>
+						<div class="space-y-2 rounded-xl border border-slate-800/80 bg-slate-950/40 p-4">
+							<p class="text-xs font-semibold uppercase tracking-wide text-emerald-300">
+								Developer experience and ops
+							</p>
+							<ul class="mt-1 space-y-1 text-xs text-slate-400 sm:text-sm">
+								<li>• Serilog logging, structured HTTP auditing, and health checks wired up.</li>
+								<li>• Background jobs, caching, and mailing behind clean abstractions.</li>
+								<li>• Shared MSBuild configuration, analyzers, and architecture tests out of the box.</li>
+							</ul>
+						</div>
+					</div>
+				</section>
+			</main>
+		</div>
+	</body>
+</html>
+
+
+
+
+
