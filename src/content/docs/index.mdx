@@ -1,0 +1,41 @@
+---
+title: FullStackHero .NET Starter Kit
+description: Opinionated, modular .NET 10 platform for building multi-tenant SaaS and enterprise APIs fast.
+template: splash # Keep the splash layout for a marketing-style landing page.
+hero:
+  tagline: Build production-ready .NET SaaS faster with fullstackhero.
+  image:
+    file: ../../assets/houston.webp
+  actions:
+    - text: Get started
+      link: /guides/example/
+      icon: right-arrow
+    - text: View .NET starter kit
+      link: https://github.com/fullstackhero/dotnet-starter-kit
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## Build real products, not boilerplate
+
+FullStackHero’s .NET 10 Starter Kit gives you a modular, multi-tenant foundation so you can focus on your domain instead of wiring and plumbing. Use the opinionated building blocks, conventions, and tooling to ship SaaS and enterprise APIs with confidence.
+
+<CardGrid stagger>
+	<Card title="Modular architecture" icon="layout">
+		Slice your solution by business capability with feature-first modules, clear contracts, and architecture tests to keep boundaries healthy.
+	</Card>
+	<Card title=".NET 10 & modern stack" icon="rocket">
+		Built on Minimal APIs, Mediator-powered CQRS, EF Core, Serilog, and hardened defaults for validation, logging, and error handling.
+	</Card>
+	<Card title="Multi-tenancy built in" icon="users">
+		Use Finbuckle.MultiTenant, tenant-aware migrations, and audit logging to build true multi-tenant SaaS from day one.
+	</Card>
+	<Card title="Ready-made building blocks" icon="puzzle-piece">
+		Leverage building blocks for caching, jobs, mailing, storage, and web host composition instead of reinventing infrastructure.
+	</Card>
+	<Card title="Batteries-included developer experience" icon="sparkles">
+		Shared MSBuild configuration, analyzers, and templates help your team stay consistent while still letting you extend the platform.
+	</Card>
+</CardGrid>
