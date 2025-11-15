@@ -26,39 +26,48 @@ export default defineConfig({
 			sidebar: [
 				{
 					label: 'Getting Started',
-					autogenerate: { directory: 'getting-started' },
+					collapsed: true,
+					autogenerate: { directory: 'getting-started', collapsed: true },
 				},
 				{
 					label: 'Core Concepts',
-					autogenerate: { directory: 'concepts' },
+					collapsed: true,
+					autogenerate: { directory: 'concepts', collapsed: true },
 				},
 				{
 					label: 'Architecture',
-					autogenerate: { directory: 'architecture' },
+					collapsed: true,
+					autogenerate: { directory: 'architecture', collapsed: true },
 				},
 				{
 					label: 'Modules',
-					autogenerate: { directory: 'modules' },
+					collapsed: true,
+					autogenerate: { directory: 'modules', collapsed: true },
 				},
 				{
 					label: 'Building Blocks',
-					autogenerate: { directory: 'building-blocks' },
+					collapsed: true,
+					autogenerate: { directory: 'building-blocks', collapsed: true },
 				},
 				{
 					label: 'How-to Guides',
-					autogenerate: { directory: 'how-to' },
+					collapsed: true,
+					autogenerate: { directory: 'how-to', collapsed: true },
 				},
 				{
 					label: 'Cookbook',
-					autogenerate: { directory: 'cookbook' },
+					collapsed: true,
+					autogenerate: { directory: 'cookbook', collapsed: true },
 				},
 				{
 					label: 'Reference',
-					autogenerate: { directory: 'reference' },
+					collapsed: true,
+					autogenerate: { directory: 'reference', collapsed: true },
 				},
 				{
 					label: 'Changelog',
-					autogenerate: { directory: 'changelog' },
+					collapsed: true,
+					autogenerate: { directory: 'changelog', collapsed: true },
 				},
 			],
 		}),

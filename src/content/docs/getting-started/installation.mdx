@@ -5,32 +5,62 @@ sidebar:
   order: 2
 ---
 
-This guide walks you through restoring, building, and running the FullStackHero .NET 10 Starter Kit on your machine.
+This guide walks you through restoring, building, and running the FullStackHero .NET 10 Starter Kit on your machine so you can see the full platform in action.
 
 ## Prerequisites
 
-- .NET 10 SDK (or the matching preview/runtime shipped with this repo)
-- Node.js LTS (for the documentation site and optional Blazor tooling)
-- A PostgreSQL instance (local or container) for the default multi-tenant database
+- **.NET 10 SDK** (or the matching preview/runtime shipped with this repo)
+- **Node.js LTS** (for the documentation site and optional Blazor tooling)
+- **PostgreSQL** instance (local or container) for the default multi-tenant database
 
-## Restore and build
+## 1. Clone the repository
+
+Clone or download the repository to your development machine. The .NET solution lives under `dotnet-starter-kit/src` and the docs under `docs`.
+
+## 2. Restore and build the .NET solution
+
+From the repository root:
 
 ```bash
 dotnet restore .\dotnet-starter-kit\src\FSH.Framework.slnx
 dotnet build .\dotnet-starter-kit\src\FSH.Framework.slnx -c Debug
 ```
 
-## Run the playground API
+This restores all building blocks, modules, and tests, and verifies that the solution compiles.
+
+## 3. Configure PostgreSQL
+
+Update the connection string in your `appsettings.Development.json` (or use environment variables) to point to your PostgreSQL instance. The default configuration is optimized for multi-tenant databases.
+
+## 4. Apply migrations
+
+Use the migrations project to create the required schemas (tenancy, identity, auditing) in your database. See [Persistence & migrations](../architecture/persistence-and-migrations/) for details on how migrations are organized.
+
+## 5. Run the playground API
 
 ```bash
 cd .\dotnet-starter-kit\src\Playground\Playground.Api
 dotnet run
 ```
 
-This boots the API host, wires building blocks, loads modules, and exposes OpenAPI + Scalar UI.
+This boots the API host, composes the building blocks, loads all modules, configures multi-tenancy, and exposes OpenAPI + Scalar UI.
+
+Open the URL printed in the console to browse the API surface and interact with endpoints.
+
+## 6. (Optional) Run the docs locally
+
+From the `docs` folder:
+
+```bash
+npm install
+npm run dev
+```
+
+This starts the documentation site that you are reading now, including the marketing landing page and Starlight-powered docs.
 
 ## Next steps
 
 - Inspect the solution layout in [Architecture → Solution structure](../architecture/solution-structure/).
 - Add your first endpoint in [Getting started → Your first API](../getting-started/first-api/).
+- See multi-tenancy in action in [SaaS quickstart](../getting-started/saas-quickstart/).
 

@@ -1,22 +1,60 @@
 ---
 title: Getting started with FullStackHero
-description: High-level overview of the FullStackHero .NET 10 Starter Kit and how it helps you build multi-tenant SaaS and enterprise APIs.
+description: Learn what the FullStackHero .NET 10 Starter Kit gives you out of the box and why it is a strong foundation for multi-tenant SaaS and enterprise APIs.
 sidebar:
   order: 1
 ---
 
-FullStackHero is an opinionated .NET 10 starter kit for building modular, multi-tenant SaaS applications and enterprise APIs. It gives you a cohesive solution layout, tenant-aware persistence, CQRS, logging, and cross-cutting infrastructure so you can focus on your domain instead of boilerplate.
+FullStackHero is an opinionated .NET 10 starter kit for building **modular, multi-tenant SaaS applications and enterprise APIs**. It provides a cohesive solution layout, tenant-aware persistence, CQRS, logging, and cross-cutting infrastructure so you can ship real products instead of wiring plumbing.
 
-## What you get
+## Why FullStackHero?
 
-- **Modern .NET 10 stack** – Minimal APIs, Mediator-powered CQRS, EF Core, Serilog, health checks, rate limiting, and RFC7807 error responses.
-- **Modular architecture** – Building blocks in `BuildingBlocks/*` plus feature-first vertical slices under `Modules.*`.
-- **Multi-tenancy built-in** – Finbuckle.MultiTenant integration with tenant-aware DbContexts and migrations.
-- **Production-friendly defaults** – Structured logging, HTTP auditing, OpenAPI + Scalar UI, and architecture tests.
+FullStackHero is designed for teams who:
 
-## Where to go next
+- Want a **clean, modular architecture** but do not want to assemble everything from scratch.
+- Need **multi-tenancy** (per-tenant databases, tenant-aware APIs, and auditing) from day one.
+- Care about **developer experience**: analyzers, architecture tests, and a predictable solution layout.
 
-- Read the [installation guide](../getting-started/installation/) to restore and run the solution locally.
-- Follow [Your first API](../getting-started/first-api/) to add a new endpoint using CQRS and Minimal APIs.
-- Explore [Key concepts](../concepts/architecture/) to understand building blocks, modules, and multi-tenancy.
+You keep full control of the codebase and patterns, while starting from a strong, battle-tested baseline.
 
+## What’s included
+
+### Architecture & solution layout
+
+- **Vertical slices (`Modules.*`)** with dedicated contracts projects and feature folders.
+- **BuildingBlocks** layer with shared infrastructure for web, persistence, caching, jobs, mailing, and more.
+- **Playground hosts** (API, Blazor, migrations) that show how to compose modules into real applications.
+
+See the [solution structure](../architecture/solution-structure/) and [architecture overview](../concepts/architecture/) for a guided tour.
+
+### Building blocks
+
+- **Core** – domain primitives, base types, exceptions, domain events.
+- **Shared** – shared contracts, options, and constants (for example, database providers).
+- **Persistence** – EF Core helpers, `DatabaseOptions`, interceptors, pagination, specifications, and DbContext bindings.
+- **Web** – host composition, middleware, versioning, OpenAPI, CORS, rate limiting, and modular endpoint wiring.
+- **Caching** – `ICacheService` abstraction with in-memory and distributed implementations.
+- **Jobs** – background job helpers and integration for recurring/long-running work.
+- **Mailing & Storage** – opinionated placeholders for outbound email and blob/file storage integrations.
+
+### Feature modules
+
+- **Identity** – authentication/authorization endpoints, user and role management, permission checks, token issuing.
+- **Multitenancy** – tenant CRUD, Finbuckle.MultiTenant strategies (header, claim, optional query), tenant stores, and per-tenant migrations/seeding.
+- **Auditing** – HTTP request/response auditing, masking of sensitive fields, and pluggable sinks for persisting audits.
+
+Each module has a runtime project and a `*.Contracts` project so public API shape stays separate from internals.
+
+### Cross-cutting capabilities
+
+- **Mediator-powered CQRS** – commands, queries, and pipeline behaviors for validation, transactions, and logging.
+- **Logging & observability** – Serilog with structured logging, contextual properties (tenant, user, correlation id), and health checks.
+- **HTTP experience** – RFC7807 problem details, rate limiting, OpenAPI + Scalar UI, and an opinionated HTTP pipeline.
+- **Architecture & code quality** – architecture tests, `.editorconfig`, shared MSBuild (`Directory.Build.props`), central package management, and analyzers.
+
+## How to get hands-on
+
+1. **Install & run locally** – follow the [installation guide](../getting-started/installation/) to restore, build, and run `Playground.Api`.
+2. **Add an endpoint** – use [Your first API endpoint](../getting-started/first-api/) to add a Minimal API endpoint wired to a Mediator handler.
+3. **See multi-tenancy in action** – walk through the [SaaS quickstart](../getting-started/saas-quickstart/) to create tenants, run migrations, and call tenant-aware APIs.
+4. **Deep dive** – read [Core concepts](../concepts/architecture/), [modules](../modules/identity/overview/), and [building blocks](../building-blocks/web/) when you are ready to customize the platform.
