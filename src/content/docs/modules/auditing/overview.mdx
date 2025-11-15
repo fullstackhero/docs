@@ -1,0 +1,15 @@
+---
+title: Auditing module
+description: HTTP request/response auditing and persistence using the Auditing module.
+---
+
+The Auditing module captures HTTP request and response metadata, including tenant and user information.
+
+## Features
+
+- Pluggable sinks for writing audit records to databases or other stores.
+- Payload masking and exclusion for sensitive fields.
+- Correlation between logs and audits via shared identifiers.
+
+Auditing is wired into the HTTP pipeline but can be extended for domain events or background jobs.
+

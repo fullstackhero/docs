@@ -1,0 +1,23 @@
+---
+title: CQRS and Mediator
+description: How commands, queries, and pipeline behaviors are wired in FullStackHero for clean separation of concerns.
+---
+
+FullStackHero uses Mediator and CQRS to separate reads and writes while keeping the application layer explicit and testable.
+
+## Commands and queries
+
+- **Commands** change system state (create, update, delete).
+- **Queries** return data without side effects.
+- Each command/query has a dedicated handler and a contract that defines input and output.
+
+## Pipeline behaviors
+
+Cross-cutting concerns such as validation, logging, and transaction management can be implemented as Mediator pipeline behaviors. This keeps handlers lean and focused on domain logic.
+
+## Benefits
+
+- Clear entry points into the domain.
+- Easy to test and reason about.
+- Natural fit for modular vertical slices, where each feature has its own commands and queries.
+

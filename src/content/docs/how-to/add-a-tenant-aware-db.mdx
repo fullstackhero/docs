@@ -1,0 +1,15 @@
+---
+title: How to add a tenant-aware database
+description: Configure a new tenant-aware DbContext and migrations in FullStackHero.
+---
+
+Use this guide when you want to add another tenant-aware DbContext to the platform.
+
+## Outline
+
+- Define a new DbContext that uses tenant information from the current context.
+- Register it via the Persistence building block with the correct lifetime.
+- Add migrations to the migrations project and ensure they run per tenant.
+
+Keep tenant resolution and connection string logic in shared infrastructure instead of inside the DbContext itself.
+

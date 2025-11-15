@@ -1,0 +1,36 @@
+---
+title: Installation & local setup
+description: Steps to restore, build, and run the FullStackHero .NET 10 Starter Kit locally.
+sidebar:
+  order: 2
+---
+
+This guide walks you through restoring, building, and running the FullStackHero .NET 10 Starter Kit on your machine.
+
+## Prerequisites
+
+- .NET 10 SDK (or the matching preview/runtime shipped with this repo)
+- Node.js LTS (for the documentation site and optional Blazor tooling)
+- A PostgreSQL instance (local or container) for the default multi-tenant database
+
+## Restore and build
+
+```bash
+dotnet restore .\dotnet-starter-kit\src\FSH.Framework.slnx
+dotnet build .\dotnet-starter-kit\src\FSH.Framework.slnx -c Debug
+```
+
+## Run the playground API
+
+```bash
+cd .\dotnet-starter-kit\src\Playground\Playground.Api
+dotnet run
+```
+
+This boots the API host, wires building blocks, loads modules, and exposes OpenAPI + Scalar UI.
+
+## Next steps
+
+- Inspect the solution layout in [Architecture → Solution structure](../architecture/solution-structure/).
+- Add your first endpoint in [Getting started → Your first API](../getting-started/first-api/).
+

@@ -25,15 +25,40 @@ export default defineConfig({
 			},
 			sidebar: [
 				{
-					label: 'Guides',
-					items: [
-						// Each item here is one entry in the navigation menu.
-						{ label: 'Example Guide', slug: 'guides/example' },
-					],
+					label: 'Getting Started',
+					autogenerate: { directory: 'getting-started' },
+				},
+				{
+					label: 'Core Concepts',
+					autogenerate: { directory: 'concepts' },
+				},
+				{
+					label: 'Architecture',
+					autogenerate: { directory: 'architecture' },
+				},
+				{
+					label: 'Modules',
+					autogenerate: { directory: 'modules' },
+				},
+				{
+					label: 'Building Blocks',
+					autogenerate: { directory: 'building-blocks' },
+				},
+				{
+					label: 'How-to Guides',
+					autogenerate: { directory: 'how-to' },
+				},
+				{
+					label: 'Cookbook',
+					autogenerate: { directory: 'cookbook' },
 				},
 				{
 					label: 'Reference',
 					autogenerate: { directory: 'reference' },
+				},
+				{
+					label: 'Changelog',
+					autogenerate: { directory: 'changelog' },
 				},
 			],
 		}),

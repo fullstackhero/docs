@@ -1,0 +1,23 @@
+---
+title: Persistence and migrations
+description: How EF Core, database options, and migrations are wired to support multi-tenant databases in FullStackHero.
+---
+
+Persistence in FullStackHero is handled by the `Persistence` building block plus module-specific DbContexts.
+
+## Database options
+
+- Centralized `DatabaseOptions` configure providers, connection strings, and behaviors.
+- The platform supports PostgreSQL by default, with room for other providers.
+
+## EF Core integration
+
+- Shared interceptors handle auditing, soft deletes, and multi-tenant scoping.
+- Module DbContexts are registered with appropriate lifetimes and tenant settings.
+
+## Migrations
+
+- Migrations live under `Playground.Migrations.*` projects.
+- Per-tenant migrations allow each tenant database or schema to evolve independently.
+- You can extend migrations with module-specific tables and seed data.
+

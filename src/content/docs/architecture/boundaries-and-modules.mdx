@@ -1,0 +1,26 @@
+---
+title: Boundaries and modules
+description: Learn how FullStackHero enforces module boundaries, project references, and naming conventions.
+---
+
+FullStackHero uses a combination of project layout, conventions, and architecture tests to keep module boundaries explicit.
+
+## Vertical slices
+
+Each feature module owns:
+
+- Its public contracts (`Modules.X.Contracts`).
+- Its runtime behavior (`Modules.X`) including endpoints, handlers, and services.
+
+Other modules talk to a module via contracts, not its internal types.
+
+## Architecture tests
+
+The `Architecture.Tests` project enforces rules such as:
+
+- Modules may not reference each other in forbidden directions.
+- Building blocks cannot depend on modules or hosts.
+- Namespaces mirror folder layout so it’s easy to navigate code.
+
+These tests run as part of CI to protect your architecture from accidental drift.
+

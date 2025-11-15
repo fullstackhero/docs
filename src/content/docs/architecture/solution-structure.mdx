@@ -1,0 +1,28 @@
+---
+title: Solution structure
+description: Walkthrough of the FullStackHero solution layout, including BuildingBlocks, Modules, and Playground hosts.
+---
+
+The starter kit is organized into three main areas: `BuildingBlocks`, `Modules`, and `Playground`.
+
+## BuildingBlocks
+
+- `Core` – domain primitives, base classes, and shared abstractions.
+- `Persistence` – database options, interceptors, and EF Core helpers.
+- `Web` – application host, middleware, versioning, OpenAPI, and pipeline helpers.
+- `Caching`, `Jobs`, `Mailing`, `Storage` – optional horizontal infrastructure.
+
+## Modules
+
+- `Modules.Identity` – authentication/authorization endpoints, users, roles, permissions.
+- `Modules.Multitenancy` – tenant management, connection strings, seeding.
+- `Modules.Auditing` – HTTP auditing middleware and storage services.
+
+Each module comes with a `*.Contracts` project for DTOs and integration contracts.
+
+## Playground
+
+- `Playground.Api` – Minimal API host that composes building blocks and modules.
+- `Playground.Blazor*` – optional UI frontends (if included).
+- `Playground.Migrations.*` – migrations projects for databases such as PostgreSQL.
+

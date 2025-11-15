@@ -1,0 +1,25 @@
+---
+title: Architecture overview
+description: Learn how FullStackHero structures building blocks, modules, and playground hosts into a clean .NET 10 solution.
+---
+
+FullStackHero is organized as a modular monolith: shared infrastructure in `BuildingBlocks`, vertical slices in `Modules.*`, and host applications under `Playground`.
+
+## Building blocks
+
+- **Core** – domain primitives, base types, exceptions, domain events.
+- **Persistence** – EF Core helpers, options, interceptors, and DbContext bindings.
+- **Web** – host wiring, middleware, versioning, OpenAPI, HTTP pipeline helpers.
+- **Caching / Jobs / Mailing / Storage** – optional cross-cutting infrastructure.
+
+These projects are referenced by modules and hosts, not the other way around.
+
+## Feature modules
+
+Each feature module (for example, Identity, Multitenancy, Auditing) has:
+
+- A runtime project (`Modules.X`) with endpoints, handlers, and services.
+- A contracts project (`Modules.X.Contracts`) with DTOs and integration contracts.
+
+Architecture tests constrain which projects can reference which, protecting boundaries as the solution grows.
+

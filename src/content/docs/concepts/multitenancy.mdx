@@ -1,0 +1,25 @@
+---
+title: Multitenancy
+description: How FullStackHero implements multi-tenant persistence, migrations, and request handling using Finbuckle.MultiTenant.
+---
+
+FullStackHero treats multi-tenancy as a first-class concern. Tenant context flows from the HTTP request to the database, logging, and auditing layers.
+
+## Tenant resolution
+
+- Finbuckle.MultiTenant resolves the current tenant from headers, claims, or other strategies.
+- Middleware attaches tenant info to the current context before authorization and endpoint execution.
+
+## Tenant-aware persistence
+
+- DbContexts are configured with tenant-specific connection strings and schemas.
+- Migrations run per tenant, so each tenant can have its own database or schema.
+
+## Tenant management
+
+The Multitenancy module exposes endpoints and services to:
+
+- Create, update, and deactivate tenants.
+- Manage connection strings and tenant metadata.
+- Seed default tenants for local development.
+

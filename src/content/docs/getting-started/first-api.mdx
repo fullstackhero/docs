@@ -1,0 +1,37 @@
+---
+title: Your first API endpoint
+description: Add a new Minimal API endpoint backed by CQRS and building blocks in FullStackHero.
+---
+
+In this guide you will add a new Minimal API endpoint backed by a Mediator handler, validation, and persistence.
+
+## 1. Choose a module
+
+Pick the module that owns the business capability (for example, `Modules.Identity` or a new module you create). Endpoints should live close to their handlers and contracts.
+
+## 2. Add a request + response contract
+
+Create a contract type in the module’s `*.Contracts` project, for example:
+
+```csharp
+public sealed record CreateFooRequest(string Name);
+```
+
+Keep contracts small and focused on API shape rather than internal domain models.
+
+## 3. Add a Mediator handler
+
+In the module runtime project, add a command/handler pair that performs the work (validation, persistence, domain events).
+
+## 4. Map the endpoint
+
+In the module’s endpoint mapping file, register a Minimal API route that sends the request to Mediator and returns a typed result. Follow existing endpoints for naming, authorization, and versioning.
+
+## 5. Validate with architecture tests
+
+Run the architecture tests to ensure your new types follow naming and layering rules:
+
+```bash
+dotnet test .\dotnet-starter-kit\src\Tests\Architecture.Tests\Architecture.Tests.csproj
+```
+

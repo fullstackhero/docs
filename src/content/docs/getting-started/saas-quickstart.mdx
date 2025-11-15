@@ -1,0 +1,26 @@
+---
+title: Multi-tenant SaaS quickstart
+description: Run FullStackHero as a multi-tenant SaaS backend with tenants, per-tenant databases, and seeded data.
+---
+
+FullStackHero is optimized for multi-tenant SaaS from day one. This guide shows how to boot the playground with tenants and tenant-aware persistence.
+
+## Multi-tenancy in a nutshell
+
+- **Tenant resolution** via Finbuckle.MultiTenant (header, claims, optional query string).
+- **Tenant stores** in the database with per-tenant connection strings and metadata.
+- **Tenant-aware DbContexts** that scope reads/writes and migrations to the current tenant.
+
+## Bring up the playground
+
+1. Configure your PostgreSQL connection string in `appsettings.Development.json`.
+2. Run the migrations project for PostgreSQL to apply tenant, identity, and audit schemas.
+3. Start `Playground.Api` and hit the OpenAPI UI.
+
+Use the configured tenant header (for example, `X-Tenant` or `tenant`) when calling APIs to see tenant context flow through logging, auditing, and persistence.
+
+## Learn more
+
+- [Concepts → Multitenancy](../concepts/multitenancy/)
+- [Architecture → Persistence & migrations](../architecture/persistence-and-migrations/)
+

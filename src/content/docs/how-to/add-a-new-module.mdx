@@ -1,0 +1,16 @@
+---
+title: How to add a new module
+description: Step-by-step guide for adding a new feature module in FullStackHero.
+---
+
+This guide walks you through creating a new module with runtime and contracts projects.
+
+## Steps
+
+1. **Create projects** – Add `Modules.YourFeature` and `Modules.YourFeature.Contracts` projects.
+2. **Wire references** – Reference building blocks and contracts according to existing modules.
+3. **Add endpoints and handlers** – Follow the patterns from Identity or Multitenancy modules.
+4. **Register the module** – Ensure the module is picked up by the module loader in `Playground.Api`.
+
+Run the architecture tests to confirm your module follows existing conventions.
+

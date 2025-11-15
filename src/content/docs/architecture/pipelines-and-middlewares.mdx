@@ -1,0 +1,22 @@
+---
+title: Pipelines and middlewares
+description: Understand the HTTP pipeline in FullStackHero, including exception handling, multi-tenancy, rate limiting, and OpenAPI.
+---
+
+The `Web` building block defines an opinionated HTTP pipeline that the playground host wires up.
+
+## Pipeline stages
+
+The typical order in `Playground.Api` is:
+
+1. Exception handling and problem details.
+2. HTTPS redirection and security headers.
+3. Routing, multi-tenancy, and authentication.
+4. Rate limiting and authorization.
+5. Auditing and logging.
+6. OpenAPI, Scalar UI, and endpoints.
+
+## Customizing the pipeline
+
+You can customize the pipeline via extension points in the Web building block, adding or removing middlewares while keeping a consistent structure across hosts.
+

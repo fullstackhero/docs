@@ -1,0 +1,22 @@
+---
+title: Auditing and logging
+description: Learn how request logging, auditing, and observability work in the FullStackHero .NET starter kit.
+---
+
+FullStackHero ships with opinionated logging and auditing so you can see what your multi-tenant system is doing in production.
+
+## Logging
+
+- Serilog is configured for structured logging with contextual properties (tenant, user, correlation id).
+- HTTP logs are enriched with route, status code, and timing information.
+
+## Auditing
+
+- An auditing module captures request/response metadata and publishes events for storage or processing.
+- Sensitive payload fields can be masked or excluded to meet compliance requirements.
+
+## Diagnostics
+
+- Health checks, rate limiting, and error handling (RFC7807) are wired into the Web building block.
+- You can plug in your own sinks and dashboards while keeping the same abstractions.
+

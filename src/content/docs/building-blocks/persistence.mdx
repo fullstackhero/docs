@@ -1,0 +1,13 @@
+---
+title: Persistence building block
+description: Shared EF Core infrastructure for FullStackHero, including options, interceptors, and DbContext registration.
+---
+
+The Persistence building block centralizes EF Core configuration and database options.
+
+## Key pieces
+
+- `DatabaseOptions` for provider, connection strings, and behaviors.
+- Interceptors for audit fields, soft deletes, and multi-tenant filters.
+- Shared base DbContext types for modules to build on.
+
