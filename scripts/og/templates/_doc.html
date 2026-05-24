@@ -11,9 +11,7 @@
     --fg: #f1ede4;
     --muted: #a39c8f;
     --border: #2a2c33;
-    --green: #16a34a;
     --green-bright: #22c55e;
-    --green-deep: #15803d;
     --display: 'Outfit', system-ui, sans-serif;
     --body: 'Figtree', system-ui, sans-serif;
     --mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -25,12 +23,12 @@
     font-family: var(--body);
     -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
   }
-  .canvas { position: relative; width: 1200px; height: 675px; overflow: hidden; background: var(--bg); }
+  .canvas { --accent: {{ACCENT}}; position: relative; width: 1200px; height: 675px; overflow: hidden; background: var(--bg); }
 
   .glow {
     position: absolute; left: 50%; top: 30%; transform: translate(-50%, -50%);
-    width: 880px; height: 520px;
-    background: radial-gradient(ellipse at center, rgba(34, 197, 94, 0.18), rgba(21, 128, 61, 0.08) 40%, transparent 70%);
+    width: 900px; height: 540px;
+    background: radial-gradient(ellipse at center, color-mix(in srgb, var(--accent) 20%, transparent), transparent 70%);
     filter: blur(6px);
   }
   .grid {
@@ -45,40 +43,43 @@
   .stack {
     position: absolute; inset: 0;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    padding: 64px 80px; text-align: center;
+    padding: 60px 80px; text-align: center;
   }
 
-  /* Small brand lockup */
-  .brand {
-    display: inline-flex; align-items: center; gap: 14px;
-    margin-bottom: 34px;
-  }
-  .brand img { width: 54px; height: 54px; filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.5)); }
+  .brand { display: inline-flex; align-items: center; gap: 14px; margin-bottom: 30px; }
+  .brand img { width: 48px; height: 48px; filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.5)); }
   .brand .name {
-    font-family: var(--display); font-weight: 300; font-size: 30px;
+    font-family: var(--display); font-weight: 300; font-size: 27px;
     letter-spacing: -0.03em; color: var(--fg);
   }
-  .brand .name .accent { color: var(--green); }
+  .brand .name .accent { color: #16a34a; }
 
   .eyebrow {
-    display: inline-flex; align-items: center; gap: 10px;
+    display: inline-flex; align-items: center; gap: 12px;
     font-family: var(--mono); font-size: 13px; font-weight: 600;
-    letter-spacing: 0.3em; text-transform: uppercase; color: var(--muted);
+    letter-spacing: 0.26em; text-transform: uppercase;
   }
   .eyebrow .dot {
     width: 7px; height: 7px; border-radius: 999px;
-    background: var(--green-bright); box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.18);
+    background: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+  .eyebrow .label { color: var(--muted); }
+  .eyebrow .badge {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.16em;
+    color: var(--accent); padding: 4px 10px; border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 32%, transparent);
   }
 
-  .section {
-    margin-top: 18px;
-    font-family: var(--display); font-weight: 400;
-    font-size: 88px; line-height: 1.02; letter-spacing: -0.035em;
-    color: var(--fg); max-width: 1000px;
+  .title {
+    margin-top: 20px;
+    font-family: var(--display); font-weight: 500;
+    font-size: {{TITLE_SIZE}}px; line-height: 1.04; letter-spacing: -0.035em;
+    color: var(--fg); max-width: 1040px;
   }
 
   .desc {
-    margin-top: 22px; max-width: 720px;
+    margin-top: 22px; max-width: 760px;
     font-size: 22px; line-height: 1.45; font-weight: 500; color: var(--muted);
   }
 </style>
@@ -94,8 +95,12 @@
         <img src="{{LOGO_SRC}}" alt="" />
         <span class="name">fullstack<span class="accent">hero</span></span>
       </div>
-      <span class="eyebrow"><span class="dot"></span>{{EYEBROW}}</span>
-      <h1 class="section">{{TITLE}}</h1>
+      <span class="eyebrow">
+        <span class="dot"></span>
+        <span class="label">{{EYEBROW}}</span>
+        <span class="badge">{{BADGE}}</span>
+      </span>
+      <h1 class="title" style="font-size:{{TITLE_SIZE}}px">{{TITLE}}</h1>
       <p class="desc">{{DESC}}</p>
     </div>
   </div>

@@ -16,7 +16,7 @@
  */
 import { chromium } from 'playwright';
 import matter from 'gray-matter';
-import { renderDocsTemplate, escapeHtml } from './template.mjs';
+import { renderDocsTemplate, escapeHtml, pickTitleSize, truncate } from './template.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -81,16 +81,9 @@ async function fileExists(p) {
 
 async function buildDocsJobs(labels, logoSrc) {
   const ids = await listDocIds();
-  // Section-overview cards render through a bespoke token template.
+  // Section-overview and leaf-doc cards each render through a bespoke token template.
   const overviewTpl = await fs.readFile(path.join(templatesDir, '_overview.html'), 'utf8');
-  // child-page counts per top-level section dir (excludes index pages)
-  const counts = new Map();
-  for (const id of ids) {
-    if (variantOf(id) === 'doc') {
-      const top = id.split('/')[0];
-      counts.set(top, (counts.get(top) ?? 0) + 1);
-    }
-  }
+  const docTpl = await fs.readFile(path.join(templatesDir, '_doc.html'), 'utf8');
 
   const jobs = [];
   for (const id of ids) {
@@ -109,19 +102,24 @@ async function buildDocsJobs(labels, logoSrc) {
       html = { content: renderDocsTemplate({ variant, eyebrow: 'Documentation', title: 'fullstackhero', description: data.description, logoSrc }) };
     } else if (variant === 'overview') {
       // Section index pages are titled "Overview"; use the section label as the
-      // headline so the card reads "Architecture", not "Overview". Single-page
-      // sections (count 0) drop the "N pages" pill.
-      const oc = counts.get(sectionDir) ?? 0;
+      // headline so the card reads "Architecture", not "Overview".
       const content = overviewTpl
         .replaceAll('{{LOGO_SRC}}', logoSrc)
         .replaceAll('{{EYEBROW}}', 'Section Overview')
         .replaceAll('{{TITLE}}', escapeHtml(label ?? data.title))
-        .replaceAll('{{DESC}}', escapeHtml(data.description))
-        .replaceAll('{{META}}', oc > 0 ? `<div class="meta"><span class="pages">${oc} pages</span></div>` : '');
+        .replaceAll('{{DESC}}', escapeHtml(data.description));
       html = { content };
     } else {
       const pt = PAGE_TYPE[data.pageType] ?? PAGE_TYPE.guide;
-      html = { content: renderDocsTemplate({ variant, eyebrow: label ?? 'fullstackhero', title: data.title, description: data.description, badge: pt.badge, accent: pt.accent, logoSrc }) };
+      const content = docTpl
+        .replaceAll('{{ACCENT}}', pt.accent)
+        .replaceAll('{{LOGO_SRC}}', logoSrc)
+        .replaceAll('{{EYEBROW}}', escapeHtml(label ?? 'fullstackhero'))
+        .replaceAll('{{BADGE}}', pt.badge)
+        .replaceAll('{{TITLE}}', escapeHtml(data.title))
+        .replaceAll('{{TITLE_SIZE}}', String(pickTitleSize(data.title)))
+        .replaceAll('{{DESC}}', escapeHtml(truncate(data.description, 150)));
+      html = { content };
     }
     jobs.push({ name: `docs/${slug}`, outPath, ...html });
   }
