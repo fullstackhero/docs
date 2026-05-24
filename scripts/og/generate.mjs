@@ -16,7 +16,7 @@
  */
 import { chromium } from 'playwright';
 import matter from 'gray-matter';
-import { renderDocsTemplate } from './template.mjs';
+import { renderDocsTemplate, escapeHtml } from './template.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -81,6 +81,8 @@ async function fileExists(p) {
 
 async function buildDocsJobs(labels, logoSrc) {
   const ids = await listDocIds();
+  // Section-overview cards render through a bespoke token template.
+  const overviewTpl = await fs.readFile(path.join(templatesDir, '_overview.html'), 'utf8');
   // child-page counts per top-level section dir (excludes index pages)
   const counts = new Map();
   for (const id of ids) {
@@ -107,8 +109,16 @@ async function buildDocsJobs(labels, logoSrc) {
       html = { content: renderDocsTemplate({ variant, eyebrow: 'Documentation', title: 'fullstackhero', description: data.description, logoSrc }) };
     } else if (variant === 'overview') {
       // Section index pages are titled "Overview"; use the section label as the
-      // headline so the card reads "Architecture", not "Overview".
-      html = { content: renderDocsTemplate({ variant, eyebrow: 'Section Overview', title: label ?? data.title, description: data.description, count: counts.get(sectionDir) ?? 0, logoSrc }) };
+      // headline so the card reads "Architecture", not "Overview". Single-page
+      // sections (count 0) drop the "N pages" pill.
+      const oc = counts.get(sectionDir) ?? 0;
+      const content = overviewTpl
+        .replaceAll('{{LOGO_SRC}}', logoSrc)
+        .replaceAll('{{EYEBROW}}', 'Section Overview')
+        .replaceAll('{{TITLE}}', escapeHtml(label ?? data.title))
+        .replaceAll('{{DESC}}', escapeHtml(data.description))
+        .replaceAll('{{META}}', oc > 0 ? `<div class="meta"><span class="pages">${oc} pages</span></div>` : '');
+      html = { content };
     } else {
       const pt = PAGE_TYPE[data.pageType] ?? PAGE_TYPE.guide;
       html = { content: renderDocsTemplate({ variant, eyebrow: label ?? 'fullstackhero', title: data.title, description: data.description, badge: pt.badge, accent: pt.accent, logoSrc }) };
@@ -121,7 +131,7 @@ async function buildDocsJobs(labels, logoSrc) {
 async function buildSiteJobs() {
   const jobs = [];
   for (const ent of await fs.readdir(templatesDir, { withFileTypes: true })) {
-    if (ent.isFile() && ent.name.endsWith('.html')) {
+    if (ent.isFile() && ent.name.endsWith('.html') && !ent.name.startsWith('_')) {
       const name = ent.name.replace(/\.html$/, '');
       jobs.push({ name, outPath: path.join(ogDir, `${name}.jpg`), goto: pathToFileURL(path.join(templatesDir, ent.name)).href });
     }

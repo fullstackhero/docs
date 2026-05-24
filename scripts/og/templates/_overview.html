@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0b0d;
+    --fg: #f1ede4;
+    --muted: #a39c8f;
+    --border: #2a2c33;
+    --green: #16a34a;
+    --green-bright: #22c55e;
+    --green-deep: #15803d;
+    --display: 'Outfit', system-ui, sans-serif;
+    --body: 'Figtree', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 1200px; height: 675px; overflow: hidden;
+    background: var(--bg); color: var(--fg);
+    font-family: var(--body);
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  }
+  .canvas { position: relative; width: 1200px; height: 675px; overflow: hidden; background: var(--bg); }
+
+  .glow {
+    position: absolute; left: 50%; top: 30%; transform: translate(-50%, -50%);
+    width: 880px; height: 520px;
+    background: radial-gradient(ellipse at center, rgba(34, 197, 94, 0.18), rgba(21, 128, 61, 0.08) 40%, transparent 70%);
+    filter: blur(6px);
+  }
+  .grid {
+    position: absolute; inset: 0;
+    background-image: radial-gradient(circle at 1px 1px, rgba(241, 237, 228, 0.06) 1px, transparent 0);
+    background-size: 30px 30px;
+    -webkit-mask-image: radial-gradient(80% 74% at 50% 42%, black, transparent 76%);
+            mask-image: radial-gradient(80% 74% at 50% 42%, black, transparent 76%);
+  }
+  .vignette { position: absolute; inset: 0; background: radial-gradient(125% 120% at 50% 0%, transparent 52%, rgba(0, 0, 0, 0.6)); }
+
+  .stack {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 64px 80px; text-align: center;
+  }
+
+  /* Small brand lockup */
+  .brand {
+    display: inline-flex; align-items: center; gap: 14px;
+    margin-bottom: 34px;
+  }
+  .brand img { width: 54px; height: 54px; filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.5)); }
+  .brand .name {
+    font-family: var(--display); font-weight: 300; font-size: 30px;
+    letter-spacing: -0.03em; color: var(--fg);
+  }
+  .brand .name .accent { color: var(--green); }
+
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-family: var(--mono); font-size: 13px; font-weight: 600;
+    letter-spacing: 0.3em; text-transform: uppercase; color: var(--muted);
+  }
+  .eyebrow .dot {
+    width: 7px; height: 7px; border-radius: 999px;
+    background: var(--green-bright); box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.18);
+  }
+
+  .section {
+    margin-top: 18px;
+    font-family: var(--display); font-weight: 400;
+    font-size: 88px; line-height: 1.02; letter-spacing: -0.035em;
+    color: var(--fg); max-width: 1000px;
+  }
+
+  .desc {
+    margin-top: 22px; max-width: 720px;
+    font-size: 22px; line-height: 1.45; font-weight: 500; color: var(--muted);
+  }
+
+  .meta { margin-top: 28px; display: inline-flex; align-items: center; gap: 10px; }
+  .meta .pages {
+    font-family: var(--mono); font-size: 14px; font-weight: 600; letter-spacing: 0.06em;
+    color: var(--fg); padding: 7px 16px; border-radius: 999px;
+    border: 1px solid var(--border); background: rgba(21, 23, 27, 0.6);
+  }
+</style>
+</head>
+<body>
+  <div class="canvas">
+    <div class="glow"></div>
+    <div class="grid"></div>
+    <div class="vignette"></div>
+
+    <div class="stack">
+      <div class="brand">
+        <img src="{{LOGO_SRC}}" alt="" />
+        <span class="name">fullstack<span class="accent">hero</span></span>
+      </div>
+      <span class="eyebrow"><span class="dot"></span>{{EYEBROW}}</span>
+      <h1 class="section">{{TITLE}}</h1>
+      <p class="desc">{{DESC}}</p>
+      {{META}}
+    </div>
+  </div>
+</body>
+</html>
