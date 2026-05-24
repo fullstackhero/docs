@@ -1,7 +1,7 @@
 ---
 title: Health checks
 lastUpdated: 2026-05-19
-description: Liveness + readiness endpoints — database, Redis, MinIO, tenant migrations — for Kubernetes / Docker Compose / load balancer probes.
+description: Liveness + readiness endpoints — database, Valkey, MinIO, tenant migrations — for Kubernetes / Docker Compose / load balancer probes.
 sidebar:
   label: Health checks
   order: 7
@@ -12,7 +12,7 @@ seo:
   keywords: 'asp.net core health checks, kubernetes liveness readiness probe, health endpoint .net 10, redis health check, postgres health check'
 ---
 
-Two health endpoints ship out of the box: `GET /health` for overall liveness, `GET /health/ready` for readiness. The kit registers checks for every dependency the host needs to function — database connections per registered `DbContext`, Redis when caching or jobs are enabled, MinIO when storage is configured, and a per-tenant migration check that reports whether every tenant DB is on the latest schema.
+Two health endpoints ship out of the box: `GET /health` for overall liveness, `GET /health/ready` for readiness. The kit registers checks for every dependency the host needs to function — database connections per registered `DbContext`, Valkey (a Redis-compatible, BSD-licensed Redis fork) when caching or jobs are enabled, MinIO when storage is configured, and a per-tenant migration check that reports whether every tenant DB is on the latest schema.
 
 <Callout type="tip" title="Liveness vs readiness">
 Liveness asks "is the process alive?" — restart if it fails. Readiness asks "is the process ready to take traffic?" — stop sending requests if it fails. The kit's `/health` is liveness (just respond), `/health/ready` is readiness (all dependencies green).
@@ -23,7 +23,7 @@ Liveness asks "is the process alive?" — restart if it fails. Readiness asks "i
 | Check | Source | When registered |
 |---|---|---|
 | Per-DbContext | `Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore` | Always — one per `DbContext` |
-| Redis | Kit's `RedisHealthCheck` | When `CachingOptions:Redis` is set |
+| Valkey | Kit's `RedisHealthCheck` | When `CachingOptions:Redis` is set |
 | Hangfire | Kit's `HangfireHealthCheck` | When `EnableJobs = true` |
 | MinIO / S3 | `S3StorageService.HeadObjectAsync` against the bucket | When storage provider is `s3` |
 | Tenant migrations | Kit's `TenantMigrationsHealthCheck` | When `EnableHeroMultiTenantDatabases` is on |

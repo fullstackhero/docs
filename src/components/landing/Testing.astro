@@ -4,7 +4,7 @@
  *
  * A four-pillar scoreboard over a faux-terminal showing a green run. The
  * selling point this section exists to make: integration tests execute against
- * a REAL PostgreSQL (+ Redis) in Docker via Testcontainers — no mocks, no
+ * a REAL PostgreSQL (+ Valkey) in Docker via Testcontainers — no mocks, no
  * in-memory fakes — and both React apps get full Playwright E2E coverage.
  *
  * Counts are real, verified against the repo (1,484 backend [Fact]/[Theory] =
@@ -34,7 +34,7 @@ const pillars: Pillar[] = [
     icon: 'lucide:container',
     value: '660', unit: '+',
     label: 'Integration',
-    desc: 'The full HTTP stack against a real PostgreSQL + Redis in Docker, via Testcontainers. No mocks, no fakes.',
+    desc: 'The full HTTP stack against a real PostgreSQL + Valkey in Docker, via Testcontainers. No mocks, no fakes.',
     highlight: true,
   },
   {
@@ -129,7 +129,7 @@ const pillars: Pillar[] = [
       </div>
 
       <pre class="overflow-x-auto p-5 font-mono text-[12px] leading-[1.75] tabular-nums sm:p-6 sm:text-[12.5px]"><code><span class="text-primary">$</span> dotnet test
-<span class="text-muted-foreground/80">  ⟳  Testcontainers — postgres:17 · redis  ready</span>
+<span class="text-muted-foreground/80">  ⟳  Testcontainers — postgres:17 · valkey  ready</span>
 <span class="text-primary">  ✓</span>  unit ........................  <span class="text-foreground">774 passed</span>
 <span class="text-primary">  ✓</span>  integration <span class="text-muted-foreground/70">(real Postgres)</span> .  <span class="text-foreground">661 passed</span>
 <span class="text-primary">  ✓</span>  architecture <span class="text-muted-foreground/70">(NetArchTest)</span> .   <span class="text-foreground">49 passed</span>

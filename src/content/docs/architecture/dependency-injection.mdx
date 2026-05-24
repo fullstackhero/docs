@@ -99,12 +99,12 @@ The kit uses standard `IServiceCollection` lifetimes:
 | Lifetime | Use for | Example |
 |---|---|---|
 | Singleton | Stateless / app-wide / thread-safe | `IEventSerializer`, `JsonMaskingService`, OpenTelemetry meter providers |
-| Scoped | Per-request DbContext, per-request user, per-request services | `DbContext`, `ICurrentUser`, `IUserService`, `IQuotaService` (when Redis-backed) |
+| Scoped | Per-request DbContext, per-request user, per-request services | `DbContext`, `ICurrentUser`, `IUserService`, `IQuotaService` (when Valkey-backed) |
 | Transient | Stateless helpers that aren't expensive to construct | Specifications, command/query handlers |
 
 Two things to watch out for:
 
-- **Hangfire jobs get a new scope per execution.** `FshJobActivator` creates an `IServiceScope` per job. So a scoped service injected into a job sees a fresh instance for each run. Don't try to share state via scoped services across job invocations; use Redis or the database.
+- **Hangfire jobs get a new scope per execution.** `FshJobActivator` creates an `IServiceScope` per job. So a scoped service injected into a job sees a fresh instance for each run. Don't try to share state via scoped services across job invocations; use Valkey or the database.
 - **Integration event handlers run synchronously in the publisher's scope.** When a Chat handler publishes a `MentionedInChannelIntegrationEvent`, the Notifications handler runs in the same scope. The Notifications handler can resolve the same DbContext the Chat handler holds — which is intentional, because it lets the inbox row write commit in the same transaction as the message.
 
 ## Permission registration

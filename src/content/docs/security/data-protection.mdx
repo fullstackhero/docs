@@ -1,7 +1,7 @@
 ---
 title: Data protection
 lastUpdated: 2026-05-19
-description: Redis-backed Data Protection key persistence so cookies, antiforgery tokens, and IDataProtector payloads survive rolling deploys across instances.
+description: Valkey-backed Data Protection key persistence so cookies, antiforgery tokens, and IDataProtector payloads survive rolling deploys across instances.
 sidebar:
   label: Data protection
   order: 6
@@ -12,10 +12,10 @@ seo:
   keywords: 'asp.net core data protection redis, idataprotector dotnet, cookie key persistence, multi instance data protection .net 10'
 ---
 
-ASP.NET Core's Data Protection API encrypts cookies, antiforgery tokens, and any payload you ask it to with `IDataProtector`. Default behaviour stores the keys in the local filesystem — fine for a single-process host, broken for multi-instance deployments where each instance maintains its own key ring and decryption fails across nodes. The kit fixes this by **persisting the key ring to Redis** through the shared multiplexer.
+ASP.NET Core's Data Protection API encrypts cookies, antiforgery tokens, and any payload you ask it to with `IDataProtector`. Default behaviour stores the keys in the local filesystem — fine for a single-process host, broken for multi-instance deployments where each instance maintains its own key ring and decryption fails across nodes. The kit fixes this by **persisting the key ring to Valkey** (a Redis-compatible, BSD-licensed Redis fork) through the shared multiplexer.
 
 <Callout type="tip" title="Already configured if you enabled caching">
-`AddHeroCaching` registers an `IConnectionMultiplexer` against Redis, then `services.AddDataProtection().PersistKeysToStackExchangeRedis(...)` reuses the same multiplexer for key persistence. One Redis connection pool, one key ring shared across every instance.
+`AddHeroCaching` registers an `IConnectionMultiplexer` against Valkey, then `services.AddDataProtection().PersistKeysToStackExchangeRedis(...)` reuses the same multiplexer for key persistence. One Valkey connection pool, one key ring shared across every instance.
 </Callout>
 
 ## What gets protected
@@ -44,21 +44,21 @@ services.AddDataProtection()
 Two important details:
 
 - **Same multiplexer** as the cache + (optionally) SignalR backplane. One connection pool covers all three.
-- **`SetApplicationName`** — Data Protection isolates keys by application name. If you run two fullstackhero hosts against the same Redis (staging + dev sharing a Redis instance), use distinct application names so they don't fight over the key ring.
+- **`SetApplicationName`** — Data Protection isolates keys by application name. If you run two fullstackhero hosts against the same Valkey (staging + dev sharing a Valkey instance), use distinct application names so they don't fight over the key ring.
 
 ## What happens without it
 
-Without Redis-backed persistence (e.g. you forgot to set `CachingOptions:Redis`), each instance writes its key ring to its local filesystem inside the container. Symptoms:
+Without Valkey-backed persistence (e.g. you forgot to set `CachingOptions:Redis`), each instance writes its key ring to its local filesystem inside the container. Symptoms:
 
 - **First request after deploy on a different pod**: user gets logged out / asked to re-confirm email / token-expired errors.
 - **Email confirmation links from one deploy stop working** after the next deploy if the new pod doesn't share the keys.
 - **Antiforgery validation fails** intermittently across pods.
 
-The fix is simple — set `CachingOptions:Redis`. There's no "production-grade-without-Redis" alternative; if Redis isn't available, use Postgres for key persistence via `PersistKeysToDbContext(...)` (the kit doesn't ship this by default but it's a 10-line change).
+The fix is simple — set `CachingOptions:Redis`. There's no "production-grade-without-Valkey" alternative; if Valkey isn't available, use Postgres for key persistence via `PersistKeysToDbContext(...)` (the kit doesn't ship this by default but it's a 10-line change).
 
 ## Key rotation
 
-Data Protection rotates keys automatically every 90 days by default. The active key is used for new protections; expired keys are kept for decrypting older payloads up to a retention period. The key ring grows over time — Redis storage is negligible (a few KB).
+Data Protection rotates keys automatically every 90 days by default. The active key is used for new protections; expired keys are kept for decrypting older payloads up to a retention period. The key ring grows over time — Valkey storage is negligible (a few KB).
 
 Explicit rotation isn't necessary in normal operation; the framework handles it. For incident response (a key may have leaked), revoke the entire ring and force a deploy:
 
@@ -93,8 +93,8 @@ STORAGE__S3__SECRETKEY=...
 
 ## Gotchas
 
-- **The shared multiplexer crash story.** When Redis goes down, Data Protection key reads fail for the duration of the outage. Cookie auth keeps working because keys are cached in-memory after the first read; new encryptions can't happen. Plan your Redis HA accordingly (Redis Sentinel, Redis Cluster, or a managed Redis service with multi-AZ).
-- **Different application names mean different key rings.** Two hosts that share Redis but use different `SetApplicationName` values can't decrypt each other's payloads. That's usually what you want for multi-env isolation; it's the wrong thing if you accidentally set different names on instances of the same logical app.
+- **The shared multiplexer crash story.** When Valkey goes down, Data Protection key reads fail for the duration of the outage. Cookie auth keeps working because keys are cached in-memory after the first read; new encryptions can't happen. Plan your Valkey HA accordingly (Sentinel, Cluster, or a managed Redis-compatible service with multi-AZ).
+- **Different application names mean different key rings.** Two hosts that share Valkey but use different `SetApplicationName` values can't decrypt each other's payloads. That's usually what you want for multi-env isolation; it's the wrong thing if you accidentally set different names on instances of the same logical app.
 - **Don't change application name once you've started shipping.** The keys encrypted under the old name become unreadable. If you need to rename, plan a deprecation window where you run both names side-by-side.
 
 ## Related

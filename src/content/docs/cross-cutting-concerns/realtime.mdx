@@ -1,7 +1,7 @@
 ---
 title: Realtime
 lastUpdated: 2026-05-19
-description: SignalR with a Redis backplane, group conventions for users + channels, post-SaveChanges broadcast pattern, and distributed-cache typing throttle.
+description: SignalR with a Valkey backplane, group conventions for users + channels, post-SaveChanges broadcast pattern, and distributed-cache typing throttle.
 sidebar:
   label: Realtime (SignalR)
   order: 9
@@ -12,7 +12,7 @@ seo:
   keywords: 'asp.net core signalr .net 10, signalr redis backplane, signalr group conventions, realtime chat dotnet, signalr authentication query token'
 ---
 
-The kit's realtime surface is a single SignalR hub — `AppHub` in `BuildingBlocks/Web/Realtime/` — serving every realtime concern. On connect, every user joins their personal `user:{userId}` group plus every `channel:{channelId}` they belong to. Handlers broadcast via `IHubContext<AppHub>` after `SaveChanges` commits; the Redis backplane fans the broadcast across instances.
+The kit's realtime surface is a single SignalR hub — `AppHub` in `BuildingBlocks/Web/Realtime/` — serving every realtime concern. On connect, every user joins their personal `user:{userId}` group plus every `channel:{channelId}` they belong to. Handlers broadcast via `IHubContext<AppHub>` after `SaveChanges` commits; the **Valkey** (a Redis-compatible, BSD-licensed Redis fork) backplane fans the broadcast across instances.
 
 <Callout type="tip" title="One hub, many concerns">
 A second hub would mean a second auth pipeline, a second backplane configuration, a second pile of client-side connection state. Keep all realtime traffic on `AppHub`; identify event types via the SignalR method name (`ChatMessageCreated`, `NotificationCreated`, `TicketResolved`).
@@ -25,7 +25,7 @@ builder.AddHeroPlatform(o => o.EnableRealtime = true);
 app.UseHeroPlatform(p => p.MapRealtime = true);
 ```
 
-`AddHeroRealtime` wires the hub registration; if `CachingOptions:Redis` is set, it also calls `AddStackExchangeRedis(...)` so cross-instance message fan-out works. Without Redis, every instance broadcasts only to its own connected clients — fine for dev, not for multi-instance production.
+`AddHeroRealtime` wires the hub registration; if `CachingOptions:Redis` is set, it also calls `AddStackExchangeRedis(...)` so cross-instance message fan-out works. Without Valkey, every instance broadcasts only to its own connected clients — fine for dev, not for multi-instance production.
 
 ## Group conventions
 
@@ -86,7 +86,7 @@ public async Task Typing(Guid channelId)
 }
 ```
 
-`TryClaimAsync` returns true exactly once per (channel, user) per 3-second window. With Redis, the throttle is cluster-wide — chatty clients can't bypass by reconnecting to a different node.
+`TryClaimAsync` returns true exactly once per (channel, user) per 3-second window. With Valkey, the throttle is cluster-wide — chatty clients can't bypass by reconnecting to a different node.
 
 ## Authenticating SignalR connections
 
@@ -160,4 +160,4 @@ Two important config notes:
 - [Chat module](/docs/modules/chat/) — the canonical consumer of every realtime feature listed here.
 - [Notifications module](/docs/modules/notifications/) — `NotificationCreated` push.
 - [Server-Sent Events](/docs/cross-cutting-concerns/server-sent-events/) — one-way streaming when SignalR is overkill.
-- [Caching](/docs/cross-cutting-concerns/caching/) — the Redis backplane is shared with the cache.
+- [Caching](/docs/cross-cutting-concerns/caching/) — the Valkey backplane is shared with the cache.

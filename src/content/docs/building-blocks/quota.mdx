@@ -1,7 +1,7 @@
 ---
 title: Quota building block
 lastUpdated: 2026-05-19
-description: Per-tenant resource limits with Redis or in-memory counters, gauge-based live usage, calendar-month windows, and HTTP middleware enforcement.
+description: Per-tenant resource limits with Valkey or in-memory counters, gauge-based live usage, calendar-month windows, and HTTP middleware enforcement.
 sidebar:
   label: Quota
   order: 11
@@ -12,7 +12,7 @@ seo:
   keywords: '.net usage quota limits, multi-tenant rate limit dotnet, redis counter quota, plan limits saas dotnet'
 ---
 
-The Quota block enforces per-tenant resource limits. Storage bytes used, number of active users, API calls per month, anything you care to meter. It ships Redis-backed counters with an in-memory fallback (for dev/test only), plan-driven limits with per-tenant overrides, an `IQuotaGaugeProvider` hook for modules that expose live counts (the Identity module exposes user count this way), and a request middleware that returns 429 when a tenant blows past its plan.
+The Quota block enforces per-tenant resource limits. Storage bytes used, number of active users, API calls per month, anything you care to meter. It ships Valkey-backed counters (Valkey is a Redis-compatible, BSD-licensed Redis fork) with an in-memory fallback (for dev/test only), plan-driven limits with per-tenant overrides, an `IQuotaGaugeProvider` hook for modules that expose live counts (the Identity module exposes user count this way), and a request middleware that returns 429 when a tenant blows past its plan.
 
 <Callout type="tip" title="Plans first, overrides second">
 Most tenants are on a plan. Plans live in `appsettings:QuotaOptions:Plans`. A tenant's `AppTenantInfo.QuotaLimits` is the per-tenant override dict — set values there only when you've negotiated a bespoke contract.
@@ -22,7 +22,7 @@ Most tenants are on a plan. Plans live in `appsettings:QuotaOptions:Plans`. A te
 
 ### Extensions
 
-- **`AddHeroQuotas(services, configuration)`** — registers an `IQuotaService` based on `QuotaOptions:Enabled` and whether Redis is configured. Disabled → `NoopQuotaService`. Enabled + Redis → `RedisQuotaService`. Enabled + no Redis → `InMemoryQuotaService`. Also registers `QuotaPlanResolver` + `QuotaEnforcementMiddleware`.
+- **`AddHeroQuotas(services, configuration)`** — registers an `IQuotaService` based on `QuotaOptions:Enabled` and whether Valkey is configured. Disabled → `NoopQuotaService`. Enabled + Valkey → `RedisQuotaService`. Enabled + no Valkey → `InMemoryQuotaService`. Also registers `QuotaPlanResolver` + `QuotaEnforcementMiddleware`.
 - **`UseHeroQuotas(app)`** — inserts the enforcement middleware into the pipeline (after authentication, before authorization).
 
 ### Service interfaces
@@ -134,9 +134,9 @@ The default period is the calendar month. To use a sliding window or a custom wi
 
 - **Period is calendar-month, UTC.** Counters reset at midnight UTC on the 1st. Cross-timezone customers see "your usage reset" at 4 PM PT on the 31st. Document this in your dashboard.
 - **Gauges are read on-demand.** Each `CheckAsync` invokes the gauge providers, which usually do a DB query. Cache the results inside the gauge if the data is expensive to compute and slightly stale is fine.
-- **`InMemoryQuotaService` is not cluster-safe.** Two instances of the API hold separate counters. Use Redis (or any distributed cache) in production.
+- **`InMemoryQuotaService` is not cluster-safe.** Two instances of the API hold separate counters. Use Valkey (or any distributed cache) in production.
 - **Root tenant exemption is global.** With `ExemptRootTenant = true`, the root/platform tenant has unlimited everything. Don't disable this in production unless you have a reason — internal admin actions tend to exceed all the limits you set for paying customers.
-- **Redis TTL.** Period keys carry a TTL aligned to the period end. Clock skew between instances can produce off-by-one errors at the period boundary. Use NTP.
+- **Valkey TTL.** Period keys carry a TTL aligned to the period end. Clock skew between instances can produce off-by-one errors at the period boundary. Use NTP.
 
 ## Critical files
 

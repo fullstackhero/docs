@@ -67,12 +67,12 @@ dotnet test src/FSH.Starter.slnx      # unit + architecture + integration
 ```
 
 <Callout type="warning" title="Integration tests need Docker">
-`Integration.Tests` spins up real Postgres, Redis, and MinIO via Testcontainers. If Docker isn't running
+`Integration.Tests` spins up real Postgres, Valkey, and MinIO via Testcontainers. If Docker isn't running
 you'll see `DockerUnavailableException` — that's environmental, not a code regression. Run the unit
 projects (e.g. `dotnet test src/Tests/Catalog.Tests`) to validate logic without Docker.
 </Callout>
 
-To see it all running, the Aspire AppHost brings up the whole stack — Postgres, Redis, MinIO, the migrator,
+To see it all running, the Aspire AppHost brings up the whole stack — Postgres, Valkey, MinIO, the migrator,
 the API, and both React apps — with one command:
 
 ```bash

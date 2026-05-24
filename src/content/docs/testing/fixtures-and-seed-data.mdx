@@ -23,7 +23,7 @@ Seeded tenants (acme, globex, root) live throughout the suite. Don't create new 
 | Fixture | Type | Shared by |
 |---|---|---|
 | `DatabaseFixture` | `IAsyncLifetime` — Testcontainers Postgres 17 | The whole test project |
-| `RedisFixture` | `IAsyncLifetime` — Testcontainers Redis 7 | The whole test project |
+| `RedisFixture` | `IAsyncLifetime` — Testcontainers Valkey 8 | The whole test project |
 | `MinioFixture` | `IAsyncLifetime` — Testcontainers MinIO | The whole test project |
 | `FshWebApplicationFactory` | `WebApplicationFactory<Program>` | Class-level via `IClassFixture<>` |
 | `Seed.*` | Static — pre-inserted users / tenants / brands / categories | Read-only across the project |

@@ -29,7 +29,7 @@ It's aimed at teams that want to ship features on day one without spending a spr
 - **Quotas.** Per-tenant request and resource limits.
 - **Observability baked in.** OpenTelemetry traces, metrics, and logs (OTLP); Serilog structured logging; health checks; security/exception auditing.
 - **API docs.** OpenAPI + Scalar UI. Versioned routes via `Asp.Versioning` (`/api/v{version}/{module}`).
-- **Cloud-ready.** `.NET Aspire` AppHost brings up Postgres, Redis, and the API host locally with one command. Production deploy via Docker Compose included.
+- **Cloud-ready.** `.NET Aspire` AppHost brings up Postgres, Valkey (a Redis-compatible, BSD-licensed Redis fork), and the API host locally with one command. Production deploy via Docker Compose included.
 - **Two frontends.** React + Vite admin console and dashboard, both in `clients/`.
 - **CLI + template.** Scaffold new projects with `fsh new` or `dotnet new fsh`, or clone the repo directly.
 
@@ -42,7 +42,7 @@ dotnet-starter-kit/
 │   │   ├── Core                  DDD primitives, exceptions, abstractions
 │   │   ├── Persistence           EF Core base contexts, specifications, soft delete
 │   │   ├── Web                   Host wiring: auth, OpenAPI, rate limit, CORS, errors
-│   │   ├── Caching               HybridCache + Redis
+│   │   ├── Caching               HybridCache + Valkey
 │   │   ├── Eventing              Domain + integration events
 │   │   ├── Eventing.Abstractions Contracts for cross-module events
 │   │   ├── Jobs                  Hangfire
@@ -136,11 +136,11 @@ The API never mutates data on startup. Demo data (acme/globex tenants, sample ca
 | Database            | PostgreSQL (Npgsql) by default; SQL Server provider available           |
 | Identity            | ASP.NET Identity + JWT bearer (`Microsoft.AspNetCore.Authentication.JwtBearer` 10) |
 | Multitenancy        | Finbuckle.MultiTenant 10 (claim / header / query strategies)            |
-| Caching             | `HybridCache` (in-memory + Redis) via `StackExchange.Redis`             |
+| Caching             | `HybridCache` (in-memory + Valkey) via `StackExchange.Redis`            |
 | Jobs                | Hangfire 1.8 (Postgres or in-memory)                                    |
 | HTTP resilience     | `Microsoft.Extensions.Http.Resilience` (Polly v8)                       |
 | Feature flags       | Microsoft.FeatureManagement + tenant overrides                          |
-| Realtime            | SignalR (Redis backplane) + Server-Sent Events                          |
+| Realtime            | SignalR (Valkey backplane) + Server-Sent Events                         |
 | Mail                | MailKit / SendGrid                                                      |
 | Storage             | Local filesystem or S3-compatible (AWS SDK)                             |
 | Messaging           | RabbitMQ client (optional)                                              |
@@ -148,7 +148,7 @@ The API never mutates data on startup. Demo data (acme/globex tenants, sample ca
 | Tracing / metrics   | OpenTelemetry 1.15 (OTLP exporter)                                      |
 | API docs            | OpenAPI 10 + Scalar UI                                                  |
 | Errors              | `ProblemDetails` (RFC 9457) via global exception handler                |
-| Orchestration       | .NET Aspire 13.3 (Postgres + Redis + API)                               |
+| Orchestration       | .NET Aspire 13.3 (Postgres + Valkey + API)                              |
 
 ### Frontends
 
@@ -162,7 +162,7 @@ The API never mutates data on startup. Demo data (acme/globex tenants, sample ca
 | Layer            | Tools                                                            |
 |------------------|------------------------------------------------------------------|
 | Unit             | xUnit, Shouldly, NSubstitute, AutoFixture                        |
-| Integration      | `Microsoft.AspNetCore.Mvc.Testing`, Testcontainers (Postgres / Redis / Minio) |
+| Integration      | `Microsoft.AspNetCore.Mvc.Testing`, Testcontainers (Postgres / Valkey / Minio) |
 | Architecture     | NetArchTest — enforces module boundaries                         |
 
 ### Distribution

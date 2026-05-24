@@ -11,7 +11,7 @@ seo:
   keywords: '.net 10 testing, xunit shouldly nsubstitute, testcontainers .net postgres, netarchtest module boundaries, integration tests dotnet aspnet'
 ---
 
-fullstackhero ships with around **900 `[Fact]` + `[Theory]` tests** that run green on every build. Three layers: unit tests verify domain invariants and handler logic without infrastructure; integration tests spin up real Postgres + Redis + MinIO via Testcontainers and exercise the API end-to-end through `Microsoft.AspNetCore.Mvc.Testing`; architecture tests use NetArchTest to enforce module boundaries, contracts purity, and naming conventions as compiler-level rules.
+fullstackhero ships with around **900 `[Fact]` + `[Theory]` tests** that run green on every build. Three layers: unit tests verify domain invariants and handler logic without infrastructure; integration tests spin up real Postgres + Valkey + MinIO via Testcontainers and exercise the API end-to-end through `Microsoft.AspNetCore.Mvc.Testing`; architecture tests use NetArchTest to enforce module boundaries, contracts purity, and naming conventions as compiler-level rules.
 
 <Callout type="tip" title="The test suite is the contract">
 Every architectural rule in the kit — "modules never reference each other's runtime", "every handler has a validator", "no controller may bypass `.RequirePermission()`" — is a NetArchTest assertion. Break the rule, fail the build. Read `src/Tests/Architecture.Tests/` to see exactly what's enforced.

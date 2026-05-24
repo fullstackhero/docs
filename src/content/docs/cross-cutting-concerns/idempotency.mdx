@@ -50,7 +50,7 @@ If no header is sent, the filter is a no-op — the endpoint behaves like an ord
 }
 ```
 
-`AddHeroPlatform(o => o.EnableIdempotency = true)` wires the filter. The cache itself uses HybridCache, so the L2 (Redis) backing means cached responses survive across instances. Without Redis you get per-instance idempotency, which is OK for dev but not for multi-instance production.
+`AddHeroPlatform(o => o.EnableIdempotency = true)` wires the filter. The cache itself uses HybridCache, so the L2 (Valkey) backing means cached responses survive across instances. Without Valkey you get per-instance idempotency, which is OK for dev but not for multi-instance production.
 
 ## What clients send
 
@@ -92,7 +92,7 @@ Layer `Idempotency-Key` on top of these for full retry safety across both transp
 
 - **The cache key includes tenant**, so two tenants using the same idempotency key get separate responses. This is correct; tenants are independent.
 - **`MaxBodyBytes` defaults to 64 KB.** Responses larger than this aren't cached (and a warning logs). For large responses, raise the cap or skip idempotency on that endpoint.
-- **Cache miss after restart is normal**. If you restart the host and Redis isn't running, the in-memory L2 starts empty — replayed requests run again. Always use Redis in production.
+- **Cache miss after restart is normal**. If you restart the host and Valkey isn't running, the in-memory L2 starts empty — replayed requests run again. Always use Valkey in production.
 
 ## Related
 

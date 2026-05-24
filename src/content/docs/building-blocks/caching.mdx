@@ -1,7 +1,7 @@
 ---
 title: Caching building block
 lastUpdated: 2026-05-19
-description: HybridCache (L1 in-memory + L2 Redis or distributed memory) with OpenTelemetry instrumentation, stampede protection, and a shared multiplexer for DataProtection.
+description: HybridCache (L1 in-memory + L2 Valkey or distributed memory) with OpenTelemetry instrumentation, stampede protection, and a shared multiplexer for DataProtection.
 sidebar:
   label: Caching
   order: 5
@@ -12,7 +12,7 @@ seo:
   keywords: 'hybridcache .net 10, hybridcache redis backplane, l1 l2 cache dotnet, stampede protection .net, opentelemetry cache metrics'
 ---
 
-The Caching block wires `Microsoft.Extensions.Caching.Hybrid` for the whole platform. L1 is in-process memory; L2 is Redis when `CachingOptions:Redis` is set, otherwise the in-process `DistributedMemoryCache`. The block decorates the underlying `HybridCache` with `ObservableHybridCache` to emit OpenTelemetry metrics + activities, and it shares the `IConnectionMultiplexer` with DataProtection so the whole host opens **one Redis connection pool**, not three.
+The Caching block wires `Microsoft.Extensions.Caching.Hybrid` for the whole platform. L1 is in-process memory; L2 is **Valkey** (a Redis-compatible, BSD-licensed Redis fork) when `CachingOptions:Redis` is set, otherwise the in-process `DistributedMemoryCache`. The block decorates the underlying `HybridCache` with `ObservableHybridCache` to emit OpenTelemetry metrics + activities, and it shares the `IConnectionMultiplexer` with DataProtection so the whole host opens **one Valkey connection pool**, not three.
 
 <Callout type="tip" title="Stampede protection is the win">
 HybridCache coalesces concurrent identical requests into a single source fetch automatically. The first caller blocks on the source; the rest of the wave wait on the same task. You don't write lock code; you just call `GetOrCreateAsync` and the cache does the right thing.
@@ -87,11 +87,11 @@ Identity uses HybridCache for role-permission lookups (the `RolePermissionSyncer
 }
 ```
 
-When `Redis` is empty the block falls back to in-memory L2 (`DistributedMemoryCache`) — fine for dev/test, **not** for multi-instance production. Always set Redis (or another distributed cache) for production.
+When `Redis` is empty the block falls back to in-memory L2 (`DistributedMemoryCache`) — fine for dev/test, **not** for multi-instance production. Always set Valkey (or another distributed cache) for production.
 
 ## How to extend
 
-### Use the shared multiplexer for your own Redis work
+### Use the shared multiplexer for your own Valkey work
 
 The block exposes the `IConnectionMultiplexer` through DI; resolve it and reuse instead of opening a second pool:
 

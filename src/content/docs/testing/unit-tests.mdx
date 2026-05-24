@@ -109,7 +109,7 @@ Unit tests test the handler. If your handler is too coupled to its DI container 
 
 ### 3. No infrastructure, no network, no file system
 
-Anything that touches `DbContext`, `HttpClient`, file I/O, or Redis is an [integration test](/docs/testing/integration-tests/). Unit tests stay in memory.
+Anything that touches `DbContext`, `HttpClient`, file I/O, or Valkey is an [integration test](/docs/testing/integration-tests/). Unit tests stay in memory.
 
 ## Testing aggregates
 

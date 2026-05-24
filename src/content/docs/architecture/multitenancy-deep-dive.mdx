@@ -46,7 +46,7 @@ builder.Services.AddMultiTenant<AppTenantInfo>()
 Finbuckle's strategy chain runs **before** `UseAuthentication()`. The claim strategy therefore sees an anonymous `User` on every normal request and is effectively a no-op. It's there for the **cross-tenant impersonation** case, where post-auth middleware re-resolves the tenant from the impersonation grant's claim. In the normal flow the header strategy is the primary resolver.
 </Callout>
 
-The kit caches resolved tenants in `DistributedCacheStore` for 60 minutes (Redis backplane) to keep hot-path requests off the DB. The `EFCoreStore` is the source of truth.
+The kit caches resolved tenants in `DistributedCacheStore` for 60 minutes (Valkey backplane) to keep hot-path requests off the DB. The `EFCoreStore` is the source of truth.
 
 ### The root-operator override
 

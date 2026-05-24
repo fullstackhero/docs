@@ -15,7 +15,7 @@ seo:
 Both `clients/admin` and `clients/dashboard` are Vite-based React SPAs. Standard `npm` lifecycle, standard build output, no special tooling required.
 
 <Callout type="tip" title="Aspire is the easiest local dev">
-`dotnet run --project src/Host/FSH.Starter.AppHost` brings up Postgres, Redis, MinIO, the API, the admin, and the dashboard — all at once, with service discovery handling URLs. You don't need to run `npm run dev` separately unless you're isolating frontend work.
+`dotnet run --project src/Host/FSH.Starter.AppHost` brings up Postgres, Valkey, MinIO, the API, the admin, and the dashboard — all at once, with service discovery handling URLs. You don't need to run `npm run dev` separately unless you're isolating frontend work.
 </Callout>
 
 ## Running locally
@@ -31,7 +31,7 @@ This starts everything:
 - API at http://localhost:5000
 - Admin at http://localhost:5173
 - Dashboard at http://localhost:5174
-- Postgres at tcp/5432, Redis at tcp/6379, MinIO at :9000
+- Postgres at tcp/5432, Valkey at tcp/6379, MinIO at :9000
 
 Vite HMR works through Aspire — edits to frontend files reload instantly in the browser.
 

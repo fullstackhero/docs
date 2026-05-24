@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-05-19
+lastUpdated: 2026-05-24
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -9,4 +9,10 @@ seo:
   title: 'Changelog — fullstackhero .NET starter kit release notes'
 ---
 
-Coming soon.
+Notable changes to the kit, newest first.
+
+## 2026-05-24
+
+- **Cache/store engine switched from Redis to Valkey 8** — the BSD-licensed, Linux Foundation fork of Redis. It's a drop-in over the Redis protocol (RESP): the `StackExchange.Redis` client and every `CachingOptions:Redis` config key are unchanged. Applies to .NET Aspire, both Docker Compose files, and the integration-test container.
+- **RedisInsight cache browser** is now auto-wired in Aspire, connected to the Valkey instance so you can inspect cache keys, TTLs, and the SignalR backplane in local dev with no manual configuration.
+- **Docker Compose hardening** — the production `deploy/docker` stack now provisions the MinIO bucket before the API starts (fixes a first-upload `NoSuchBucket`); the dev root `docker-compose.yml` now runs the DB migrator (`apply --seed`) so the API never boots against an empty schema.

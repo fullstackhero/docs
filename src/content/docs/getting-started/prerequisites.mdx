@@ -16,7 +16,7 @@ A short checklist. The rest of Getting Started assumes these are in place.
 ## Required
 
 - **.NET 10 SDK** — from [dotnet.microsoft.com/download](https://dotnet.microsoft.com/download).
-- **Docker** — used for Postgres and Redis containers (Aspire and integration tests rely on it). Docker Desktop on macOS / Windows, Docker Engine on Linux.
+- **Docker** — used for Postgres and Valkey containers (Aspire and integration tests rely on it). Docker Desktop on macOS / Windows, Docker Engine on Linux.
 - **Git** — for cloning the repo or pulling template updates.
 
 ## Optional
@@ -24,7 +24,7 @@ A short checklist. The rest of Getting Started assumes these are in place.
 - **.NET Aspire workload** — `dotnet workload install aspire`. Needed only if you'll run the project via the AppHost (the default Quick Start path does).
 - **Node 20+** — only if you'll work on the React + Vite frontends in `clients/admin` and `clients/dashboard`.
 - **PostgreSQL 15+** — install locally if you'd rather not run Postgres in a container. Otherwise Aspire provisions one for you.
-- **Redis 7+** — same.
+- **Valkey 8+** — same. (Valkey is a Redis-compatible, BSD-licensed Redis fork; any Redis-protocol server also works.)
 
 ## Verify
 

@@ -29,7 +29,7 @@ const faqs: FaqItem[] = [
   },
   {
     q: 'How do I deploy it?',
-    a: "Two paths. For development, .NET Aspire orchestrates everything with a single dotnet run command. For production, deploy/docker/docker-compose.yml ships a complete stack (PostgreSQL, Redis, MinIO, API, Admin, Dashboard, DbMigrator) you can stand up on a single host. Each service is also a normal Docker image you can ship to Kubernetes, Azure App Service, AWS ECS, or anywhere else.",
+    a: "Two paths. For development, .NET Aspire orchestrates everything with a single dotnet run command. For production, deploy/docker/docker-compose.yml ships a complete stack (PostgreSQL, Valkey, MinIO, API, Admin, Dashboard, DbMigrator) you can stand up on a single host. Each service is also a normal Docker image you can ship to Kubernetes, Azure App Service, AWS ECS, or anywhere else.",
     link: { text: 'Deployment guide', href: '/docs/deployment/' },
   },
   {
@@ -44,7 +44,7 @@ const faqs: FaqItem[] = [
   },
   {
     q: 'Can I deploy it to Azure, AWS, or Kubernetes?',
-    a: "Yes. The API, DbMigrator, admin and dashboard apps each ship as a normal Docker image — they don't depend on any orchestrator. deploy/docker/docker-compose.yml runs everything on a single VM; the same images run on Azure App Service, AWS ECS / App Runner, Google Cloud Run, or any Kubernetes cluster. PostgreSQL, Redis, and MinIO are off-the-shelf — swap them for managed services (Azure Postgres, AWS ElastiCache, S3) when you're ready.",
+    a: "Yes. The API, DbMigrator, admin and dashboard apps each ship as a normal Docker image — they don't depend on any orchestrator. deploy/docker/docker-compose.yml runs everything on a single VM; the same images run on Azure App Service, AWS ECS / App Runner, Google Cloud Run, or any Kubernetes cluster. PostgreSQL, Valkey, and MinIO are off-the-shelf — swap them for managed services (Azure Postgres, AWS ElastiCache, S3) when you're ready.",
     link: { text: 'Cloud deployment recipes', href: '/docs/deployment/' },
   },
 ];

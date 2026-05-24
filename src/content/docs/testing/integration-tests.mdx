@@ -1,7 +1,7 @@
 ---
 title: Integration tests
 lastUpdated: 2026-05-19
-description: WebApplicationFactory in-process API tests against Testcontainers Postgres + Redis + MinIO — one container set, all modules, real round trips.
+description: WebApplicationFactory in-process API tests against Testcontainers Postgres + Valkey + MinIO — one container set, all modules, real round trips.
 sidebar:
   label: Integration tests
   order: 2
@@ -12,7 +12,7 @@ seo:
   keywords: 'webapplicationfactory dotnet, testcontainers postgres .net 10, integration test asp.net core, in-process api test, testcontainers minio'
 ---
 
-Integration tests in fullstackhero spin up real infrastructure in containers — PostgreSQL 17, Redis 7, MinIO — and exercise the API end-to-end through `Microsoft.AspNetCore.Mvc.Testing`'s `WebApplicationFactory<T>`. The same container set serves every test class in the single `Integration.Tests` project, so startup cost (~10-30 seconds on first run) is paid once and the per-test cost is small.
+Integration tests in fullstackhero spin up real infrastructure in containers — PostgreSQL 17, Valkey 8 (a Redis-compatible, BSD-licensed Redis fork), MinIO — and exercise the API end-to-end through `Microsoft.AspNetCore.Mvc.Testing`'s `WebApplicationFactory<T>`. The same container set serves every test class in the single `Integration.Tests` project, so startup cost (~10-30 seconds on first run) is paid once and the per-test cost is small.
 
 <Callout type="tip" title="One project, one container set, all modules">
 Splitting integration tests into per-module projects would mean per-project container startup. The single project shares fixtures, runs faster, and you don't have to think about container leakage across boundaries.
@@ -23,7 +23,7 @@ Splitting integration tests into per-module projects would mean per-project cont
 | Layer | Library | Purpose |
 |---|---|---|
 | Host | `Microsoft.AspNetCore.Mvc.Testing` 10.0.8 | `WebApplicationFactory<TEntryPoint>` for in-process API |
-| Containers | `Testcontainers` 4.11 | Postgres / Redis / MinIO per test session |
+| Containers | `Testcontainers` 4.11 | Postgres / Valkey / MinIO per test session |
 | HTTP | `HttpClient` from `WebApplicationFactory.CreateClient()` | Real HTTP calls (no marshalling) |
 | Assertions | Shouldly, NSubstitute, AutoFixture | Same as unit tests |
 
@@ -80,7 +80,7 @@ The seeded users + tenants live in `src/Tests/Integration.Tests/Infrastructure/S
 Three Testcontainers fixtures live in `src/Tests/Integration.Tests/Infrastructure/`:
 
 - **`DatabaseFixture`** — `postgres:17-alpine`, runs the kit's migrations against it on startup.
-- **`RedisFixture`** — `redis:7-alpine` for the cache + SignalR backplane + Data Protection key ring.
+- **`RedisFixture`** — `valkey/valkey:8-alpine` for the cache + SignalR backplane + Data Protection key ring.
 - **`MinioFixture`** — MinIO for file storage tests.
 
 Each fixture exposes connection details (`ConnectionString`, `Endpoint`, `AccessKey`, `SecretKey`) that `FshWebApplicationFactory` reads when overriding configuration.

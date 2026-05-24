@@ -1,7 +1,7 @@
 ---
 title: Chat module
 lastUpdated: 2026-05-19
-description: Slack-style messaging — named channels, 1:1 + group DMs, @mentions, thread replies, reactions, message pinning, full-text search, typing indicators, and SignalR realtime over Redis.
+description: Slack-style messaging — named channels, 1:1 + group DMs, @mentions, thread replies, reactions, message pinning, full-text search, typing indicators, and SignalR realtime over Valkey.
 sidebar:
   label: Chat
   order: 5
@@ -12,7 +12,7 @@ seo:
   keywords: '.net signalr chat module, realtime chat .net 10, mention notifications dotnet, signalr redis backplane, dotnet messaging module'
 ---
 
-The Chat module turns fullstackhero into a working messaging app. Named channels (Slack-style), 1:1 direct messages (idempotent via a sorted key), group DMs, file attachments via the Files module, @mentions that publish integration events to Notifications, thread replies, emoji reactions, message pinning, full-text search, typing indicators with a Redis-backed throttle, and SignalR realtime over a Redis backplane. Around **800 lines of code across the runtime project**, plus contracts. The most feature-dense module in v10.
+The Chat module turns fullstackhero into a working messaging app. Named channels (Slack-style), 1:1 direct messages (idempotent via a sorted key), group DMs, file attachments via the Files module, @mentions that publish integration events to Notifications, thread replies, emoji reactions, message pinning, full-text search, typing indicators with a Valkey-backed throttle, and SignalR realtime over a Valkey backplane (Valkey is a Redis-compatible, BSD-licensed Redis fork). Around **800 lines of code across the runtime project**, plus contracts. The most feature-dense module in v10.
 
 <Callout type="tip" title="Use it as the realtime template">
 Anything else that needs realtime broadcast (live cursors, presence, collaborative editing) should follow Chat's pattern: a SignalR hub in `BuildingBlocks/Web/Realtime`, groups named `user:{id}` and `channel:{id}`, a 3-second distributed-cache throttle on noisy events, and integration events bridging to other modules.
@@ -29,7 +29,7 @@ Anything else that needs realtime broadcast (live cursors, presence, collaborati
 - **@mentions** parsed server-side by `IMentionResolver`; each resolved user is published as a `MentionedInChannelIntegrationEvent` for the Notifications module to consume.
 - **Full-text search** across messages via PostgreSQL `tsvector` and a GIN index on a generated `BodyTsv` column.
 - **Typing indicator** with a 3-second per (channel, user) throttle in distributed cache.
-- **SignalR realtime** over a Redis backplane (`AppHub` in `BuildingBlocks/Web/Realtime`); on connect every user joins `user:{id}` and every channel they belong to as `channel:{id}`.
+- **SignalR realtime** over a Valkey backplane (`AppHub` in `BuildingBlocks/Web/Realtime`); on connect every user joins `user:{id}` and every channel they belong to as `channel:{id}`.
 - **22 endpoints** under `/api/v1/chat/...` plus the realtime hub at `/realtime`.
 - **File attachments** through the Files module's `ChatChannelFileAccessPolicy` (uploader + members can read; only uploader can delete).
 
@@ -189,7 +189,7 @@ The Notifications module's `MentionedInChannelIntegrationEventHandler` writes a 
 
 The module reads no `IOptions<T>` directly. Configuration that matters lives in adjacent blocks:
 
-- **SignalR / Redis backplane** — set `CachingOptions:Redis` to point at your Redis. The `AppHub` registration calls `AddStackExchangeRedis(...)` automatically.
+- **SignalR / Valkey backplane** — set `CachingOptions:Redis` to point at your Valkey. The `AppHub` registration calls `AddStackExchangeRedis(...)` automatically.
 - **Files attachments** — `ChatChannelFileAccessPolicy` is registered automatically during `ConfigureServices`. Uploads go through `/api/v1/files/upload-url` with `OwnerType=ChatChannel` and `OwnerId={channelId}`.
 
 ## How to extend
@@ -223,4 +223,4 @@ Decorate `AddReactionCommandHandler` (or wrap `IMessageReactionService`) and rej
 
 - [Notifications module](/docs/modules/notifications/) — receives `MentionedInChannelIntegrationEvent`.
 - [Files module](/docs/modules/files/) — chat attachments through `ChatChannelFileAccessPolicy`.
-- [Cross-cutting concerns](/docs/cross-cutting-concerns/) — SignalR, Redis backplane, Hangfire.
+- [Cross-cutting concerns](/docs/cross-cutting-concerns/) — SignalR, Valkey backplane, Hangfire.

@@ -46,7 +46,7 @@ Your composition root has two real lines — `builder.AddHeroPlatform(o => ...)`
 ```csharp
 builder.AddHeroPlatform(o =>
 {
-    o.EnableCaching     = true;   // adds HybridCache + Redis
+    o.EnableCaching     = true;   // adds HybridCache + Valkey
     o.EnableJobs        = true;   // adds Hangfire
     o.EnableMailing     = true;   // adds IMailService
     o.EnableQuotas      = true;   // adds quota middleware
@@ -67,7 +67,7 @@ builder.AddHeroPlatform(o =>
 - **`AddHeroIdempotency`** — `Idempotency-Key` header support; replay protection via distributed cache.
 - **`AddHeroFeatureFlags`** — `Microsoft.FeatureManagement` with tenant overrides.
 - **`AddHeroSse`** — Server-Sent Events endpoint plumbing.
-- **`AddHeroRealtime`** — SignalR hub registration over a Redis backplane.
+- **`AddHeroRealtime`** — SignalR hub registration over a Valkey backplane.
 - **`AddHeroSecurityHeaders`** — CSP, HSTS, X-Frame-Options, X-Content-Type-Options.
 
 ## How modules consume Web

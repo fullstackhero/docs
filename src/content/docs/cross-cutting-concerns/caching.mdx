@@ -1,7 +1,7 @@
 ---
 title: Caching
 lastUpdated: 2026-05-19
-description: HybridCache (L1 in-memory + L2 Redis) with OpenTelemetry instrumentation, stampede protection, and tag-based invalidation.
+description: HybridCache (L1 in-memory + L2 Valkey) with OpenTelemetry instrumentation, stampede protection, and tag-based invalidation.
 sidebar:
   label: Caching
   order: 1
@@ -12,7 +12,11 @@ seo:
   keywords: 'hybridcache .net 10, redis cache asp.net core, tag based cache eviction, stampede protection cache, l1 l2 cache pattern'
 ---
 
-`HybridCache` is the .NET 10 framework cache primitive. L1 is in-process memory; L2 is Redis (or `DistributedMemoryCache` for dev). The kit wraps it with `ObservableHybridCache` so every call emits OpenTelemetry metrics — hits, misses, duration, payload size.
+`HybridCache` is the .NET 10 framework cache primitive. L1 is in-process memory; L2 is **Valkey** (a Redis-compatible, BSD-licensed Redis fork) — or `DistributedMemoryCache` for dev. The kit wraps it with `ObservableHybridCache` so every call emits OpenTelemetry metrics — hits, misses, duration, payload size.
+
+<Callout type="note" title="The L2 store is Valkey (Redis-compatible)">
+The distributed L2 store is Valkey 8, which speaks the Redis protocol (RESP), so the .NET client (`StackExchange.Redis`) and all `CachingOptions:Redis` config keys are unchanged. In Aspire-based local dev, a **RedisInsight** browser is auto-wired and connected to the Valkey instance so you can inspect keys without any manual config — see [Aspire](/docs/deployment/aspire/).
+</Callout>
 
 <Callout type="tip" title="Stampede protection is the win">
 HybridCache coalesces concurrent identical requests into a single source fetch automatically. The first caller blocks on the source; the rest of the wave wait on the same task. You don't write lock code; just call `GetOrCreateAsync` and the cache does the right thing.
@@ -46,7 +50,7 @@ public sealed class GetTenantConfigQueryHandler(HybridCache cache, ITenantConfig
 
 Three things happen automatically:
 
-1. **L1 hit** returns immediately without touching Redis or the source.
+1. **L1 hit** returns immediately without touching Valkey or the source.
 2. **L1 miss / L2 hit** populates L1 and returns.
 3. **Both miss** runs the factory, populates L1 + L2, returns.
 
@@ -86,9 +90,9 @@ This evicts every cache entry tagged with that tenant id across L1 + L2.
 `AddHeroCaching` registers a single `IConnectionMultiplexer` and shares it with:
 
 - **Data Protection** key persistence — so cookies survive rolling deploys.
-- **SignalR** Redis backplane (when realtime is enabled) — so realtime events fan out across instances.
+- **SignalR** Valkey backplane (when realtime is enabled) — so realtime events fan out across instances.
 
-One Redis connection pool per host, not three. Bumping connection pool size affects all three consumers.
+One Valkey connection pool per host, not three. Bumping connection pool size affects all three consumers.
 
 ## Who uses it in the kit
 

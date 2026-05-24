@@ -28,7 +28,7 @@ The Clean Architecture templates by Jason Taylor and Steve Smith (Ardalis) are t
 | Auditing | Not included | Not included | EF SaveChanges interceptor + per-entity before/after + queryable `/audits` |
 | Background jobs | Not included | Not included | Hangfire 1.8 with tenant context preserved |
 | Observability | Console logging | Serilog example | Serilog 4 + OpenTelemetry 1.15 (OTLP) pre-wired |
-| Caching | Not included | Not included | HybridCache (in-memory + Redis) with tenant-scoped invalidation |
+| Caching | Not included | Not included | HybridCache (in-memory + Valkey) with tenant-scoped invalidation |
 | API browser | Swagger | Swagger | Scalar (OpenAPI 3.1) on `/scalar/` |
 | Frontend | Angular 21 / React 19 (sample) | None (API-only) | React 19 + Vite admin + dashboard, in the repo |
 | Stars (May 2026) | ~20,100★ | ~18,200★ | ~6,400★ |

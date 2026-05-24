@@ -105,7 +105,7 @@ Always HTTPS in production. Consider IP whitelisting in the reverse proxy on top
 ## Gotchas
 
 - **Hangfire serializes arguments.** Pass primitives (Guid, string, int) — not large object graphs. If you need state, look it up inside the job from the DI-resolved DbContext.
-- **`FshJobActivator` creates a new scope per job.** Don't try to share state via scoped services across job invocations; each gets a clean container. Use Redis / DB for cross-job state.
+- **`FshJobActivator` creates a new scope per job.** Don't try to share state via scoped services across job invocations; each gets a clean container. Use Valkey / DB for cross-job state.
 - **Stale-lock cleanup runs ~10s after host startup.** `HangfireStaleLockCleanupService` releases locks from servers that crashed without releasing. The delay avoids interfering with legitimate startup-time job acquisition.
 - **Background jobs and tenant context.** Enqueuing happens inside a request scope (so `ICurrentUser` works). Execution happens on a background thread (so it doesn't). `FshJobFilter` bridges this — but if you write your own filter or skip the kit's activator, restore the tenant context manually.
 

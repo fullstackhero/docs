@@ -40,7 +40,7 @@ fsh new MyApp --db postgres --no-git
 dotnet run --project src/Host/MyApp.AppHost
 ```
 
-Aspire brings up Postgres and Redis containers, wires connection strings, launches the API host, and enables OTLP export. Open the Aspire dashboard to watch services start; the API serves at `https://localhost:5285` with OpenAPI and Scalar at `/scalar/v1`.
+Aspire brings up Postgres and Valkey containers, wires connection strings, launches the API host, and enables OTLP export. Open the Aspire dashboard to watch services start; the API serves at `https://localhost:5285` with OpenAPI and Scalar at `/scalar/v1`.
 
 ## Next
 
