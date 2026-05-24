@@ -67,6 +67,14 @@ async function sendBeacon(): Promise<void> {
     // in parallel. Two-step is intentional: the chip glides in while the
     // number counts up — composed, not stacked.
     wrap.dataset.state = 'ready';
+    // If a sibling opted in as a separator (the landing trust strip prefixes
+    // the readout with a "·"), reveal it in lockstep so a slow/failed beacon
+    // never leaves a dangling separator. No-op elsewhere (e.g. the docs chip
+    // has no such sibling).
+    const sep = wrap.previousElementSibling;
+    if (sep instanceof HTMLElement && sep.hasAttribute('data-views-sep')) {
+      sep.dataset.state = 'ready';
+    }
     animateCount(target, data.views);
   } catch {
     // Network failure is silent — the chip stays in `pending` state and
