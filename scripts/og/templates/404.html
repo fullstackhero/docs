@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0b0d;
+    --fg: #f1ede4;
+    --muted: #a39c8f;
+    --border: #2a2c33;
+    --green: #16a34a;
+    --green-bright: #22c55e;
+    --display: 'Outfit', system-ui, sans-serif;
+    --body: 'Figtree', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 1200px; height: 675px; overflow: hidden;
+    background: var(--bg); color: var(--fg);
+    font-family: var(--body);
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  }
+  .canvas { position: relative; width: 1200px; height: 675px; overflow: hidden; background: var(--bg); }
+
+  .glow {
+    position: absolute; left: 50%; top: 44%; transform: translate(-50%, -50%);
+    width: 820px; height: 480px;
+    background: radial-gradient(ellipse at center, rgba(34, 197, 94, 0.16), transparent 70%);
+    filter: blur(6px);
+  }
+  .grid {
+    position: absolute; inset: 0;
+    background-image: radial-gradient(circle at 1px 1px, rgba(241, 237, 228, 0.06) 1px, transparent 0);
+    background-size: 30px 30px;
+    -webkit-mask-image: radial-gradient(78% 74% at 50% 46%, black, transparent 76%);
+            mask-image: radial-gradient(78% 74% at 50% 46%, black, transparent 76%);
+  }
+  .vignette { position: absolute; inset: 0; background: radial-gradient(125% 120% at 50% 0%, transparent 52%, rgba(0, 0, 0, 0.6)); }
+
+  .stack {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 56px 80px; text-align: center;
+  }
+
+  .brand { display: inline-flex; align-items: center; gap: 12px; margin-bottom: 30px; }
+  .brand img { width: 42px; height: 42px; filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.5)); }
+  .brand .name {
+    font-family: var(--display); font-weight: 300; font-size: 26px;
+    letter-spacing: -0.03em; color: var(--fg);
+  }
+  .brand .name .accent { color: var(--green); }
+
+  .code {
+    font-family: var(--display); font-weight: 300;
+    font-size: 200px; line-height: 0.9; letter-spacing: -0.06em; color: var(--fg);
+  }
+  .code .accent {
+    background: linear-gradient(180deg, #34d36b, #15803d);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+
+  .msg {
+    margin-top: 18px; max-width: 720px;
+    font-size: 24px; line-height: 1.4; font-weight: 500; color: var(--muted);
+  }
+
+  .foot {
+    position: absolute; bottom: 46px; left: 50%; transform: translateX(-50%);
+    display: inline-flex; align-items: center; gap: 14px;
+    font-family: var(--mono); font-size: 14px; letter-spacing: 0.14em; color: var(--muted);
+  }
+  .foot .tick { width: 20px; height: 1px; background: var(--border); }
+</style>
+</head>
+<body>
+  <div class="canvas">
+    <div class="glow"></div>
+    <div class="grid"></div>
+    <div class="vignette"></div>
+
+    <div class="stack">
+      <div class="brand">
+        <img src="../../../public/logo-fullstackhero.png" alt="" />
+        <span class="name">fullstack<span class="accent">hero</span></span>
+      </div>
+      <div class="code">4<span class="accent">0</span>4</div>
+      <p class="msg">This page took a wrong turn. Head back to the docs.</p>
+    </div>
+
+    <div class="foot"><span class="tick"></span>fullstackhero.net/docs<span class="tick"></span></div>
+  </div>
+</body>
+</html>

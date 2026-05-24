@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0b0d;
+    --fg: #f1ede4;
+    --muted: #a39c8f;
+    --border: #2a2c33;
+    --green: #16a34a;
+    --green-bright: #22c55e;
+    --green-deep: #15803d;
+    --display: 'Outfit', system-ui, sans-serif;
+    --body: 'Figtree', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 1200px; height: 675px; overflow: hidden;
+    background: var(--bg); color: var(--fg);
+    font-family: var(--body);
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  }
+  .canvas { position: relative; width: 1200px; height: 675px; overflow: hidden; background: var(--bg); }
+
+  .glow {
+    position: absolute; left: 50%; top: 30%; transform: translate(-50%, -50%);
+    width: 900px; height: 540px;
+    background: radial-gradient(ellipse at center, rgba(34, 197, 94, 0.20), rgba(21, 128, 61, 0.08) 40%, transparent 70%);
+    filter: blur(6px);
+  }
+  .grid {
+    position: absolute; inset: 0;
+    background-image: radial-gradient(circle at 1px 1px, rgba(241, 237, 228, 0.06) 1px, transparent 0);
+    background-size: 30px 30px;
+    -webkit-mask-image: radial-gradient(80% 76% at 50% 40%, black, transparent 76%);
+            mask-image: radial-gradient(80% 76% at 50% 40%, black, transparent 76%);
+  }
+  .vignette { position: absolute; inset: 0; background: radial-gradient(125% 120% at 50% 0%, transparent 52%, rgba(0, 0, 0, 0.6)); }
+
+  .stack {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 56px 72px; text-align: center;
+  }
+
+  .logo { position: relative; width: 148px; height: 148px; }
+  .logo::before {
+    content: ""; position: absolute; inset: -44px;
+    background: radial-gradient(circle, rgba(34, 197, 94, 0.34), transparent 68%);
+    filter: blur(7px); z-index: 0;
+  }
+  .logo img {
+    position: relative; z-index: 1; width: 148px; height: 148px;
+    filter: drop-shadow(0 20px 32px rgba(0, 0, 0, 0.5));
+  }
+
+  .wordmark {
+    margin-top: 22px;
+    font-family: var(--display); font-weight: 300;
+    font-size: 86px; line-height: 0.95; letter-spacing: -0.05em; color: var(--fg);
+  }
+  .wordmark .accent {
+    background: linear-gradient(180deg, #34d36b, #15803d);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    padding-right: 0.12em; margin-right: -0.12em;
+  }
+
+  .tagline {
+    margin-top: 20px; max-width: 760px;
+    font-size: 22px; line-height: 1.45; font-weight: 500; color: var(--muted);
+  }
+  .tagline b { color: var(--fg); font-weight: 600; }
+
+  .chips { display: inline-flex; align-items: center; gap: 10px; margin-top: 28px; }
+  .chip {
+    font-family: var(--mono); font-size: 13px; font-weight: 600; letter-spacing: 0.04em;
+    color: var(--fg); padding: 8px 16px; border-radius: 999px;
+    border: 1px solid var(--border); background: rgba(21, 23, 27, 0.6);
+  }
+  .chip.lead { color: var(--green-bright); border-color: color-mix(in srgb, var(--green-bright) 32%, transparent); background: color-mix(in srgb, var(--green-bright) 10%, transparent); }
+</style>
+</head>
+<body>
+  <div class="canvas">
+    <div class="glow"></div>
+    <div class="grid"></div>
+    <div class="vignette"></div>
+
+    <div class="stack">
+      <div class="logo"><img src="../../../public/logo-fullstackhero.png" alt="" /></div>
+      <h1 class="wordmark">fullstack<span class="accent">hero</span></h1>
+      <p class="tagline"><b>The .NET 10 + React starter kit.</b> Modular monolith, vertical slice, multitenant — ship features on day one.</p>
+      <div class="chips">
+        <span class="chip lead">Free &amp; MIT</span>
+        <span class="chip">.NET 10 + React</span>
+        <span class="chip">Modular Monolith</span>
+        <span class="chip">10 Modules</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
