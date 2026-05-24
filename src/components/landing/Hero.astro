@@ -18,6 +18,7 @@
  */
 import { Icon } from 'astro-icon/components';
 import Button from '../brand/Button.astro';
+import HeroViews from './HeroViews.astro';
 import siteConfig from '../../data/site';
 import { getStars } from '../../helpers/github-stars';
 
@@ -163,6 +164,8 @@ const heroStats = [
         <li>.NET 10 / C# 14</li>
         <li aria-hidden class="text-muted-foreground/40">·</li>
         <li>PostgreSQL · Redis · React</li>
+        <li aria-hidden class="text-muted-foreground/40">·</li>
+        <HeroViews />
       </ul>
     </div>
 

@@ -1,5 +1,5 @@
-// Posts a view beacon for the current /docs/* page and renders the
-// returned count into [data-views-count]. The chip uses a data-state
+// Posts a view beacon for the current /docs/* page or the homepage and
+// renders the returned count into [data-views-count]. The chip uses a data-state
 // reveal so the count-up animation runs once when the network resolves.
 // Idempotent against Astro's view-transitions lifecycle: also re-runs
 // on `astro:page-load`.
@@ -46,7 +46,7 @@ function animateCount(el: HTMLElement, to: number): void {
 
 async function sendBeacon(): Promise<void> {
   const slug = location.pathname.replace(/\/+$/, '') || '/';
-  if (!slug.startsWith('/docs')) return;
+  if (slug !== '/' && !slug.startsWith('/docs')) return;
 
   const wrap = document.querySelector<HTMLElement>('[data-views-count-wrap]');
   const target = document.querySelector<HTMLElement>('[data-views-count]');

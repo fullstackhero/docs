@@ -1,0 +1,57 @@
+---
+import { Icon } from 'astro-icon/components';
+
+// Trust-strip views readout for the landing page. Reuses the shared
+// /api/views beacon (src/scripts/views-counter.ts) — same data plumbing as
+// the docs PageHeader chip, but rendered as a plain strip item rather than a
+// bordered pill so it matches the neighboring trust-strip entries.
+//
+// Dev: render in `ready` with a sample value so the item is visible under
+// `astro dev` (the Worker isn't running, so the beacon 404s). Prod: render in
+// `pending`; the client beacon flips it to `ready` only on a successful
+// response, so it never flashes "0 views".
+const isDev = import.meta.env.DEV;
+const initialState = isDev ? 'ready' : 'pending';
+const initialCount = isDev ? '1,234' : '0';
+---
+
+<li
+  data-views-count-wrap
+  data-state={initialState}
+  title={isDev ? 'Sample value — run wrangler dev to see real counts' : undefined}
+  class="views-strip-item inline-flex items-center gap-1.5"
+>
+  <Icon name="lucide:eye" class="h-3 w-3" aria-hidden="true" />
+  <span class="font-medium tabular-nums text-foreground" data-views-count>{initialCount}</span>
+  <span>views</span>
+</li>
+
+<style>
+  /* Reveal-from-pending: fade + 2px lift, mirroring the docs views chip.
+     `visibility: hidden` (not display:none) reserves the slot so revealing
+     the real count doesn't reflow the strip. */
+  .views-strip-item {
+    transition:
+      opacity 360ms cubic-bezier(0.32, 0.72, 0, 1),
+      transform 360ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  .views-strip-item[data-state='pending'] {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(2px);
+  }
+  .views-strip-item[data-state='ready'] {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .views-strip-item {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  import '../../scripts/views-counter';
+</script>

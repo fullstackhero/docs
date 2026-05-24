@@ -115,9 +115,11 @@ function normalizeSlug(raw: string | null): string | null {
   // Force leading slash, strip trailing slash (except root).
   const withSlash = noQuery.startsWith('/') ? noQuery : `/${noQuery}`;
   const trimmed = withSlash.length > 1 ? withSlash.replace(/\/+$/, '') : withSlash;
-  // Whitelist: docs pages only. Keeps the table from filling with
-  // arbitrary paths if a beacon ever fires from the marketing site.
-  if (!trimmed.startsWith(SLUG_PREFIX) && trimmed !== '/docs') return null;
+  // Whitelist: homepage + docs pages only. Keeps the table from filling
+  // with arbitrary paths — a beacon from any other marketing path is dropped.
+  const isHome = trimmed === '/';
+  const isDocs = trimmed.startsWith(SLUG_PREFIX) || trimmed === '/docs';
+  if (!isHome && !isDocs) return null;
   if (trimmed.length > MAX_SLUG_LEN) return null;
   // Path-only — reject anything with control chars.
   if (/[\x00-\x1f\x7f]/.test(trimmed)) return null;
