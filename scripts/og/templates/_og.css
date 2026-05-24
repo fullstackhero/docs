@@ -1,0 +1,205 @@
+/* OG card styles for fullstackhero docs.
+   FSH-green port of codewithmukesh/blog scripts/og/templates/_v2-shared.css.
+   Per-card accent is set via the --accent custom property on .canvas. */
+
+:root {
+  --background: #0d0e11;
+  --surface: #17181c;
+  --foreground: #ede8df;
+  --muted: #b3aca0;
+  --border: #2c2d35;
+  --primary: #15803d;
+  --primary-soft: #16a34a;
+  --font-display: 'Outfit', system-ui, -apple-system, Segoe UI, sans-serif;
+  --font-body: 'Figtree', system-ui, -apple-system, Segoe UI, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 1200px;
+  height: 675px;
+  overflow: hidden;
+  font-family: var(--font-body);
+  background: var(--background);
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.canvas {
+  --accent: var(--primary-soft);
+  position: relative;
+  width: 1200px;
+  height: 675px;
+  overflow: hidden;
+  background: var(--background);
+}
+
+.bg-mesh {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(42% 58% at 80% 48%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 70%),
+    radial-gradient(60% 60% at 10% 92%, rgba(22, 163, 74, 0.06), transparent 70%);
+}
+.bg-grid {
+  position: absolute; inset: 0;
+  background-image: radial-gradient(circle at 1px 1px, rgba(237, 232, 223, 0.07) 1px, transparent 0);
+  background-size: 28px 28px;
+  -webkit-mask-image: radial-gradient(90% 85% at 50% 50%, black, transparent);
+          mask-image: radial-gradient(90% 85% at 50% 50%, black, transparent);
+}
+
+.frame {
+  position: relative;
+  height: 100%;
+  display: grid;
+  grid-template-columns: 1fr 460px;
+}
+
+.copy {
+  padding: 56px 44px 56px 64px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+.eyebrow .dot {
+  width: 8px; height: 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.eyebrow .label { color: var(--foreground); }
+.eyebrow .badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--accent);
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 32%, transparent);
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  margin-top: 30px;
+}
+
+.headline {
+  font-family: var(--font-display);
+  font-weight: 800;
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+  color: var(--foreground);
+}
+.wordmark {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 92px;
+  line-height: 0.94;
+  letter-spacing: -0.05em;
+  color: var(--foreground);
+}
+.wordmark .accent { color: var(--accent); }
+
+.description {
+  font-family: var(--font-body);
+  font-size: 22px;
+  line-height: 1.45;
+  color: var(--muted);
+  font-weight: 500;
+  max-width: 90%;
+}
+
+.meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.meta .pages {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--foreground);
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(23, 24, 28, 0.6);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+}
+.brand img { width: 34px; height: 34px; border-radius: 8px; }
+.brand .name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--foreground);
+  letter-spacing: -0.01em;
+}
+.brand .name .accent { color: var(--accent); }
+.brand .sep { width: 4px; height: 4px; border-radius: 999px; background: var(--border); }
+.brand .url {
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.mark-col {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+}
+.mark-col::before {
+  content: "";
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 420px; height: 420px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 32%, transparent) 0%, color-mix(in srgb, var(--accent) 14%, transparent) 42%, transparent 70%);
+  filter: blur(8px);
+  z-index: 0;
+}
+.mark-col::after {
+  content: "";
+  position: absolute;
+  top: 64px; bottom: 64px; left: 0;
+  width: 1px;
+  background: linear-gradient(to bottom, transparent, var(--border) 25%, var(--border) 75%, transparent);
+}
+.mark-col img {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 280px; height: 280px;
+  z-index: 1;
+  filter: drop-shadow(0 24px 36px rgba(0, 0, 0, 0.5));
+}
+
+/* Centered (no right column) — used by 404 */
+.frame.centered { grid-template-columns: 1fr; }
+.frame.centered .copy { align-items: center; text-align: center; padding: 72px 80px; }
+.frame.centered .eyebrow, .frame.centered .brand { justify-content: center; }
+.frame.centered .description { max-width: 100%; }
