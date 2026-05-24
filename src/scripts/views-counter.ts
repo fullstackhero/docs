@@ -75,6 +75,12 @@ async function sendBeacon(): Promise<void> {
     if (sep instanceof HTMLElement && sep.hasAttribute('data-views-sep')) {
       sep.dataset.state = 'ready';
     }
+    // Reserve exactly the final number's width before counting up, so the
+    // digits grow in place (no per-frame reflow of the centred strip) without
+    // over-reserving — a small count like "1" stays tight to the digit instead
+    // of leaving a gap. No-op where the target isn't a sized box (the inline
+    // docs chip span, where min-width doesn't apply).
+    target.style.minWidth = `${formatCount(data.views).length}ch`;
     animateCount(target, data.views);
   } catch {
     // Network failure is silent — the chip stays in `pending` state and

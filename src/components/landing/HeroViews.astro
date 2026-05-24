@@ -52,13 +52,15 @@ const initialCount = isDev ? '1,234' : '0';
     transform: translateY(0);
   }
 
-  /* Fixed numeric box: the count-up grows in place (right-aligned, odometer
-     style) instead of widening the <li> and re-centring the whole strip.
-     This is what keeps CLS at zero. tabular-nums makes every digit the same
-     width; 5ch comfortably holds a 4-digit comma'd count (e.g. "1,234"). */
+  /* Numeric box for the count-up. Its exact width is reserved in JS once the
+     count is known (views-counter.ts), so the count-up grows in place without
+     reflowing the centred strip (zero CLS) — yet a small count like "1" stays
+     tight to the digit instead of leaving a gap. tabular-nums keeps digits
+     equal-width; right-align makes the number fill toward the icon as it ticks
+     up. (Under `astro dev` the beacon never resolves, so the static sample
+     just renders at its natural width — no reserve needed.) */
   .views-num {
     display: inline-block;
-    min-width: 5ch;
     text-align: right;
     font-variant-numeric: tabular-nums;
   }
