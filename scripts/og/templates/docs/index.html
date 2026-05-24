@@ -49,15 +49,15 @@
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     padding: 60px 64px; text-align: center;
   }
-  .logo { position: relative; width: 184px; height: 184px; }
+  .logo { position: relative; width: 220px; height: 220px; }
   .logo::before {
-    content: ""; position: absolute; inset: -54px;
+    content: ""; position: absolute; inset: -64px;
     background: radial-gradient(circle, rgba(34, 197, 94, 0.34), transparent 68%);
-    filter: blur(7px); z-index: 0;
+    filter: blur(8px); z-index: 0;
   }
   .logo img {
-    position: relative; z-index: 1; width: 184px; height: 184px;
-    filter: drop-shadow(0 22px 36px rgba(0, 0, 0, 0.5));
+    position: relative; z-index: 1; width: 220px; height: 220px;
+    filter: drop-shadow(0 24px 40px rgba(0, 0, 0, 0.5));
   }
 
   .wordmark {
@@ -68,6 +68,9 @@
   .wordmark .accent {
     background: linear-gradient(180deg, #34d36b, #15803d);
     -webkit-background-clip: text; background-clip: text; color: transparent;
+    /* background-clip:text trims the last glyph's right bearing under tight
+       letter-spacing; pad the paint box and cancel the layout shift. */
+    padding-right: 0.12em; margin-right: -0.12em;
   }
 
   .tagline {
@@ -94,7 +97,7 @@
     <div class="stack">
       <div class="logo"><img src="../../../../public/logo-fullstackhero.png" alt="fullstackhero" /></div>
       <h1 class="wordmark">fullstack<span class="accent">hero</span></h1>
-      <p class="tagline"><b>.NET 10 + React starter kit.</b> Modular monolith, vertical slice, multitenant — everything documented in one place.</p>
+      <p class="tagline"><b>.NET 10 + React starter kit.</b> Modular monolith, vertical slice, multitenant — production-ready and MIT licensed.</p>
     </div>
 
     <div class="foot"><span class="tick"></span>fullstackhero.net<span class="tick"></span></div>
