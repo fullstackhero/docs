@@ -24,7 +24,7 @@ interface Props {
 }
 
 const { title, description, image, noindex, seoTitle, additionalSchemas } = Astro.props;
-const pageTitle = seoTitle ?? (title ? `${title} — ${siteConfig.title}` : siteConfig.title);
+const pageTitle = seoTitle ?? (title ? `${title} — ${siteConfig.name}` : siteConfig.title);
 const pageDescription = description ?? siteConfig.description;
 const pageImage = new URL(image ?? siteConfig.ogImage, Astro.site ?? siteConfig.url).toString();
 const canonicalURL = new URL(Astro.url.pathname, Astro.site ?? siteConfig.url).toString();
@@ -47,6 +47,8 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site ?? siteConfig.url).t
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={pageDescription} />
     <meta property="og:image" content={pageImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
     <meta property="og:url" content={canonicalURL} />
     <meta property="og:site_name" content={siteConfig.title} />
 

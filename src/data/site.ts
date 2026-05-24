@@ -1,13 +1,16 @@
 const siteConfig = {
   url: 'https://fullstackhero.net',
-  title: 'fullstackhero - .NET 10 Starter Kit with React UI',
+  // Home/landing <title> + og:title. Kept in the 50–60 char SEO sweet spot.
+  title: 'fullstackhero - Free .NET 10 Starter Kit with React UI',
+  // Short brand used as the suffix on composed page titles ("Page — fullstackhero")
+  // so deep pages don't blow past ~60 chars.
+  name: 'fullstackhero',
+  // Default meta/og description. Trimmed to the 110–160 char SEO range.
   description:
-    'Free, MIT-licensed, production-ready .NET 10 starter kit with React + Vite admin + dashboard. Modular monolith with vertical slice architecture, multitenancy-first, and ten ready-to-ship modules — so engineering teams skip the scaffolding and write features on day one.',
+    'Free, MIT-licensed .NET 10 starter kit with a React admin + dashboard. Modular monolith, vertical slice, multitenant, with ten ready-to-ship modules.',
   repo: 'https://github.com/fullstackhero/dotnet-starter-kit',
   author: 'Mukesh Murugan',
-  // Use the brand logo as the social share image until a dedicated 1200×630
-  // OG card is designed. /logo-fullstackhero.png is 512×512 — most platforms
-  // accept that as a square avatar fallback.
+  // Default social card; per-page cards live at /og/docs/<slug>.jpg (1200×630).
   ogImage: '/logo-fullstackhero.png',
 };
 

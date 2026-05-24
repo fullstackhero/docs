@@ -18,7 +18,7 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body {
   width: 1200px;
-  height: 675px;
+  height: 630px;
   overflow: hidden;
   font-family: var(--font-body);
   background: var(--background);
@@ -31,7 +31,7 @@ html, body {
   --accent: var(--primary-soft);
   position: relative;
   width: 1200px;
-  height: 675px;
+  height: 630px;
   overflow: hidden;
   background: var(--background);
 }

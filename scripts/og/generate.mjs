@@ -28,9 +28,11 @@ const templatesDir = path.join(__dirname, 'templates');
 const overridesDir = path.join(templatesDir, 'docs');
 const ogDir = path.join(root, 'public', 'og');
 
+// 1200×630 is the canonical OG size (1.91:1). Scale 1 keeps the output at
+// exactly 1200×630 — text is vector-rasterised at target size, so it stays crisp.
 const WIDTH = 1200;
-const HEIGHT = 675;
-const DEVICE_SCALE = 2;
+const HEIGHT = 630;
+const DEVICE_SCALE = 1;
 
 const PAGE_TYPE = {
   guide: { accent: '#16a34a', badge: 'GUIDE' },
