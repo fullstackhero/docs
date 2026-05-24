@@ -34,7 +34,9 @@ const slugForCrumb = entry.id.replace(/\.mdx$/, '').replace(/\/index$/, '');
 const seo = entry.data.seo ?? {};
 const seoTitle = seo.title; // when set, replaces the BaseLayout default composition entirely
 const description = seo.description ?? entry.data.description;
-const image = seo.ogImage;
+// Default the social card to the slug-derived generated image (public/og/docs/<slug>.jpg);
+// seo.ogImage still overrides per page.
+const image = seo.ogImage ?? `/og/docs/${slugForCrumb || 'index'}.jpg`;
 const noindex = seo.noindex === true;
 
 // ── Structured data ─────────────────────────────────────────────────────
