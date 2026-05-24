@@ -47,16 +47,16 @@ test('renderDocsTemplate (doc) includes eyebrow, escaped title, description, bad
   assert.ok(html.includes(LOGO));
 });
 
-test('renderDocsTemplate (home) renders the FullStackHero wordmark, no badge', () => {
+test('renderDocsTemplate (home) renders the lowercase fullstackhero wordmark, no badge', () => {
   const html = renderDocsTemplate({
     variant: 'home',
     eyebrow: 'Documentation',
-    title: 'FullStackHero',
+    title: 'fullstackhero',
     description: 'A .NET 10 starter kit.',
     logoSrc: LOGO,
   });
   assert.ok(html.includes('class="wordmark"'));
-  assert.ok(html.includes('FullStackHero'));
+  assert.ok(html.includes('fullstackhero'));
   assert.ok(!html.includes('class="badge"'));
 });
 

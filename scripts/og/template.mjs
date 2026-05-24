@@ -41,7 +41,7 @@ export function pickTitleSize(title = '') {
 
 const BRAND = (accent) => `
   <div class="brand">
-    <span class="name">FullStackHero</span>
+    <span class="name">fullstackhero</span>
     <span class="sep"></span>
     <span class="url">fullstackhero.net</span>
   </div>`;
@@ -66,7 +66,7 @@ function markCol(logoSrc) {
 
 export function renderDocsTemplate({
   variant = 'doc',
-  eyebrow = 'FullStackHero',
+  eyebrow = 'fullstackhero',
   title = '',
   description = '',
   badge = '',
@@ -86,7 +86,7 @@ export function renderDocsTemplate({
   let headline;
   let meta = '';
   if (variant === 'home') {
-    headline = `<h1 class="wordmark">FullStackHero</h1>`;
+    headline = `<h1 class="wordmark">fullstackhero</h1>`;
   } else {
     headline = `<h1 class="headline" style="font-size:${pickTitleSize(title)}px">${escapeHtml(title)}</h1>`;
     if (variant === 'overview' && count > 0) {

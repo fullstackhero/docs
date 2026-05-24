@@ -104,14 +104,14 @@ async function buildDocsJobs(labels, logoSrc) {
     if (await fileExists(override)) {
       html = { goto: pathToFileURL(override).href };
     } else if (variant === 'home') {
-      html = { content: renderDocsTemplate({ variant, eyebrow: 'Documentation', title: 'FullStackHero', description: data.description, logoSrc }) };
+      html = { content: renderDocsTemplate({ variant, eyebrow: 'Documentation', title: 'fullstackhero', description: data.description, logoSrc }) };
     } else if (variant === 'overview') {
       // Section index pages are titled "Overview"; use the section label as the
       // headline so the card reads "Architecture", not "Overview".
       html = { content: renderDocsTemplate({ variant, eyebrow: 'Section Overview', title: label ?? data.title, description: data.description, count: counts.get(sectionDir) ?? 0, logoSrc }) };
     } else {
       const pt = PAGE_TYPE[data.pageType] ?? PAGE_TYPE.guide;
-      html = { content: renderDocsTemplate({ variant, eyebrow: label ?? 'FullStackHero', title: data.title, description: data.description, badge: pt.badge, accent: pt.accent, logoSrc }) };
+      html = { content: renderDocsTemplate({ variant, eyebrow: label ?? 'fullstackhero', title: data.title, description: data.description, badge: pt.badge, accent: pt.accent, logoSrc }) };
     }
     jobs.push({ name: `docs/${slug}`, outPath, ...html });
   }

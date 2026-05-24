@@ -162,8 +162,7 @@ html, body {
 .brand .sep { width: 4px; height: 4px; border-radius: 999px; background: var(--border); }
 .brand .url {
   font-size: 13px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--muted);
 }
 
