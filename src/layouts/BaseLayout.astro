@@ -3,6 +3,7 @@ import '../styles/globals.css';
 import { Font } from 'astro:assets';
 import siteConfig from '../data/site';
 import SearchModal from '../components/docs/SearchModal.astro';
+import Analytics from '../components/shell/Analytics.astro';
 
 interface Props {
   title?: string;
@@ -33,6 +34,10 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site ?? siteConfig.url).t
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    {/* Google Analytics (gtag.js) — loaded early per Google guidance. */}
+    <Analytics />
+
     <link rel="canonical" href={canonicalURL} />
     <title>{pageTitle}</title>
     <meta name="description" content={pageDescription} />

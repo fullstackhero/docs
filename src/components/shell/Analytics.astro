@@ -1,0 +1,19 @@
+---
+// Google Analytics (gtag.js). Rendered once in the shared <head> via
+// BaseLayout. `is:inline` keeps Astro from bundling/transforming the
+// snippet so gtag loads exactly as Google ships it.
+const GA_MEASUREMENT_ID = 'G-V1XWX7CJF6';
+---
+<script
+  is:inline
+  async
+  src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+></script>
+<script is:inline define:vars={{ GA_MEASUREMENT_ID }}>
+  window.dataLayer = window.dataLayer || [];
+  function gtag() {
+    dataLayer.push(arguments);
+  }
+  gtag('js', new Date());
+  gtag('config', GA_MEASUREMENT_ID);
+</script>
