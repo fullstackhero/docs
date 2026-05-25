@@ -2,6 +2,7 @@
 import { getCollection, render, type CollectionEntry } from 'astro:content';
 import DocsLayout from '../../layouts/DocsLayout.astro';
 import PageHeader from '../../components/docs/PageHeader.astro';
+import CourseCta from '../../components/docs/CourseCta.astro';
 import Breadcrumbs from '../../components/docs/Breadcrumbs.astro';
 import PrevNext from '../../components/docs/PrevNext.astro';
 import { mdxComponents } from '../../components/mdx';
@@ -93,6 +94,7 @@ const additionalSchemas = [breadcrumbSchema, articleSchema];
     pageType={entry.data.pageType}
     lastUpdated={entry.data.lastUpdated}
   />
+  <CourseCta />
   <article class="prose max-w-none" data-pagefind-body>
     <Content components={mdxComponents} />
   </article>
