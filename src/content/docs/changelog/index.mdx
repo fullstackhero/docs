@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-05-24
+lastUpdated: 2026-05-27
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -10,6 +10,10 @@ seo:
 ---
 
 Notable changes to the kit, newest first.
+
+## 2026-05-27
+
+- **Missing required request parameters now return `400`, not `500`** — calling a tenant-scoped endpoint without the `tenant` header (and any other endpoint missing a required header/route/query parameter, or sent with an unreadable/oversized body) raised an ASP.NET `BadHttpRequestException` that the global exception handler rendered as a generic `500 Internal Server Error`. The handler now honours the framework's own status code, so these surface as a proper `400 Bad Request` (or `413`, etc.) with a `ProblemDetails` body. Fixes [#1245](https://github.com/fullstackhero/dotnet-starter-kit/issues/1245).
 
 ## 2026-05-24
 
