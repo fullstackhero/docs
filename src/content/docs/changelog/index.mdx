@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-05-24
+lastUpdated: 2026-05-27
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -10,6 +10,12 @@ seo:
 ---
 
 Notable changes to the kit, newest first.
+
+## 2026-05-27
+
+- **CI split into path-scoped backend + frontend pipelines** — the single `ci.yml` is replaced by `backend.yml` (runs only on `src/**` changes) and `frontend.yml` (runs only on `clients/**`), so a client-only change never builds or tests the API, and vice versa. The SDK is pinned to the .NET 10 **GA** release via a root `global.json` (no more preview channel). Unit and integration tests each run **once**, and the coverage gate merges their results instead of re-running the whole solution. The React apps get real CI for the first time — ESLint, `tsc`/Vite build, and the Playwright E2E suites (admin + dashboard) on Node 22. Branch protection requires the always-resolving `Backend CI` / `Frontend CI` gate jobs. See [CI/CD](/docs/deployment/ci-cd/).
+- **Consolidated to a single `main` branch** — the repo now uses one long-lived default branch, `main`; the `develop` branch is retired. Branch from and target `main`; stable releases are cut from `v*` tags. See [Contributing](/docs/contributing/).
+- **Removed the redundant root `docker-compose.yml`** — local development is covered by .NET Aspire and production by `deploy/docker/`, so the overlapping root compose file (added 2026-05-24) was dropped.
 
 ## 2026-05-24
 

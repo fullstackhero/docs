@@ -1,7 +1,7 @@
 ---
 title: Overview
-lastUpdated: 2026-05-19
-description: Help shape fullstackhero — issues, PRs, and conventions.
+lastUpdated: 2026-05-27
+description: Help shape fullstackhero — branching model, issues, PRs, and conventions.
 sidebar:
   order: 1
 pageType: guide
@@ -12,3 +12,15 @@ seo:
 # Contributing
 
 See the repo's [CONTRIBUTING.md](https://github.com/fullstackhero/dotnet-starter-kit/blob/main/CONTRIBUTING.md) for the latest guidelines.
+
+## Branching model
+
+The repo uses a **single long-lived branch: `main`** (the default). There is no `develop` branch.
+
+- **Branch from and target `main`.** Open your feature/fix branch off the latest `main` and point your PR back at `main`.
+- **Releases are tags, not a branch.** Stable releases are cut from `v*` tags (e.g. `v10.0.0`); "latest stable" is the newest tag/GitHub Release, and `main` stays releasable. Older majors, if maintained, live on short-lived `release/x.y` branches.
+- **CI gates the merge.** A PR must pass the `Backend CI` and/or `Frontend CI` checks (whichever your change touches — see [CI/CD](/docs/deployment/ci-cd/)) before it can merge.
+
+<Callout type="tip" title="Keep your branch current">
+Rebase onto `main` before requesting review so your PR applies cleanly and CI runs against the current baseline.
+</Callout>
