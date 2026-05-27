@@ -23,6 +23,10 @@ The first stable **10.0.0** release. FullStackHero is now a complete **.NET 10 m
 
 See the dated entries below for the complete list of changes that shipped into 10.0.0.
 
+## 2026-05-28
+
+- **Chat delivers messages live to recipients who weren't in the conversation when they connected** — chat broadcasts each message to the channel's SignalR group, but a connection only joined the groups for channels it already belonged to *at connect time* (`AppHub.OnConnectedAsync`). So a brand-new DM, or being added to a channel mid-session, never received live messages — the recipient saw nothing until they reloaded the page. The hub now exposes a membership-checked `JoinChannel` method that the dashboard invokes when a conversation is opened and again on reconnect, so a live socket joins the group on demand. Creating a DM also notifies the other participants (via their `user:{id}` group), so the new conversation appears in their channel rail without a refresh.
+
 ## 2026-05-27
 
 - **Dependencies updated to latest for the v10 release** — .NET **Aspire 13.3.5** (Hosting packages + AppHost SDK), Finbuckle.MultiTenant 10.1.0, MailKit/MimeKit 4.17.0, AWSSDK.S3 4.0.23.4, Scalar.AspNetCore 2.14.14, and SonarAnalyzer 10.27. Builds clean with warnings-as-errors and the full test suite (unit + Testcontainers integration) stays green.
