@@ -33,7 +33,8 @@ documents what it starts and **why** it's wired the way it is.
 | RedisInsight | *(sidecar)* | Key browser auto-connected to the Valkey instance for inspecting cache keys in dev | Persistent |
 | MinIO | `minio` | S3-compatible object storage, **:9000** (API) / **:9001** (console) | Persistent (data volume) |
 | MinIO init | `minio-init` | One-shot: creates the `fsh-uploads` bucket + download policy, then exits | Run-once |
-| DB migrator | `fsh-db-migrator` | One-shot: applies migrations across the tenant catalog + every tenant's module DBs, then exits | Run-once |
+| DB migrator | `fsh-db-migrator` | One-shot: applies migrations across the tenant catalog + every tenant's module DBs (`apply --seed`, so the root admin exists), then exits | Run-once |
+| Demo seeder | `fsh-demo-seeder` | One-shot, **dev-only**: runs `seed-demo` after the migrator to provision the `acme`/`globex` demo tenants + users, then exits | Run-once |
 | API | `fsh-api` | The ASP.NET Core API (`net10.0`) | Long-running |
 | Admin app | `fsh-admin` | Operator React + Vite SPA on **:5173** | Long-running |
 | Dashboard app | `fsh-dashboard` | Tenant React + Vite SPA on **:5174** (with SSE live feed) | Long-running |
@@ -42,8 +43,8 @@ The Aspire dashboard opens automatically and shows every resource's state,
 logs, traces, and endpoints. The API's Scalar UI is at `/scalar`.
 
 <Callout type="note" title="Startup is ordered, not racy">
-The API waits for Postgres and Valkey to be healthy **and** for both one-shot
-jobs (`minio-init`, `fsh-db-migrator`) to finish before it starts. So the API
+The API waits for Postgres and Valkey to be healthy **and** for the one-shot
+jobs (`minio-init`, `fsh-db-migrator`, `fsh-demo-seeder`) to finish before it starts. So the API
 never boots against an unmigrated database or a missing bucket — no retry loops,
 no first-request 500s.
 </Callout>

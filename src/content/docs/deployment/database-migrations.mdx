@@ -44,7 +44,7 @@ dotnet run --project src/Host/FSH.Starter.DbMigrator -- [verb] [options]
 |---|---|
 | `apply` *(default)* | Apply pending migrations. Add `--seed` to also run the per-tenant seed. |
 | `seed` | Run only the seed step per tenant (no migration). |
-| `seed-demo` | Provision demo tenants (`acme`, `globex`) with users, catalog, tickets, and chat. **Dev-only** — refuses to run unless `ASPNETCORE_ENVIRONMENT=Development`. |
+| `seed-demo` | Provision demo tenants (`acme`, `globex`) with users, catalog, tickets, and chat. **Dev-only** — refuses to run unless `DOTNET_ENVIRONMENT=Development` (the migrator is a generic-host console app, so it reads `DOTNET_ENVIRONMENT`, **not** `ASPNETCORE_ENVIRONMENT`). Under Aspire this runs automatically — see [Local development](#local-development). |
 | `list-pending` | Print pending migrations without applying anything. |
 
 | Option | Effect |
@@ -68,10 +68,13 @@ dotnet run --project src/Host/FSH.Starter.DbMigrator -- apply --catalog-only
 
 ## Local development
 
-When you run the stack via Aspire, the migrator runs **for you** as the
-`fsh-db-migrator` resource: it executes `apply` on each AppHost launch and exits,
-and the API is gated on its completion (`WaitForCompletion`) so it never starts
-against an unmigrated database. See [Local Orchestration with Aspire](/docs/deployment/aspire/).
+When you run the stack via Aspire, the migrator runs **for you**: the
+`fsh-db-migrator` resource executes `apply --seed` on each AppHost launch (so the
+root admin `admin@root.com` is seeded), then a dev-only `fsh-demo-seeder` resource
+runs `seed-demo` to provision the `acme`/`globex` demo tenants and their users. The
+API is gated on both (`WaitForCompletion`), so it never starts against an
+unmigrated database and the demo logins work the moment the dashboard loads. See
+[Local Orchestration with Aspire](/docs/deployment/aspire/).
 
 You can also run it directly any time:
 
@@ -79,10 +82,12 @@ You can also run it directly any time:
 dotnet run --project src/Host/FSH.Starter.DbMigrator -- apply --seed
 ```
 
-To populate demo tenants for a local demo or test drive:
+To populate demo tenants for a local demo or test drive (Aspire already does this
+for you on launch; run it manually only when you're **not** using Aspire — set
+`DOTNET_ENVIRONMENT=Development` so the dev-only verb proceeds):
 
 ```bash
-dotnet run --project src/Host/FSH.Starter.DbMigrator -- seed-demo
+DOTNET_ENVIRONMENT=Development dotnet run --project src/Host/FSH.Starter.DbMigrator -- seed-demo
 ```
 
 ## Production
