@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-05-27
+lastUpdated: 2026-05-28
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -10,6 +10,18 @@ seo:
 ---
 
 Notable changes to the kit, newest first.
+
+## 10.0.0 — 2026-05-28
+
+The first stable **10.0.0** release. FullStackHero is now a complete **.NET 10 modular monolith plus two React 19 apps**, distributed as the `fsh` CLI and the `dotnet new fsh` template — and you get the **full source**, no black-box runtime packages.
+
+- **Backend** — .NET 10 / EF Core 10 modular monolith (Vertical Slice + source-generated Mediator CQRS) across **10 modules**: Identity, Multitenancy, Billing, Catalog, Tickets, Chat, Files, Webhooks, Auditing, and Notifications. Multitenant by default (Finbuckle), JWT + ASP.NET Identity, HybridCache on Valkey, Hangfire jobs, presigned S3/MinIO storage, OpenAPI + Scalar, and Serilog + OpenTelemetry.
+- **Front-ends** — two **React 19 + Vite 7 + TypeScript** apps: an operator console (`admin`) and a tenant app (`dashboard`), with TanStack Query v5, Tailwind v4, and SignalR/SSE real-time.
+- **One-command local dev** — **.NET Aspire** brings up Postgres + pgAdmin, Valkey + RedisInsight, MinIO, the migrator, demo data, the API, and both front-ends. **Docker Compose** and **AWS/Terraform** cover deployment.
+- **Tested & enforced** — 1,600+ backend tests (xUnit, Testcontainers, NetArchTest boundaries) and 200+ Playwright E2E tests, with path-scoped backend/frontend CI and warnings-as-errors.
+- **Polish in this release** — the `fsh` CLI gained a `--version` flag and a corrected (semver-aware) update check; the unimplemented `--db sqlserver` scaffold option was removed (PostgreSQL is the supported provider); AppHost resource names are namespaced per app; and a batch of scaffold/DX fixes landed (see the dated entries below).
+
+See the dated entries below for the complete list of changes that shipped into 10.0.0.
 
 ## 2026-05-27
 
