@@ -33,18 +33,26 @@ documents what it starts and **why** it's wired the way it is.
 | RedisInsight | *(sidecar)* | Key browser auto-connected to the Valkey instance for inspecting cache keys in dev | Persistent |
 | MinIO | `minio` | S3-compatible object storage, **:9000** (API) / **:9001** (console) | Persistent (data volume) |
 | MinIO init | `minio-init` | One-shot: creates the `fsh-uploads` bucket + download policy, then exits | Run-once |
-| DB migrator | `fsh-db-migrator` | One-shot: applies migrations across the tenant catalog + every tenant's module DBs (`apply --seed`, so the root admin exists), then exits | Run-once |
-| Demo seeder | `fsh-demo-seeder` | One-shot, **dev-only**: runs `seed-demo` after the migrator to provision the `acme`/`globex` demo tenants + users, then exits | Run-once |
-| API | `fsh-api` | The ASP.NET Core API (`net10.0`) | Long-running |
-| Admin app | `fsh-admin` | Operator React + Vite SPA on **:5173** | Long-running |
-| Dashboard app | `fsh-dashboard` | Tenant React + Vite SPA on **:5174** (with SSE live feed) | Long-running |
+| DB migrator | `fsh-starter-db-migrator` | One-shot: applies migrations across the tenant catalog + every tenant's module DBs (`apply --seed`, so the root admin exists), then exits | Run-once |
+| Demo seeder | `fsh-starter-demo-seeder` | One-shot, **dev-only**: runs `seed-demo` after the migrator to provision the `acme`/`globex` demo tenants + users, then exits | Run-once |
+| API | `fsh-starter-api` | The ASP.NET Core API (`net10.0`) | Long-running |
+| Admin app | `fsh-starter-admin` | Operator React + Vite SPA on **:5173** | Long-running |
+| Dashboard app | `fsh-starter-dashboard` | Tenant React + Vite SPA on **:5174** (with SSE live feed) | Long-running |
+
+<Callout type="note" title="Resource names are namespaced per app">
+The `fsh-starter-*` resource names — and the Docker volume names — are derived
+from the AppHost's assembly name. A CLI-scaffolded app (say `Acme.Store`) gets
+`acme-store-api`, `acme-store-admin`, and so on, so two FSH-based apps on one
+machine never collide on container or volume names. The third-party infra
+(`postgres`, `redis`, `minio`) and the `fsh-db` database keep stable names.
+</Callout>
 
 The Aspire dashboard opens automatically and shows every resource's state,
 logs, traces, and endpoints. The API's Scalar UI is at `/scalar`.
 
 <Callout type="note" title="Startup is ordered, not racy">
 The API waits for Postgres and Valkey to be healthy **and** for the one-shot
-jobs (`minio-init`, `fsh-db-migrator`, `fsh-demo-seeder`) to finish before it starts. So the API
+jobs (`minio-init`, `fsh-starter-db-migrator`, `fsh-starter-demo-seeder`) to finish before it starts. So the API
 never boots against an unmigrated database or a missing bucket — no retry loops,
 no first-request 500s.
 </Callout>
@@ -69,8 +77,9 @@ browser PUTs from the admin (`:5173`) and dashboard (`:5174`) origins via
 
 ### The migrator is the production deploy step too
 
-`fsh-db-migrator` is the same `FSH.Starter.DbMigrator` project you run as an
-explicit step in production (`dotnet run --project ... -- apply`). The database
+The `fsh-starter-db-migrator` resource runs the same `FSH.Starter.DbMigrator`
+project you run as an explicit step in production (published as the
+`fsh-db-migrator` image; `dotnet run --project ... -- apply`). The database
 is **never** migrated at API startup — locally or in the cloud. One mechanism,
 two contexts.
 
