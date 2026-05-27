@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-05-27
+lastUpdated: 2026-05-28
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -10,6 +10,23 @@ seo:
 ---
 
 Notable changes to the kit, newest first.
+
+## 10.0.0 — 2026-05-28
+
+The first stable **10.0.0** release. FullStackHero is now a complete **.NET 10 modular monolith plus two React 19 apps**, distributed as the `fsh` CLI and the `dotnet new fsh` template — and you get the **full source**, no black-box runtime packages.
+
+- **Backend** — .NET 10 / EF Core 10 modular monolith (Vertical Slice + source-generated Mediator CQRS) across **10 modules**: Identity, Multitenancy, Billing, Catalog, Tickets, Chat, Files, Webhooks, Auditing, and Notifications. Multitenant by default (Finbuckle), JWT + ASP.NET Identity, HybridCache on Valkey, Hangfire jobs, presigned S3/MinIO storage, OpenAPI + Scalar, and Serilog + OpenTelemetry.
+- **Front-ends** — two **React 19 + Vite 7 + TypeScript** apps: an operator console (`admin`) and a tenant app (`dashboard`), with TanStack Query v5, Tailwind v4, and SignalR/SSE real-time.
+- **One-command local dev** — **.NET Aspire** brings up Postgres + pgAdmin, Valkey + RedisInsight, MinIO, the migrator, demo data, the API, and both front-ends. **Docker Compose** and **AWS/Terraform** cover deployment.
+- **Tested & enforced** — 1,600+ backend tests (xUnit, Testcontainers, NetArchTest boundaries) and 200+ Playwright E2E tests, with path-scoped backend/frontend CI and warnings-as-errors.
+- **Polish in this release** — the `fsh` CLI gained a `--version` flag and a corrected (semver-aware) update check; the unimplemented `--db sqlserver` scaffold option was removed (PostgreSQL is the supported provider); AppHost resource names are namespaced per app; and a batch of scaffold/DX fixes landed (see the dated entries below).
+
+See the dated entries below for the complete list of changes that shipped into 10.0.0.
+
+## 2026-05-28
+
+- **Chat delivers messages live to recipients who weren't in the conversation when they connected** — chat broadcasts each message to the channel's SignalR group, but a connection only joined the groups for channels it already belonged to *at connect time* (`AppHub.OnConnectedAsync`). So a brand-new DM, or being added to a channel mid-session, never received live messages — the recipient saw nothing until they reloaded the page. The hub now exposes a membership-checked `JoinChannel` method that the dashboard invokes when a conversation is opened and again on reconnect, so a live socket joins the group on demand. Creating a DM also notifies the other participants (via their `user:{id}` group), so the new conversation appears in their channel rail without a refresh.
+- **Deactivated tenants are now actually blocked (security fix)** — deactivating a tenant only flipped an `IsActive` flag in the tenant store; nothing in the auth or request pipeline enforced it, so a deactivated tenant's users could still log in and use the API. Tenant resolution now rejects requests for a deactivated tenant with `403 Forbidden` — covering login, token refresh, and every API/realtime request — via a post-authentication guard. Operators (the root tenant) are exempt so they can still manage and reactivate tenants. Deactivation also now invalidates the tenant's distributed-cache entry, so the change takes effect on the very next request instead of waiting out the 60-minute cache.
 
 ## 2026-05-27
 
