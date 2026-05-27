@@ -119,7 +119,7 @@ app.UseHeroMultiTenantDatabases();
 app.UseHeroPlatform(p => { p.MapModules = true; /* ... */ });
 ```
 
-The API never mutates data on startup. Demo data (acme/globex tenants, sample catalog/tickets/chat) is provisioned by `FSH.Starter.DbMigrator seed-demo`.
+The API never mutates data on startup. Demo data (acme/globex tenants, sample catalog/tickets/chat) is provisioned by `FSH.Starter.DbMigrator seed-demo`, which Aspire runs automatically on launch (the `fsh-demo-seeder` resource) — so the demo logins work out of the box.
 
 ## Stack
 
