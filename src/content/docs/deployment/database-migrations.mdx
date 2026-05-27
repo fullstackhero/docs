@@ -69,8 +69,8 @@ dotnet run --project src/Host/FSH.Starter.DbMigrator -- apply --catalog-only
 ## Local development
 
 When you run the stack via Aspire, the migrator runs **for you**: the
-`fsh-db-migrator` resource executes `apply --seed` on each AppHost launch (so the
-root admin `admin@root.com` is seeded), then a dev-only `fsh-demo-seeder` resource
+`fsh-starter-db-migrator` resource executes `apply --seed` on each AppHost launch (so the
+root admin `admin@root.com` is seeded), then a dev-only `fsh-starter-demo-seeder` resource
 runs `seed-demo` to provision the `acme`/`globex` demo tenants and their users. The
 API is gated on both (`WaitForCompletion`), so it never starts against an
 unmigrated database and the demo logins work the moment the dashboard loads. See
