@@ -25,7 +25,9 @@ Use the Billing module if your product charges tenants on a recurring plan and y
 - An **invoice aggregate** with a clean state machine: Draft → Issued → (Paid \| Void). Line items are owned; subtotals recompute on add; period (year, month) is immutable.
 - **Usage metering** — `UsageSnapshot` rows record what each tenant consumed in a window. The monthly job reads these against the subscribed plan's overage rates to add overage line items to the next invoice.
 - A **monthly Hangfire recurring job** (`billing-monthly-invoices`) registered at module startup. Runs at `0 5 1 * *` UTC — 00:05 UTC on the 1st of each month — and generates a Draft invoice per active tenant for the previous period.
-- **15 endpoints** at `/api/v1/billing/...` covering plans, subscriptions, invoices, and usage. Two coarse permissions: `Billing.View` and `Billing.Manage`.
+- **Email notifications** — issuing an invoice raises `InvoiceIssuedIntegrationEvent`, and a daily tenant-expiry scan raises nearing-expiry / entered-grace / expired events; the Notifications module emails the tenant admin. Expiry events are deduped so a tenant is notified once per state per validity window.
+- **On-demand PDF invoices** — `GET /invoices/{id}/pdf` renders the invoice to a PDF (QuestPDF, behind a swappable `IInvoicePdfRenderer`). The fetch is scoped to the caller's tenant, so the same endpoint serves operators and tenant self-service; another tenant's id returns `404`.
+- **16 endpoints** at `/api/v1/billing/...` covering plans, subscriptions, invoices, usage, and PDF download. Two coarse permissions: `Billing.View` and `Billing.Manage`.
 
 ## Architecture at a glance
 
@@ -171,6 +173,7 @@ All routes are mounted under `/api/v1/billing` and require the relevant `Billing
 | GET | `/invoices` | `GetInvoicesEndpoint` |
 | GET | `/invoices/my` | `GetMyInvoicesEndpoint` |
 | GET | `/invoices/{invoiceId}` | `GetInvoiceByIdEndpoint` |
+| GET | `/invoices/{invoiceId}/pdf` | `GetInvoicePdfEndpoint` |
 | POST | `/usage/capture` | `CaptureUsageSnapshotsEndpoint` |
 | GET | `/usage/snapshots` | `GetUsageSnapshotsEndpoint` |
 
