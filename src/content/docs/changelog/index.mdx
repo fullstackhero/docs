@@ -13,7 +13,7 @@ Notable changes to the kit, newest first.
 
 ## 10.0.0 — 2026-05-28
 
-The first stable **10.0.0** release. FullStackHero is now a complete **.NET 10 modular monolith plus two React 19 apps**, distributed as the `fsh` CLI and the `dotnet new fsh` template — and you get the **full source**, no black-box runtime packages.
+The first stable **10.0.0** release. fullstackhero is now a complete **.NET 10 modular monolith plus two React 19 apps** — and you get the **full source**, no black-box runtime packages. Available today via `git clone` or the GitHub template; the `fsh` CLI and the `dotnet new fsh` template publish to NuGet shortly.
 
 - **Backend** — .NET 10 / EF Core 10 modular monolith (Vertical Slice + source-generated Mediator CQRS) across **10 modules**: Identity, Multitenancy, Billing, Catalog, Tickets, Chat, Files, Webhooks, Auditing, and Notifications. Multitenant by default (Finbuckle), JWT + ASP.NET Identity, HybridCache on Valkey, Hangfire jobs, presigned S3/MinIO storage, OpenAPI + Scalar, and Serilog + OpenTelemetry.
 - **Front-ends** — two **React 19 + Vite 7 + TypeScript** apps: an operator console (`admin`) and a tenant app (`dashboard`), with TanStack Query v5, Tailwind v4, and SignalR/SSE real-time.

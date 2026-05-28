@@ -1,6 +1,6 @@
 ---
 title: Introduction
-lastUpdated: 2026-05-19
+lastUpdated: 2026-05-28
 description: What fullstackhero is, what it ships with, and how it's put together.
 sidebar:
   label: Introduction
@@ -31,7 +31,7 @@ It's aimed at teams that want to ship features on day one without spending a spr
 - **API docs.** OpenAPI + Scalar UI. Versioned routes via `Asp.Versioning` (`/api/v{version}/{module}`).
 - **Cloud-ready.** `.NET Aspire` AppHost brings up Postgres, Valkey (a Redis-compatible, BSD-licensed Redis fork), and the API host locally with one command. Production deploy via Docker Compose included.
 - **Two frontends.** React + Vite admin console and dashboard, both in `clients/`.
-- **CLI + template.** Scaffold new projects with `fsh new` or `dotnet new fsh`, or clone the repo directly.
+- **CLI + template.** Clone the repo directly today; one-command scaffolding via `fsh new` or `dotnet new fsh` is coming soon (both publish to NuGet shortly).
 
 ## High-level architecture
 
@@ -169,10 +169,10 @@ The API never mutates data on startup. Demo data (acme/globex tenants, sample ca
 
 | Channel                | Command                                          |
 |------------------------|--------------------------------------------------|
-| FSH CLI                | `dotnet tool install -g FullStackHero.CLI && fsh new MyApp` |
-| `dotnet new` template  | `dotnet new install FullStackHero.NET.StarterKit && dotnet new fsh -n MyApp` |
 | Clone the repo         | `git clone https://github.com/fullstackhero/dotnet-starter-kit.git` |
 | GitHub Codespaces      | "Use this template" → open in Codespaces        |
+| FSH CLI *(coming soon)* | `dotnet tool install -g FullStackHero.CLI && fsh new MyApp` |
+| `dotnet new` template *(coming soon)* | `dotnet new install FullStackHero.NET.StarterKit && dotnet new fsh -n MyApp` |
 
 ## Where to go next
 

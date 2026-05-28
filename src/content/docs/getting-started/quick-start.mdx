@@ -1,49 +1,44 @@
 ---
 title: Quick Start
-lastUpdated: 2026-05-19
-description: Scaffold a fullstackhero project and run it locally in under a minute.
+lastUpdated: 2026-05-28
+description: Clone fullstackhero and run it locally in under a minute. (The fsh CLI is coming soon.)
 sidebar:
   order: 3
 pageType: guide
 seo:
-  title: 'Quick Start — scaffold a .NET 10 starter kit with the fsh'
-  description: 'Install the FullStackHero.CLI (`dotnet tool install -g FullStackHero.CLI`), scaffold a new project with `fsh new MyApp`, and run it locally via .NET Aspire…'
-  keywords: 'fsh CLI, fsh new command, scaffold .NET 10 project, fullstackhero quick start, .NET Aspire local development'
+  title: 'Quick Start — clone and run the .NET 10 starter kit'
+  description: 'Clone the fullstackhero repo and run it locally via .NET Aspire. The FullStackHero.CLI dotnet tool is coming soon for one-command scaffolding.'
+  keywords: 'fullstackhero quick start, clone .NET 10 starter kit, .NET Aspire local development, fsh CLI'
 ---
 
-The fastest path uses the **FSH CLI** — a NuGet-distributed tool that scaffolds a new project from the latest template.
+<Callout type="warning" title="CLI coming soon">
+The one-command `fsh new` flow needs the `FullStackHero.CLI` NuGet tool, which
+isn't published yet — it lands soon. Until then, the fastest working path is a
+**git clone**, shown below. See [Install](/docs/getting-started/install/) for
+every path.
+</Callout>
 
-## 1. Install the CLI
+The quickest way to run the kit today is to clone the repo and start it with .NET Aspire.
+
+## 1. Clone the repo
 
 ```bash
-dotnet tool install -g FullStackHero.CLI
-```
-
-## 2. Scaffold a project
-
-```bash
-fsh new MyApp
+git clone https://github.com/fullstackhero/dotnet-starter-kit.git MyApp
 cd MyApp
 ```
 
-The interactive wizard asks whether to include the Aspire AppHost and the React client apps. Run `fsh doctor` first if you'd like to verify your environment (SDK, Docker, Aspire workload, free ports).
+A clone keeps the original `FSH.Starter` project names — it doesn't rename the solution. Once the CLI ships, `fsh new MyApp` will scaffold a fully renamed project (and `fsh doctor` will verify your environment first).
 
-Want it non-interactive?
-
-```bash
-fsh new MyApp --no-git
-```
-
-## 3. Run
+## 2. Run
 
 ```bash
-dotnet run --project src/Host/MyApp.AppHost
+dotnet run --project src/Host/FSH.Starter.AppHost
 ```
 
 Aspire brings up Postgres and Valkey containers, wires connection strings, launches the API host, and enables OTLP export. Open the Aspire dashboard to watch services start; the API serves at `https://localhost:5285` with OpenAPI and Scalar at `/scalar/v1`.
 
 ## Next
 
-- **[Install](/docs/getting-started/install/)** — alternative install paths (`dotnet new` template, git clone, Codespaces).
+- **[Install](/docs/getting-started/install/)** — every install path (GitHub template, Codespaces, and the upcoming CLI + `dotnet new` template).
 - **[Architecture](/docs/architecture/)** — the modular monolith + VSA mental model.
-- **[CLI](/docs/cli/)** — every `fsh` command and option.
+- **[CLI](/docs/cli/)** — every `fsh` command and option (coming soon).
