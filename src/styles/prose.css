@@ -217,18 +217,13 @@
 
   /* Inline code styling — consolidated selector */
   & :where(p, li, h2, h3, h4) code {
-    @apply mx-0.5 inline-block break-all rounded-md px-1.5 py-0.5 align-baseline text-[0.875em] leading-5;
-    background: linear-gradient(
-      135deg,
-      rgb(22 163 74 / 0.15) 0%,
-      rgb(22 163 74 / 0.08) 100%
-    );
-    border: 1px solid rgb(22 163 74 / 0.2);
+    @apply mx-px rounded break-words px-[0.4em] py-[0.1em] align-baseline text-[0.85em] font-medium;
+    background: rgb(22 163 74 / 0.07);
+    border: 1px solid rgb(22 163 74 / 0.13);
     color: var(--primary);
     font-family:
       'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
       monospace;
-    font-weight: 500;
     transition: background 0.2s ease, border-color 0.2s ease;
   }
 
@@ -237,12 +232,8 @@
   }
 
   & :where(p, li) code:hover {
-    background: linear-gradient(
-      135deg,
-      rgb(22 163 74 / 0.25) 0%,
-      rgb(22 163 74 / 0.15) 100%
-    );
-    border-color: rgb(22 163 74 / 0.4);
+    background: rgb(22 163 74 / 0.12);
+    border-color: rgb(22 163 74 / 0.26);
   }
 
   & > p a > code {
