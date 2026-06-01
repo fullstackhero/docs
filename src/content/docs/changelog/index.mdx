@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-05-28
+lastUpdated: 2026-06-01
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -10,6 +10,16 @@ seo:
 ---
 
 Notable changes to the kit, newest first.
+
+## 2026-06-01
+
+Post-10.0.0 pre-release hardening from a module-by-module audit (correctness, security, completeness, test coverage) across the backend. Every finding was adversarially verified before fixing; the suite stays green (warnings-as-errors, Testcontainers integration tests).
+
+- **Chat: restoring an archived channel no longer loses its members (fix).** Archiving a channel called `db.Remove(channel)`, which cascaded the delete onto the `ChannelMember` rows; because the soft-delete interceptor only rescues *owned* references, the members were hard-deleted and a later **restore brought back an empty channel** — the creator then got `404` trying to post. Archiving is now an explicit domain state change that flips the soft-delete flag and leaves membership intact, so a restore is lossless.
+- **Tickets: the lifecycle and permission set are now complete.** The `Closed` state was unreachable (no way to get there) and the `Tickets.Update` / `Tickets.Delete` permissions were registered with **no endpoints behind them** — so an admin could grant rights that did nothing, and the existing trash/restore had no way to actually trash a ticket. This adds first-class **Close** (`POST /api/v1/tickets/{id}/close`, Resolved → Closed), **Update** (`PUT /api/v1/tickets/{id}` — edit title/description/priority; frozen once Closed), and **Delete** (`DELETE /api/v1/tickets/{id}` — soft-delete; comments survive and return on restore), each with a validator, a permission gate, and a new `Tickets.Close` permission. `GET /api/v1/tickets/{id}/comments` now returns `404` for a non-existent ticket instead of a misleading empty list. See [Tickets](/docs/modules/tickets/).
+- **Webhooks: signing secrets are encrypted at rest, and the endpoints are permission-gated (security fixes).** The HMAC signing secret was stored as plaintext in a field named `SecretHash` — a database breach would have exposed every tenant's secret. The secret is the HMAC key (it must stay recoverable, so hashing isn't an option), so it is now **encrypted with ASP.NET Data Protection** on create and decrypted only at sign time. Separately, the endpoints were authentication-only — any signed-in user could manage every webhook in their tenant; they now require the new `Webhooks.View` / `Create` / `Delete` / `Test` permissions. **After upgrading, grant these to the roles that manage webhooks or those users will get `403`.** See [Webhooks](/docs/modules/webhooks/).
+- **Multitenancy & correctness.** The `GET tenant provisioning status` and `retry provisioning` endpoints now accept and forward a `CancellationToken` (graceful shutdown); the Notifications mention handler fails loud on a tenant-context mismatch rather than risking a cross-tenant write; webhook list endpoints validate pagination (a `pageSize=0` previously surfaced as a `500`, now a clean `400`); and the Billing monthly-invoice job takes its clock from `TimeProvider` for deterministic tests.
+- **Known follow-up.** Billing publishes its `InvoiceIssued` event directly on the in-memory bus rather than through the transactional outbox (Files does the same, with no consumer yet). Closing this needs a small `Eventing` building-block change to support more than one outbox-backed module; tracked for a follow-up release. The in-memory path is correct today.
 
 ## 10.0.0 — 2026-05-28
 

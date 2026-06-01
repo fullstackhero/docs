@@ -1,7 +1,7 @@
 ---
 title: Tickets module
-lastUpdated: 2026-05-19
-description: A complete support-ticket workflow — auto-numbered tickets, status state machine (Open → InProgress → Resolved → Closed), comments, assignment, priority, and soft delete.
+lastUpdated: 2026-06-01
+description: A complete support-ticket workflow — auto-numbered tickets, status state machine (Open → InProgress → Resolved → Closed), comments, assignment, priority, edit, and soft delete.
 sidebar:
   label: Tickets
   order: 10
@@ -21,13 +21,14 @@ If you're adding a domain with strict status transitions (orders, applications, 
 ## What ships in v10
 
 - **Tickets** with auto-generated `Number`, title, optional description, status, priority (Low / Medium / High / Critical), reporter user, and optional assignee.
-- **Four-state status machine**: Open → InProgress → Resolved → Closed, with reopen-from-Resolved-or-Closed support. Every transition raises a `TicketStatusChangedDomainEvent`.
+- **Four-state status machine**: Open → InProgress → Resolved → Closed, with reopen-from-Resolved-or-Closed support. `Close` finalizes a resolved ticket (only `Resolved` → `Closed`; any other source state is rejected with 409). Every transition raises a `TicketStatusChangedDomainEvent`.
 - **Assignment workflow** — assigning when Open moves to InProgress; unassigning from InProgress moves back to Open; assigning Closed is rejected with 409.
+- **Edit** — `Update` revises a ticket's title, description, and priority; a Closed ticket is frozen and must be reopened first (409).
 - **Immutable comments** owned by tickets. Closed tickets refuse new comments.
 - **Domain events** for cross-module reactions: `TicketCreatedDomainEvent`, `TicketAssignedDomainEvent`, `TicketStatusChangedDomainEvent`, `TicketCommentAddedDomainEvent`.
-- **Soft delete + restore** on tickets and comments via `ISoftDeletable`.
+- **Soft delete + restore** on tickets and comments via `ISoftDeletable` — `Delete` trashes a ticket (its comments survive and return on restore), `ListTrashed` lists the trash, `Restore` brings it back.
 - **Search** by status, priority, assignee, and free text.
-- **9 fine-grained permissions** — View / Create / Update / Delete / Restore / Assign / Resolve / Reopen / Comment.
+- **10 fine-grained permissions** — View / Create / Update / Delete / Restore / Assign / Resolve / Reopen / Close / Comment.
 
 ## Architecture at a glance
 
@@ -44,9 +45,11 @@ src/Modules/Tickets/
 │   │   └── TicketsDbInitializer.cs              Seeds demo data
 │   ├── Features/v1/Tickets/
 │   │   ├── CreateTicket/
+│   │   ├── UpdateTicket/
 │   │   ├── AssignTicket/
 │   │   ├── ResolveTicket/
 │   │   ├── ReopenTicket/
+│   │   ├── CloseTicket/
 │   │   ├── AddTicketComment/
 │   │   ├── DeleteTicket/
 │   │   ├── RestoreTicket/
@@ -132,18 +135,21 @@ Every method that mutates state does three things consistently: validate the sou
 
 ## Public API
 
-Ten commands and queries in the Contracts assembly:
+Thirteen commands and queries in the Contracts assembly:
 
 | Type | Purpose |
 |---|---|
 | `CreateTicketCommand(title, description?, priority, assignedToUserId?)` | File a ticket; auto-numbered |
+| `UpdateTicketCommand(ticketId, title, description?, priority)` | Edit title, description, and priority (rejected on a Closed ticket) |
 | `AssignTicketCommand(ticketId, assigneeUserId?)` | Assign or unassign (null = unassign) |
 | `ResolveTicketCommand(ticketId, resolutionNote?)` | Mark resolved |
 | `ReopenTicketCommand(ticketId)` | Reopen a resolved/closed ticket |
+| `CloseTicketCommand(ticketId)` | Finalize a resolved ticket (Resolved → Closed) |
 | `AddTicketCommentCommand(ticketId, body)` | Post a comment |
+| `DeleteTicketCommand(ticketId)` | Soft-delete (trash) a ticket |
 | `RestoreTicketCommand(ticketId)` | Restore a soft-deleted ticket |
 | `GetTicketByIdQuery(ticketId)` | Fetch single ticket with comments |
-| `ListTicketCommentsQuery(ticketId, skip, take)` | Paginated comments |
+| `ListTicketCommentsQuery(ticketId, skip, take)` | Paginated comments (404 if the ticket doesn't exist) |
 | `SearchTicketsQuery(search?, statusFilter?, priorityFilter?, assignedToUserId?, skip, take)` | Advanced search |
 | `ListTrashedTicketsQuery(skip, take)` | View soft-deleted tickets |
 
@@ -153,18 +159,21 @@ Each command returns either `Unit` (mutations) or a typed response (`TicketRespo
 
 All under `/api/v1/tickets`, gated by the corresponding `Tickets.*` permission.
 
-| Verb | Route | Endpoint class |
-|---|---|---|
-| POST | `/` | `CreateTicketEndpoint` |
-| GET | `/{ticketId}` | `GetTicketByIdEndpoint` |
-| GET | `/search` | `SearchTicketsEndpoint` |
-| GET | `/trash` | `ListTrashedTicketsEndpoint` |
-| POST | `/{ticketId}/assign` | `AssignTicketEndpoint` |
-| POST | `/{ticketId}/resolve` | `ResolveTicketEndpoint` |
-| POST | `/{ticketId}/reopen` | `ReopenTicketEndpoint` |
-| POST | `/{ticketId}/restore` | `RestoreTicketEndpoint` |
-| GET | `/{ticketId}/comments` | `ListTicketCommentsEndpoint` |
-| POST | `/{ticketId}/comments` | `AddTicketCommentEndpoint` |
+| Verb | Route | Endpoint class | Permission |
+|---|---|---|---|
+| POST | `/` | `CreateTicketEndpoint` | `Tickets.Create` |
+| PUT | `/{ticketId}` | `UpdateTicketEndpoint` | `Tickets.Update` |
+| DELETE | `/{ticketId}` | `DeleteTicketEndpoint` | `Tickets.Delete` |
+| GET | `/{ticketId}` | `GetTicketByIdEndpoint` | `Tickets.View` |
+| GET | `/search` | `SearchTicketsEndpoint` | `Tickets.View` |
+| GET | `/trash` | `ListTrashedTicketsEndpoint` | `Tickets.View` |
+| POST | `/{ticketId}/assign` | `AssignTicketEndpoint` | `Tickets.Assign` |
+| POST | `/{ticketId}/resolve` | `ResolveTicketEndpoint` | `Tickets.Resolve` |
+| POST | `/{ticketId}/reopen` | `ReopenTicketEndpoint` | `Tickets.Reopen` |
+| POST | `/{ticketId}/close` | `CloseTicketEndpoint` | `Tickets.Close` |
+| POST | `/{ticketId}/restore` | `RestoreTicketEndpoint` | `Tickets.Restore` |
+| GET | `/{ticketId}/comments` | `ListTicketCommentsEndpoint` | `Tickets.View` |
+| POST | `/{ticketId}/comments` | `AddTicketCommentEndpoint` | `Tickets.Comment` |
 
 ## Domain events
 
@@ -186,29 +195,27 @@ These are in-module domain events. To react from another module (e.g. send an em
 
 ## How to extend
 
-### Add Close as a public command
+### Add a new state transition
 
-Today there's no `CloseTicketCommand` — the Closed state is reached via business logic (e.g. an auto-close timer or an admin sweep). Add it explicitly:
-
-```csharp
-// Modules.Tickets.Contracts/v1/Tickets/CloseTicket/CloseTicketCommand.cs
-public sealed record CloseTicketCommand(Guid TicketId, string? Reason) : ICommand<Unit>;
-```
-
-In `Ticket.cs`:
+`Close` (Resolved → Closed) ships as a first-class command, endpoint, and `Tickets.Close` permission — `Ticket.Close()` validates the source state, stamps `ClosedAtUtc`, and raises `TicketStatusChangedDomainEvent`. Use it as the template for any new transition you need (e.g. an `Escalate` step):
 
 ```csharp
-public void Close(string? reason)
+// 1. Domain — guard the source state, mutate, raise the event (Modules.Tickets/Domain/Ticket.cs)
+public void Escalate()
 {
-    if (Status != TicketStatus.Resolved)
-        throw new CustomException("Can only close a resolved ticket.", HttpStatusCode.Conflict);
-    Status = TicketStatus.Closed;
-    ClosedAtUtc = DateTime.UtcNow;
-    RaiseDomainEvent(new TicketStatusChangedDomainEvent(Id, TicketStatus.Closed));
+    if (Status is TicketStatus.Closed)
+        throw new CustomException("Cannot escalate a closed ticket.",
+            (IEnumerable<string>?)null, HttpStatusCode.Conflict);
+    Priority = TicketPriority.Critical;
+    UpdatedAtUtc = DateTime.UtcNow;
 }
+
+// 2. Contracts — EscalateTicketCommand(Guid TicketId) : ICommand<Guid>
+// 3. Feature folder — handler + {Command}Validator + endpoint with .RequirePermission(...)
+// 4. Register the endpoint in TicketsModule.MapEndpoints and add the permission constant
 ```
 
-Add the handler, validator, endpoint, and permission constant — follow the existing `Resolve` shape exactly.
+Follow the existing `CloseTicket` slice end-to-end — every command handler needs a `{Command}Validator` (enforced by `Architecture.Tests`).
 
 ### Email notifications on assignment
 
@@ -235,7 +242,7 @@ Resolved tickets carry `ResolvedAtUtc`. Add an `ExpectedResolutionAtUtc` field s
 
 ## Tests
 
-One integration test file at `src/Tests/Integration.Tests/Tests/Tickets/`. Coverage is light relative to feature completeness — if you customize the state machine, add unit tests on `Ticket` directly to cover every transition.
+Integration tests live at `src/Tests/Integration.Tests/Tests/Tickets/` and cover the lifecycle (create, search/filter, assign, resolve/reopen guards), the close/update/delete operations, the delete → restore round-trip (comments survive), and tenant isolation. If you customize the state machine, add unit tests on `Ticket` directly to cover every transition.
 
 ## Related
 
