@@ -1,7 +1,7 @@
 ---
 title: Webhooks module
-lastUpdated: 2026-05-19
-description: Tenant-scoped webhook subscriptions, open-generic event fan-out, HMAC-signed delivery, Hangfire dispatch with exponential backoff, and a delivery audit log.
+lastUpdated: 2026-06-01
+description: Tenant-scoped webhook subscriptions, open-generic event fan-out, HMAC-signed delivery with secrets encrypted at rest, permission-gated endpoints, Hangfire dispatch with exponential backoff, and a delivery audit log.
 sidebar:
   label: Webhooks
   order: 7
@@ -20,14 +20,16 @@ You publish integration events anyway (Chat does, Identity does, Files does). Th
 
 ## What ships in v10
 
-- **Tenant-scoped subscriptions** — each `WebhookSubscription` row belongs to a tenant and stores `Url`, `EventsCsv` (comma-separated list with `*` wildcard support), `SecretHash` (the HMAC key), `IsActive`.
+- **Tenant-scoped subscriptions** — each `WebhookSubscription` row belongs to a tenant and stores `Url`, `EventsCsv` (comma-separated list with `*` wildcard support), `SecretHash` (the HMAC signing secret, **encrypted at rest** — see below), `IsActive`.
+- **Signing secret encrypted at rest** — the secret is the HMAC key, so it must stay recoverable (a one-way hash would make signing impossible). It is encrypted with ASP.NET Data Protection (`IWebhookSecretProtector`) on create and decrypted only at sign time, so a database breach never exposes plaintext secrets.
+- **Permission-gated endpoints** — `Webhooks.View` / `Create` / `Delete` / `Test` (previously authentication-only).
 - **Open-generic event handler** — one `WebhookFanoutHandler<TEvent>` registered for every `IIntegrationEvent`; no per-event setup needed. When a new module publishes a new event, existing subscriptions automatically receive it.
 - **Tenant context restoration** — the fanout handler explicitly restores the tenant context before querying subscriptions, so Finbuckle's global query filter sees the right tenant. (This is the single most important gotcha — see below.)
 - **HMAC-SHA256 payload signing** — when `SecretHash` is set, every delivery includes `X-Webhook-Signature: sha256={hex}` so subscribers can verify authenticity.
 - **Hangfire delivery jobs** with `[AutomaticRetry]` — 5 attempts total, exponential backoff (30 s, 2 min, 10 min, 1 h).
 - **Transient vs permanent error classification** — 5xx, 408, 429 retried; other 4xx permanent.
 - **Delivery log** — every attempt (success or failure) appends a `WebhookDelivery` row with status code, duration, error.
-- **Five endpoints** for tenants to manage subscriptions and read the delivery log.
+- **Five permission-gated endpoints** for tenants to manage subscriptions and read the delivery log.
 - **HTTP resilience** via a named `HttpClient` "Webhooks" using `Microsoft.Extensions.Http.Resilience` (Polly v8).
 
 ## Architecture at a glance
@@ -118,8 +120,9 @@ public sealed class WebhookDispatchJob(IHttpClientFactory http, IWebhookDelivery
         };
         req.Headers.Add("X-Webhook-Event", eventType);
         req.Headers.Add("X-Webhook-Delivery-Id", Guid.NewGuid().ToString());
-        if (!string.IsNullOrEmpty(sub.SecretHash))
-            req.Headers.Add("X-Webhook-Signature", "sha256=" + signer.Sign(payload, sub.SecretHash));
+        var secret = secretProtector.Unprotect(sub.SecretHash);   // decrypt at sign time
+        if (!string.IsNullOrEmpty(secret))
+            req.Headers.Add("X-Webhook-Signature", "sha256=" + signer.Sign(payload, secret));
 
         var sw = Stopwatch.StartNew();
         try
@@ -146,21 +149,36 @@ public sealed class WebhookDispatchJob(IHttpClientFactory http, IWebhookDelivery
 
 | Type | Purpose |
 |---|---|
-| `CreateWebhookSubscriptionCommand(url, events[], secretHash?)` | Subscribe |
-| `DeleteWebhookSubscriptionCommand(subscriptionId)` | Soft-delete (IsActive = false) |
+| `CreateWebhookSubscriptionCommand(url, events[], secret?)` | Subscribe (the secret is encrypted before storage) |
+| `DeleteWebhookSubscriptionCommand(subscriptionId)` | Delete the subscription |
 | `TestWebhookSubscriptionCommand(subscriptionId, eventType?)` | Enqueue one-off test delivery |
 | `GetWebhookSubscriptionsQuery(paging)` | List active subscriptions for caller's tenant |
 | `GetWebhookDeliveriesQuery(subscriptionId?, paging)` | Delivery log |
 
+## Permissions
+
+Every endpoint is gated by a `Webhooks.*` permission (defined in `Modules.Webhooks.Contracts/Authorization/WebhooksPermissions.cs` and registered at module startup). `View` is a basic permission; the rest are assigned per role.
+
+| Permission | Grants |
+|---|---|
+| `Webhooks.View` | List subscriptions and read the delivery log |
+| `Webhooks.Create` | Create a subscription |
+| `Webhooks.Delete` | Delete a subscription |
+| `Webhooks.Test` | Send a one-off test delivery |
+
+<Callout type="warning" title="Grant the new permissions after upgrading">
+Before this release the endpoints were authentication-only — any signed-in user could manage every webhook in their tenant. They now require explicit `Webhooks.*` permissions, so add them to the roles that should manage webhooks or those users will get `403`.
+</Callout>
+
 ## Endpoints
 
-| Verb | Route | What it does |
-|---|---|---|
-| POST | `/api/v1/webhooks` | Create subscription |
-| DELETE | `/api/v1/webhooks/{id}` | Deactivate subscription |
-| GET | `/api/v1/webhooks` | List subscriptions |
-| GET | `/api/v1/webhooks/deliveries` | Delivery log (newest first) |
-| POST | `/api/v1/webhooks/test` | Test delivery |
+| Verb | Route | What it does | Permission |
+|---|---|---|---|
+| POST | `/api/v1/webhooks/subscriptions` | Create subscription | `Webhooks.Create` |
+| DELETE | `/api/v1/webhooks/subscriptions/{id}` | Delete subscription | `Webhooks.Delete` |
+| GET | `/api/v1/webhooks/subscriptions` | List subscriptions | `Webhooks.View` |
+| GET | `/api/v1/webhooks/subscriptions/{id}/deliveries` | Delivery log (newest first) | `Webhooks.View` |
+| POST | `/api/v1/webhooks/subscriptions/{id}/test` | Test delivery | `Webhooks.Test` |
 
 ## Headers on every delivery
 
@@ -206,7 +224,7 @@ The kit doesn't auto-purge the `WebhookDelivery` table. For high-volume tenants,
 
 ## Tests
 
-The module has no built-in tests — webhook delivery needs a controllable HTTP endpoint, which is integration-test infrastructure. Tests live in your CI/CD pipeline rather than in the repo.
+The module ships unit tests in `src/Tests/Webhooks.Tests/` (domain, validators, the fan-out handler, payload signer, and the secret protector — encryption round-trips and never stores plaintext) and end-to-end coverage in `src/Tests/Integration.Tests/Tests/Webhooks/` (subscription CRUD, signed delivery, dispatch outcomes/retry, pagination, and cross-tenant isolation) using a controllable in-process HTTP receiver.
 
 ## Related
 
