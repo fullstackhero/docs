@@ -1,6 +1,6 @@
 ---
 title: Deploy to AWS with Terraform
-lastUpdated: 2026-05-24
+lastUpdated: 2026-06-06
 description: End-to-end AWS deployment — prerequisites, bootstrapping the state backend, configuring an environment, and the one-command deploy that ships the API and both React apps.
 sidebar:
   label: AWS (Terraform)
@@ -25,24 +25,28 @@ The Terraform lives under `deploy/terraform/`.
    Browser ──▶ admin SPA ─┤  private S3                                   │
            ──▶ dashboard ─┘  private S3                                   │
                                                                           │
-   Browser/API ──▶ ALB (+ WAF) ──▶ ECS Fargate: fsh-api ──▶ RDS PostgreSQL
-                                          │              └─▶ ElastiCache Redis
-                                          └─────────────▶ S3 (file uploads, + CloudFront)
+   Browser/API ──▶ CloudFront ──▶ ALB (+ WAF) ──▶ ECS Fargate: fsh-api ──▶ RDS PostgreSQL
+                  (HTTPS, opt)                          │              └─▶ ElastiCache Redis
+                                                        ├──────────────▶ S3 (file uploads, + CloudFront)
+                                                        │
+            one-shot ECS task: fsh-db-migrator ─────────┴──────────────▶ RDS (migrate + seed)
 ```
 
 - **Network** — VPC across your AZs, public + private subnets, NAT gateway(s), and VPC endpoints (S3, ECR, Logs, Secrets Manager) to keep traffic off the public internet.
-- **API** — ECS Fargate service behind an Application Load Balancer, fronted by **AWS WAF** (rate limiting + managed rule sets). Autoscaling, deployment circuit breaker, container in private subnets.
-- **Data** — RDS PostgreSQL (optional Multi-AZ, AWS-managed master password in Secrets Manager) and ElastiCache Redis (encryption in transit + at rest).
+- **API** — ECS Fargate service behind an Application Load Balancer, fronted by **AWS WAF** (rate limiting + managed rule sets). Autoscaling, deployment circuit breaker, container in private subnets. Optionally fronted by **CloudFront** (`enable_api_cloudfront`) so the HTTPS SPAs can call the API over HTTPS with no custom domain (no mixed-content).
+- **Migrations** — the schema is applied by a **one-shot `fsh-db-migrator` ECS task** the deploy runs after `apply` (never at API startup). It migrates and — in dev — seeds the admin user and default tenant; demo tenants are opt-in.
+- **Data** — RDS PostgreSQL (optional Multi-AZ, AWS-managed master password in Secrets Manager) and ElastiCache Redis/Valkey (encryption in transit + at rest).
 - **Files** — an S3 bucket for application uploads, optionally fronted by CloudFront.
 - **Frontends** — the admin and dashboard React SPAs each on a **private S3 bucket + CloudFront** (Origin Access Control), with SPA routing, default-on security headers (HSTS, nosniff, frame, referrer), and a Terraform-managed `config.json`.
 - **Observability** — CloudWatch alarms (opt-in) for ECS, RDS, Redis, and the ALB.
 
 <Callout type="note" title="No custom domains or Route 53 in this guide">
-Out of the box the SPAs and API are reachable on their AWS-assigned hostnames
-(CloudFront `*.cloudfront.net` and the ALB DNS name). Custom domains are
-optional — the per-app `*_cloudfront_aliases` / `*_certificate_arn` variables
-are present but commented out in the example tfvars. Bring your own ACM cert
-(in `us-east-1` for CloudFront) and DNS when you're ready.
+Out of the box the SPAs and API are reachable on their AWS-assigned hostnames —
+CloudFront `*.cloudfront.net` for the SPAs (and the API too, when
+`enable_api_cloudfront` is set), or the ALB DNS name otherwise. Custom domains
+are optional — the per-app `*_cloudfront_aliases` / `*_certificate_arn`
+variables are present but commented out in the example tfvars. Bring your own
+ACM cert (in `us-east-1` for CloudFront) and DNS when you're ready.
 </Callout>
 
 ## Prerequisites
@@ -51,17 +55,17 @@ are present but commented out in the example tfvars. Bring your own ACM cert
 
 - An **AWS account** and an IAM principal (user or SSO role) with permissions to create the resources above. The simplest start is an admin-level role; scope it down later.
 - **AWS CLI v2**, configured: `aws configure` (or `aws configure sso`). Verify with `aws sts get-caller-identity`.
-- A **container registry** the ECS tasks can pull the API image from. The default is the public `ghcr.io/fullstackhero/fsh-api` image; point `container_registry` at your own (ECR/GHCR) if you publish your own builds.
+- A **container registry** the ECS tasks can pull from. Two images are used — the API (`ghcr.io/fullstackhero/fsh-api`) and the migrator (`ghcr.io/fullstackhero/fsh-db-migrator`), built together from the same commit and sharing one immutable tag. The defaults are the public GHCR images; point `container_registry` at your own (ECR/GHCR) if you publish your own builds.
 
 ### Tooling
 
 | Tool | Version | Needed for |
 |---|---|---|
 | Terraform | **>= 1.15.4** | everything |
-| AWS CLI | v2 | auth, S3 sync, CloudFront invalidation |
-| jq | any | the deploy script reads Terraform outputs |
+| AWS CLI | v2 | auth, S3 sync, CloudFront invalidation, the migrator ECS task |
+| jq | any | reading Terraform outputs in **`deploy.sh`** (the PowerShell `deploy.ps1` uses `ConvertFrom-Json` — no jq) |
 | Node | 20+ | building the React apps |
-| .NET SDK | 10 | only with `--build-api` (building/pushing the API image) |
+| .NET SDK | 10 | only with `--build-api` (building/pushing the API + migrator images) |
 
 <Callout type="warning" title="Terraform 1.15.4 is the floor">
 The configuration pins `required_version >= 1.15.4` and the AWS provider to
@@ -118,40 +122,68 @@ app_s3_bucket_name       = "my-org-dev-fsh-app"
 dashboard_s3_bucket_name = "my-org-dev-fsh-dashboard"
 admin_s3_bucket_name     = "my-org-dev-fsh-admin"
 
+# HTTPS for the API with no custom domain: front the ALB with CloudFront so the
+# HTTPS SPAs can call it without mixed-content errors.
+enable_api_cloudfront = true
+
 db_name                        = "fshdb"
 db_username                    = "fshadmin"
 db_manage_master_user_password = true   # AWS manages the password in Secrets Manager
 
-# Immutable image tag (git SHA or semver) — never "latest"
-container_image_tag = "v1.0.0"
+# Container images — the API and migrator share one immutable tag (never "latest").
+# CI publishes "dev-<full-sha>"; `deploy.sh --build-api` publishes a 12-char short SHA.
+container_registry  = "ghcr.io/fullstackhero"
+api_image_name      = "fsh-api"
+migrator_image_name = "fsh-db-migrator"
+container_image_tag = "dev-<sha>"
+
+# What the one-shot migrator task runs. Dev migrates AND seeds (admin + default
+# tenant); seeding is idempotent. Demo tenants (acme/globex) are opt-in via --seed-demo.
+migrator_command = ["apply", "--seed"]
 ```
 
 `dev`, `staging`, and `prod` ship as ready-to-edit examples (prod enables
-Multi-AZ, deletion protection, autoscaling, and CloudWatch alarms).
+Multi-AZ, deletion protection, autoscaling, and CloudWatch alarms). `dev` ships
+for **two** regions — `us-east-1` and `ap-south-1` — as a multi-region template.
 
 ## Step 3 — Deploy (one command)
 
-From `deploy/terraform/apps/starter/`:
+From `deploy/terraform/apps/starter/`. The **region is required** — pass it as
+the second argument (the scripts never assume one; they prompt when it is
+omitted interactively and fail in CI):
 
 ```bash title="bash / CI / macOS / Linux"
-./deploy.sh dev
+./deploy.sh dev us-east-1
 ```
 
 ```powershell title="Windows PowerShell"
-./deploy.ps1 -Environment dev
+./deploy.ps1 -Environment dev -Region us-east-1
 ```
 
-That single command:
+That single command runs, in order:
 
-1. `terraform init` + `apply` for the environment (all the infra above).
-2. *(optional)* `--build-api` / `-BuildApi` builds and pushes the API container image at the current git SHA and deploys that tag.
-3. `npm run build` for each React app, `aws s3 sync` to its bucket (keeping the Terraform-managed `config.json`), and a CloudFront invalidation.
+1. `terraform init` + `apply` for the env/region (all the infra above).
+2. *(optional, `--build-api`)* builds and pushes **both** the API and migrator container images at the current git SHA and deploys that tag.
+3. runs the **`fsh-db-migrator` one-shot ECS task** (`apply` / `apply --seed`) and waits for it to exit `0` — the schema is applied here, not at API startup.
+4. `npm run build` for each React app, `aws s3 sync` to its bucket (keeping the Terraform-managed `config.json`), and a CloudFront invalidation.
 
-First deploy, building the API image yourself, with no prompts:
+First deploy, building the images yourself, with no prompts:
 
 ```bash
-./deploy.sh prod --build-api --auto-approve
+./deploy.sh prod us-east-1 --build-api --auto-approve
 ```
+
+### Flags
+
+| `deploy.sh` | `deploy.ps1` | What |
+|---|---|---|
+| `--build-api` | `-BuildApi` | Build & push the API **and** migrator images at the current git SHA and deploy that tag (needs the .NET SDK + a registry login). |
+| `--image-tag TAG` | `-ImageTag TAG` | Deploy a specific, already-published tag. |
+| `--registry REG` | `-Registry REG` | Container registry (default `ghcr.io/fullstackhero`); only used with build. |
+| `--skip-migrate` | `-SkipMigrate` | Skip the migrator ECS task after apply. |
+| `--seed-demo` | `-SeedDemo` | After migrating, also run the migrator's `seed-demo` verb (acme/globex demo tenants). |
+| `--skip-frontend` | `-SkipFrontend` | Skip building/publishing the SPAs (infra + migrate only). |
+| `--auto-approve` | `-AutoApprove` | Don't prompt before `terraform apply`. |
 
 <Callout type="tip" title="Terraform owns config.json">
 Each SPA's `config.json` (its `apiBase`, default tenant, etc.) is written by
@@ -159,6 +191,16 @@ Terraform so the front ends always point at the right API. The deploy step syncs
 your build with `--exclude config.json` so it's never clobbered — one build
 artifact promotes across every environment unchanged.
 </Callout>
+
+### Database migrations & seeding
+
+The deploy never migrates at API startup. After `terraform apply` it runs the
+**`fsh-db-migrator` image as a one-shot Fargate task** in the private subnets,
+with the verb from `migrator_command` (dev: `["apply", "--seed"]`), and fails
+the deploy if the task exits non-zero (pointing you at its CloudWatch log group).
+Seeding is idempotent. The **acme/globex demo tenants** are opt-in — add
+`--seed-demo` / `-SeedDemo` to also run the migrator's `seed-demo` verb. Skip
+the whole step with `--skip-migrate` / `-SkipMigrate`.
 
 ### Prefer raw Terraform?
 
@@ -168,13 +210,14 @@ terraform init  -backend-config=../envs/dev/us-east-1/backend.hcl
 terraform apply -var-file=../envs/dev/us-east-1/terraform.tfvars
 ```
 
-Then publish each SPA by hand (see the app stack `README.md`).
+Then run the migrator task and publish each SPA by hand (see the app stack
+`README.md`) — or just use `deploy.sh` / `deploy.ps1`, which do all three.
 
 ## Step 4 — Find your endpoints
 
 ```bash
 cd deploy/terraform/apps/starter/app_stack
-terraform output api_url          # ALB URL for the API
+terraform output api_url          # HTTPS CloudFront URL when enable_api_cloudfront, else the ALB URL
 terraform output dashboard_site   # { bucket_name, cloudfront_domain_name, url, ... }
 terraform output admin_site
 ```
@@ -190,12 +233,14 @@ deploy/terraform/
 ├── modules/                      # reusable building blocks
 │   ├── network/ alb/ waf/ ecs_cluster/ ecs_service/
 │   ├── rds_postgres/ elasticache_redis/ s3_bucket/
+│   ├── ecs_task/                 # the one-shot DbMigrator task
 │   ├── static_site/              # private S3 + CloudFront for an SPA
 │   └── cloudwatch_alarms/
 └── apps/starter/
     ├── app_stack/                # the root config — run Terraform here
     ├── envs/<env>/<region>/      # backend.hcl + terraform.tfvars per environment
-    └── deploy.sh / deploy.ps1    # one-command deploy
+    ├── deploy.sh / deploy.ps1    # one-command deploy (infra → migrate → publish SPAs)
+    └── destroy.ps1               # tear one env/region down
 ```
 
 ## Security defaults
@@ -204,20 +249,30 @@ deploy/terraform/
 - The ALB drops invalid headers and runs desync mitigation in `defensive` mode.
 - RDS and Redis security groups are scoped to the VPC CIDR; Redis uses encryption in transit + at rest; the DB password is managed in **Secrets Manager** and injected via the ECS task execution role.
 - SPA buckets are **private** — CloudFront reads them through Origin Access Control, and a managed response-headers policy adds HSTS and the usual hardening headers.
-- The API container runs as a **non-root** user on a chiseled (.NET) base image.
+- The API container runs as a **non-root** user (`1654`) on the .NET `noble` runtime base image.
 
 ## Teardown
 
-```bash
+The `destroy.ps1` helper re-points the backend and destroys one env/region in
+one step:
+
+```powershell title="Windows PowerShell"
+./destroy.ps1 -Environment dev -Region us-east-1
+```
+
+```bash title="raw Terraform (bash)"
 cd deploy/terraform/apps/starter/app_stack
+terraform init -reconfigure -backend-config=../envs/dev/us-east-1/backend.hcl
 terraform destroy -var-file=../envs/dev/us-east-1/terraform.tfvars
 ```
 
 <Callout type="warning" title="Prod resists destruction by design">
-`dev` sets `force_destroy` on buckets for easy teardown. `staging`/`prod` enable
-RDS deletion protection and ALB deletion protection — you must disable those
-(and empty the buckets) before a destroy will succeed. The state bucket created
-in Step 1 has `prevent_destroy` and is never removed by these commands.
+`dev` sets `force_destroy` on buckets and skips the RDS/Redis final snapshot, so
+it tears down cleanly and repeatably. `staging`/`prod` enable RDS deletion
+protection and ALB deletion protection — you must disable those (and empty the
+buckets) before a destroy will succeed. Tearing down the app stack does **not**
+remove the GHCR images or the Terraform state bucket from Step 1 (which has
+`prevent_destroy`).
 </Callout>
 
 ## Next
