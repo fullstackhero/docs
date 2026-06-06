@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-06-01
+lastUpdated: 2026-06-06
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -10,6 +10,19 @@ seo:
 ---
 
 Notable changes to the kit, newest first.
+
+## 2026-06-06
+
+- **Realtime: a client disconnecting mid-connect no longer logs a spurious error.** When a SignalR connection dropped while `AppHub.OnConnectedAsync` was still wiring it up — a fast reconnect, a page navigation, or ordinary negotiate/connect churn — the aborting connection token cancelled the in-flight channel lookup, and the resulting `OperationCanceledException` surfaced as an `Error when dispatching 'OnConnectedAsync' on hub` log line with a full EF/Npgsql stack trace. Nothing was actually wrong: there was simply no connection left to set up. The hub now swallows cancellation caused by the connection aborting, so these benign disconnects stay out of the error log. Genuine faults still propagate and log as before.
+
+## 2026-06-04
+
+- **.NET Aspire updated to 13.4.0** — the Hosting packages (`Aspire.Hosting.JavaScript` / `PostgreSQL` / `Redis`) and the AppHost SDK move 13.3.5 → 13.4.0. `StackExchange.Redis` is bumped 2.11.0 → 2.13.17 because `Aspire.Hosting.Redis` 13.4.0 requires ≥ 2.13.1 (a `NU1109` downgrade otherwise). Builds clean with warnings-as-errors; the full suite (unit + Testcontainers integration, incl. the Valkey-backed tests) stays green.
+- **Action required for existing local dev: wipe your Postgres data volume.** Aspire 13.4.0's default Postgres container image moves to **major 18**, which changed the on-disk data layout (version-specific subdirectories under `/var/lib/postgresql`). Postgres 18 **refuses to start** on a `*-postgres-data` volume written by an older Postgres, failing with `PostgreSQL data in: /var/lib/postgresql`. This affects local Aspire dev only — production deploy stacks pin their own Postgres and are unaffected. Fix: remove the stale volume and relaunch; Aspire re-runs `apply --seed` + `seed-demo` to rebuild and reseed it.
+  ```bash
+  docker volume rm fsh-starter-postgres-data   # use your app's prefix; e.g. acme-store-postgres-data
+  dotnet run --project src/Host/FSH.Starter.AppHost
+  ```
 
 ## 2026-06-01
 
