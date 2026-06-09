@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-06-06
+lastUpdated: 2026-06-09
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -10,6 +10,10 @@ seo:
 ---
 
 Notable changes to the kit, newest first.
+
+## 2026-06-09
+
+- **Dashboard: revoking an impersonation grant now ends the session gracefully instead of stranding the impersonated view.** When an operator revoked (or let expire) an in-progress impersonation from the admin console, the dashboard kept the now-dead impersonation token installed: every request `401`'d, but the page just rendered a stuck red error band under a half-loaded surface while the "End impersonation" banner lingered — a confusing, broken-looking state. The dashboard now detects this case (a `401` while the active token carries the `act_sub` impersonation claim — a durable signal that works even though production keeps the `401` body opaque) and routes to a calm full-screen **Impersonation ended** page that explains the access was revoked or expired and offers a single **Back to sign in** action, which clears the dead token. Mirrors the existing deactivated-tenant terminal page.
 
 ## 2026-06-06
 
