@@ -1,6 +1,6 @@
 ---
 title: Writing new tests
-lastUpdated: 2026-05-19
+lastUpdated: 2026-06-11
 description: Step-by-step recipes for adding a unit test, an integration test, or an architecture rule — copy-paste-ready.
 sidebar:
   label: Writing new tests
@@ -20,54 +20,44 @@ Test the smallest unit that fully exercises the behaviour. An invariant on an ag
 
 ## Recipe 1 — A unit test for a new handler
 
-You've just added `Modules.Catalog/Features/v1/Products/AdjustProductStock/AdjustProductStockCommandHandler.cs`. You want to verify it delegates to the aggregate's `AdjustStock` method.
+You've just added a handler under `Modules.Catalog/Features/v1/Products/AdjustProductStock/` and want to verify its logic without infrastructure.
 
 ### 1. Create the test file
 
-Mirror the handler's path:
+Unit test projects group by *kind*, not by feature path — `Domain/` for aggregate tests, `Handlers/` for handler tests, `Services/` for service tests (see `Identity.Tests` for the fullest example):
 
 ```
-src/Tests/Catalog.Tests/Features/v1/Products/AdjustProductStock/AdjustProductStockCommandHandlerTests.cs
+src/Tests/Catalog.Tests/Handlers/AdjustProductStockCommandHandlerTests.cs
 ```
 
-(If the test project doesn't exist yet, create it via `dotnet new xunit -n Catalog.Tests -o src/Tests/Catalog.Tests` and add references to `Modules.Catalog`, `Shouldly`, `NSubstitute`, `AutoFixture`.)
+(If the module has no test project yet, create it with `dotnet new xunit -n Catalog.Tests -o src/Tests/Catalog.Tests`, add it to the solution, and reference the module plus `Shouldly`, `NSubstitute`, and `AutoFixture` — versions come from central package management.)
 
 ### 2. Write the test
 
 ```csharp
-using AutoFixture;
-using FSH.Framework.Core.Domain.Contracts;
-using Modules.Catalog.Contracts.v1.Products.AdjustProductStock;
-using Modules.Catalog.Domain;
-using Modules.Catalog.Features.v1.Products.AdjustProductStock;
-using NSubstitute;
-using Shouldly;
-
-namespace Catalog.Tests.Features.v1.Products.AdjustProductStock;
+namespace Catalog.Tests.Handlers;
 
 public sealed class AdjustProductStockCommandHandlerTests
 {
-    private readonly Fixture _fixture = new();
     private readonly ICatalogDbContext _db = Substitute.For<ICatalogDbContext>();
 
     [Fact]
     public async Task Handle_Should_AdjustStock_And_SaveChanges_When_ProductExists()
     {
         // Arrange
-        var product = Product.Create(/* … create a product fixture … */);
+        var product = Product.Create(/* … create a product with Stock: 100 … */);
         _db.Products.FindAsync(Arg.Is<object[]>(o => (Guid)o[0] == product.Id),
                                Arg.Any<CancellationToken>())
            .Returns(ValueTask.FromResult<Product?>(product));
 
         var command = new AdjustProductStockCommand(product.Id, Delta: 5m);
-
         var sut = new AdjustProductStockCommandHandler(_db);
 
         // Act
         await sut.Handle(command, CancellationToken.None);
 
         // Assert
-        product.Stock.ShouldBe(105m);                                      // assumes starting 100
+        product.Stock.ShouldBe(105m);
         await _db.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
         product.DomainEvents.ShouldContain(e => e is ProductStockAdjustedDomainEvent);
     }
@@ -102,7 +92,7 @@ You've added `PATCH /api/v1/catalog/products/{productId}/stock` and want to veri
 
 ### 1. Create the test file
 
-Under `src/Tests/Integration.Tests/Tests/Catalog/`:
+Integration tests group by module under `src/Tests/Integration.Tests/Tests/`:
 
 ```
 src/Tests/Integration.Tests/Tests/Catalog/AdjustProductStockEndpointTests.cs
@@ -110,65 +100,73 @@ src/Tests/Integration.Tests/Tests/Catalog/AdjustProductStockEndpointTests.cs
 
 ### 2. Write the test
 
+Join the shared collection, take the factory in the constructor, and authenticate through `AuthHelper` — that's the whole harness contract (see [Fixtures & seed data](/docs/testing/fixtures-and-seed-data/)):
+
 ```csharp
-using System.Net;
-using System.Net.Http.Json;
 using Integration.Tests.Infrastructure;
-using Modules.Catalog.Contracts.v1.Products.AdjustProductStock;
-using Modules.Catalog.Contracts.v1.Products.GetProductById;
-using Shouldly;
+using Integration.Tests.Infrastructure.Extensions;
 
 namespace Integration.Tests.Tests.Catalog;
 
-public sealed class AdjustProductStockEndpointTests(FshWebApplicationFactory factory)
-    : IClassFixture<FshWebApplicationFactory>
+[Collection(FshCollectionDefinition.Name)]
+public sealed class AdjustProductStockEndpointTests
 {
-    private readonly HttpClient _client = factory.CreateAuthenticatedClient(tenant: "acme");
+    private readonly FshWebApplicationFactory _factory;
+    private readonly AuthHelper _auth;
+
+    public AdjustProductStockEndpointTests(FshWebApplicationFactory factory)
+    {
+        _factory = factory;
+        _auth = new AuthHelper(factory);
+    }
 
     [Fact]
-    public async Task PATCH_stock_Should_ReturnNoContent_And_UpdateStock_When_PayloadIsValid()
+    public async Task AdjustStock_Should_UpdateStock_When_PayloadIsValid()
     {
-        // Arrange — create a product to mutate
-        var create = await _client.PostAsJsonAsync("/api/v1/catalog/products",
-            new CreateProductCommand(
-                Sku: $"TEST-{Guid.NewGuid():N}",
-                Name: "Test",
-                Description: null,
-                BrandId: Seed.Brands.Default.Id,
-                CategoryId: Seed.Categories.Default.Id,
-                PriceAmount: 10m,
-                PriceCurrency: "USD",
-                Stock: 100m));
-        create.EnsureSuccessStatusCode();
-        var product = (await create.Content.ReadFromJsonAsync<ProductResponse>())!;
+        using var client = await _auth.CreateRootAdminClientAsync();
+
+        // Arrange — create the product this test owns (unique SKU, no shared seed)
+        var createResponse = await client.PostAsJsonAsync(
+            $"{TestConstants.CatalogBasePath}/products", new
+            {
+                sku = $"TEST-{Guid.NewGuid():N}"[..12],
+                name = "Stock test product",
+                priceAmount = 10m,
+                priceCurrency = "USD",
+                stock = 100m,
+            });
+        createResponse.EnsureSuccessStatusCode();
+        var productId = await createResponse.DeserializeAsync<Guid>();
 
         // Act
-        var resp = await _client.PatchAsJsonAsync(
-            $"/api/v1/catalog/products/{product.Id}/stock",
-            new AdjustProductStockCommand(product.Id, Delta: 5m));
+        var response = await client.PatchAsJsonAsync(
+            $"{TestConstants.CatalogBasePath}/products/{productId}/stock",
+            new { delta = 5m });
 
-        // Assert HTTP
-        resp.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        // Assert HTTP, then assert state via GET
+        response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
-        // Assert via GET
-        var get = await _client.GetAsync($"/api/v1/catalog/products/{product.Id}");
-        get.EnsureSuccessStatusCode();
-        var dto = (await get.Content.ReadFromJsonAsync<ProductResponse>())!;
+        var get = await client.GetAsync($"{TestConstants.CatalogBasePath}/products/{productId}");
+        var dto = await get.DeserializeAsync<ProductDto>();
         dto.Stock.ShouldBe(105m);
     }
 
     [Fact]
-    public async Task PATCH_stock_Should_ReturnForbidden_When_CallerLacksPermission()
+    public async Task AdjustStock_Should_Return401_When_NoTokenProvided()
     {
-        var weak = factory.CreateClientWithoutPermissions(tenant: "acme");
-        var resp = await weak.PatchAsJsonAsync(
-            $"/api/v1/catalog/products/{Seed.Catalog.SeededProduct.Id}/stock",
-            new AdjustProductStockCommand(Seed.Catalog.SeededProduct.Id, 5m));
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("tenant", TestConstants.RootTenantId);
 
-        resp.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        var response = await client.PatchAsJsonAsync(
+            $"{TestConstants.CatalogBasePath}/products/{Guid.NewGuid()}/stock",
+            new { delta = 5m });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
     }
 }
 ```
+
+For permission-denial (403) coverage, create a user without the permission via the API and authenticate with `CreateAuthenticatedClientAsync` — see `Tests/Authorization/PermissionEnforcementTests.cs` for the patterns.
 
 ### 3. Run it
 
@@ -177,92 +175,70 @@ dotnet test src/Tests/Integration.Tests/ \
   --filter "FullyQualifiedName~AdjustProductStockEndpointTests"
 ```
 
-Docker must be running. Cold start ~30 s; warm runs ~5-10 s.
+Docker must be running — the suite starts its Postgres + MinIO containers once and shares them across every test.
 
 ## Recipe 3 — A new architecture rule
 
-You've added a convention: "every command handler must call `SaveChangesAsync` exactly once." Encode it as a test.
+You've adopted a convention — say, "every Mediator handler must be public sealed" — and want CI to enforce it.
 
 ### 1. Pick the file
 
-Architecture tests live under `src/Tests/Architecture.Tests/`. Group by topic:
+Architecture tests live flat in `src/Tests/Architecture.Tests/`, one file per rule family:
 
 ```
-src/Tests/Architecture.Tests/Handlers/SaveChangesAsyncRuleTests.cs
+src/Tests/Architecture.Tests/HandlerShapeTests.cs
 ```
 
 ### 2. Write the rule
 
+Follow the shipped pattern: iterate `ModuleAssemblyDiscovery.GetModuleAssemblies()`, collect violations, fail with the offending types named:
+
 ```csharp
-using System.Reflection;
-using NetArchTest.Rules;
-using Shouldly;
+namespace Architecture.Tests;
 
-namespace Architecture.Tests.Handlers;
-
-public sealed class SaveChangesAsyncRuleTests
+public sealed class HandlerShapeTests
 {
     /// <summary>
-    /// Specification: every Mediator command handler that takes an `*DbContext`
-    /// must call SaveChangesAsync at least once.
-    /// Why: handlers that mutate state but forget to call SaveChangesAsync are
-    /// a common silent failure mode — the changes hold in the tracker but never
-    /// hit the DB. Catching this at the architecture-test level prevents that
-    /// class of bug.
+    /// Specification: every Mediator handler must be public sealed.
+    /// Why: source-gen requires concrete types; sealed prevents accidental
+    /// inheritance which would break the generator.
     /// </summary>
     [Fact]
-    public void Command_handlers_with_DbContext_should_call_SaveChangesAsync()
+    public void Mediator_Handlers_Should_Be_Public_Sealed()
     {
-        var assemblies = new[]
+        var failures = new List<string>();
+
+        foreach (var module in ModuleAssemblyDiscovery.GetModuleAssemblies())
         {
-            typeof(Modules.Catalog.CatalogModule).Assembly,
-            typeof(Modules.Identity.IdentityModule).Assembly,
-            // ... other runtime modules
-        };
+            var handlers = module.GetTypes()
+                .Where(t => t.IsClass && !t.IsAbstract)
+                .Where(t => t.GetInterfaces().Any(i => i.IsGenericType &&
+                    (i.GetGenericTypeDefinition() == typeof(ICommandHandler<,>) ||
+                     i.GetGenericTypeDefinition() == typeof(IQueryHandler<,>))));
 
-        foreach (var asm in assemblies)
-        {
-            var handlerTypes = asm.GetTypes()
-                .Where(t => t.IsClass && !t.IsAbstract &&
-                            t.Name.EndsWith("CommandHandler", StringComparison.Ordinal) &&
-                            t.GetInterfaces().Any(i => i.IsGenericType &&
-                                                       i.GetGenericTypeDefinition() == typeof(ICommandHandler<,>)))
-                .ToList();
-
-            foreach (var handler in handlerTypes)
-            {
-                var ctorParams = handler.GetConstructors().First().GetParameters();
-                var hasDbContext = ctorParams.Any(p => p.ParameterType.Name.EndsWith("DbContext", StringComparison.Ordinal));
-                if (!hasDbContext) continue;
-
-                var handleMethod = handler.GetMethod("Handle")!;
-                var il = handleMethod.GetMethodBody()!.GetILAsByteArray()!;
-                // (use a real IL-walker like Mono.Cecil for production-quality;
-                //  for sketch purposes, check string literal in disassembly)
-
-                var disassembly = DisassembleMethod(handleMethod);
-                disassembly.ShouldContain("SaveChangesAsync",
-                    $"{handler.FullName} accepts a DbContext but never calls SaveChangesAsync.");
-            }
+            failures.AddRange(handlers
+                .Where(h => !h.IsPublic || !h.IsSealed)
+                .Select(h => h.FullName!));
         }
-    }
 
-    private static string DisassembleMethod(MethodInfo method)
-    {
-        // Real impl: Mono.Cecil or similar. Placeholder.
-        return string.Empty;
+        failures.ShouldBeEmpty(
+            $"Handlers must be public sealed: {string.Join(", ", failures)}");
     }
 }
 ```
 
-The example is illustrative — IL-walking architecture rules are harder than the kit's standard "type X must inherit Y" style. For most rules, the existing NetArchTest fluent API is enough:
+Three conventions the shipped rules all follow:
+
+- **XML doc comment** stating the rule and *why* — the readable specification.
+- **Failure message that names the offenders** — so the fix is obvious from the CI log.
+- **Explicit allowlists for exceptions** (see `HandlerValidatorPairingTests.KnownMissingCommandHandlers`) — exemptions are code-reviewed, never silent.
+
+For pure dependency rules ("X must not reference Y"), NetArchTest's fluent API is shorter:
 
 ```csharp
-var result = Types.InAssembly(typeof(MyModule).Assembly)
-    .That()
-    .HaveNameEndingWith("CommandHandler")
-    .Should()
-    .ImplementInterface(typeof(ICommandHandler<,>))
+var result = Types.InAssembly(module)
+    .That().ResideInNamespaceContaining(".Domain")
+    .ShouldNot().HaveDependencyOn("Microsoft.EntityFrameworkCore")
     .GetResult();
 result.IsSuccessful.ShouldBeTrue();
 ```
@@ -271,10 +247,10 @@ result.IsSuccessful.ShouldBeTrue();
 
 ```bash
 dotnet test src/Tests/Architecture.Tests/ \
-  --filter "FullyQualifiedName~SaveChangesAsyncRuleTests"
+  --filter "FullyQualifiedName~HandlerShapeTests"
 ```
 
-Should run sub-second. If it fails, the message names the offending types.
+Runs in seconds — no infrastructure. If it fails, the message names the offending types.
 
 ## Three rules of thumb
 
@@ -285,6 +261,6 @@ Should run sub-second. If it fails, the message names the offending types.
 ## Related
 
 - [Unit tests](/docs/testing/unit-tests/) — conventions and assertion style.
-- [Integration tests](/docs/testing/integration-tests/) — fixtures and authenticated clients.
+- [Integration tests](/docs/testing/integration-tests/) — the harness and authenticated clients.
 - [Architecture tests](/docs/testing/architecture-tests/) — the rule families that ship.
 - [Running tests](/docs/testing/running-tests/) — `dotnet test` invocations.

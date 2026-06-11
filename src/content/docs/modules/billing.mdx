@@ -1,6 +1,6 @@
 ---
 title: Billing module
-lastUpdated: 2026-05-19
+lastUpdated: 2026-06-11
 description: Subscription plans, invoice lifecycle, and usage metering for multi-tenant SaaS — all wired through a monthly Hangfire job.
 sidebar:
   label: Billing
@@ -12,7 +12,7 @@ seo:
   keywords: 'dotnet billing module, .net subscription billing, invoice generation .net, usage metering saas .net, hangfire invoice job'
 ---
 
-The Billing module gives fullstackhero a working subscription-billing skeleton: a global catalogue of plans, per-tenant subscriptions, a Draft → Issued → Paid invoice state machine, usage metering with overage rates, and a monthly Hangfire job that generates the next billing period for every active tenant. It's not a payment gateway (no Stripe SDK, no card webhooks), it's the **invoice + subscription primitives** every SaaS needs before it integrates a gateway.
+The Billing module gives fullstackhero a working subscription-billing skeleton: a global catalogue of plans, per-tenant subscriptions driven by the tenant lifecycle (create + renew), a Draft → Issued → Paid invoice state machine, usage metering with overage rates, and a monthly Hangfire job that generates usage invoices for every active tenant. It's not a payment gateway (no Stripe SDK, no card webhooks), it's the **invoice + subscription primitives** every SaaS needs before it integrates a gateway.
 
 <Callout type="tip" title="When to use it">
 Use the Billing module if your product charges tenants on a recurring plan and you want the data model — plans, subscriptions, invoices, line items, usage snapshots — already on the table. Wire your payment gateway of choice into `MarkInvoicePaidCommand` when you're ready.
@@ -20,11 +20,12 @@ Use the Billing module if your product charges tenants on a recurring plan and y
 
 ## What ships in v10
 
-- A **global plan catalogue** (`BillingPlan`) — `Key`, name, currency, monthly base price, per-resource overage rates. Plans are platform-wide (`IGlobalEntity`), so the same catalogue serves every tenant.
-- **Per-tenant subscriptions** with a small state machine — Active → Suspended → Active or Active → Cancelled. At most one Active subscription per tenant.
-- An **invoice aggregate** with a clean state machine: Draft → Issued → (Paid \| Void). Line items are owned; subtotals recompute on add; period (year, month) is immutable.
+- A **global plan catalogue** (`BillingPlan`) — `Key`, name, currency, monthly base price, billing interval (`Monthly` or `Yearly` with optional flat `AnnualPrice`), per-resource overage rates keyed by `QuotaResource`. Plans are platform-wide (`IGlobalEntity`), so the same catalogue serves every tenant.
+- **Tenant-lifecycle wiring** — creating a tenant publishes `TenantSubscribedIntegrationEvent` and renewing one publishes `TenantRenewedIntegrationEvent` (both from the Multitenancy module); Billing's handlers react by starting/replacing the active subscription and issuing the term's subscription invoice. Invoice creation is idempotent (guarded by invoice number), and expiry past `ValidUpto` is grace-windowed via `Billing:GraceWindowDays`.
+- **Per-tenant subscriptions** with a small state machine — Active → Suspended → Active or Active → Cancelled. At most one Active subscription per tenant; assigning a plan cancels the prior active subscription.
+- An **invoice aggregate** with a clean state machine: Draft → Issued → (Paid \| Void). Line items are owned; subtotals recompute on add; period (year, month) is immutable. Every invoice carries a `Purpose` — `Subscription` (plan term, created on tenant create/renew) or `Usage` (metered overage, created by the monthly job) — so the two streams never collide on idempotency keys.
 - **Usage metering** — `UsageSnapshot` rows record what each tenant consumed in a window. The monthly job reads these against the subscribed plan's overage rates to add overage line items to the next invoice.
-- A **monthly Hangfire recurring job** (`billing-monthly-invoices`) registered at module startup. Runs at `0 5 1 * *` UTC — 00:05 UTC on the 1st of each month — and generates a Draft invoice per active tenant for the previous period.
+- A **monthly Hangfire recurring job** (`billing-monthly-invoices`) registered at module startup. Runs on cron `5 0 1 * *` UTC — 00:05 UTC on the 1st of each month — and generates a Draft usage invoice per active tenant for the previous period.
 - **Email notifications** — issuing an invoice raises `InvoiceIssuedIntegrationEvent`, and a daily tenant-expiry scan raises nearing-expiry / entered-grace / expired events; the Notifications module emails the tenant admin. Expiry events are deduped so a tenant is notified once per state per validity window.
 - **On-demand PDF invoices** — `GET /invoices/{id}/pdf` renders the invoice to a PDF (QuestPDF, behind a swappable `IInvoicePdfRenderer`). The fetch is scoped to the caller's tenant, so the same endpoint serves operators and tenant self-service; another tenant's id returns `404`.
 - **16 endpoints** at `/api/v1/billing/...` covering plans, subscriptions, invoices, usage, and PDF download. Two coarse permissions: `Billing.View` and `Billing.Manage`.
@@ -46,21 +47,27 @@ src/Modules/Billing/
 │   │   ├── Configurations/                      EF type configs
 │   │   └── BillingDbInitializer.cs              Seeds default plans
 │   ├── Features/v1/
-│   │   ├── Plans/                               4 handlers + endpoints
-│   │   ├── Subscriptions/                       3 handlers + endpoints
-│   │   ├── Invoices/                            6 handlers + endpoints (state machine)
-│   │   └── Usage/                               2 handlers + endpoints
+│   │   ├── Plans/                               3 endpoints (+ GetPlanTerm internal query)
+│   │   ├── Subscriptions/                       3 endpoints
+│   │   ├── Invoices/                            8 endpoints (state machine + PDF)
+│   │   └── Usage/                               2 endpoints
+│   ├── IntegrationEventHandlers/
+│   │   ├── TenantSubscribedIntegrationEventHandler.cs
+│   │   └── TenantRenewedIntegrationEventHandler.cs
 │   └── Services/
-│       ├── BillingService.cs                    GenerateInvoiceForPeriodAsync logic
+│       ├── BillingService.cs                    Invoice generation + transitions
 │       ├── UsageReporter.cs                     IUsageReporter implementation
+│       ├── InvoicePdfRenderer.cs                IInvoicePdfRenderer (QuestPDF)
 │       └── MonthlyInvoiceJob.cs                 Hangfire recurring job
 └── Modules.Billing.Contracts/                   Public commands/queries/events
 ```
 
-The module loads at order `500` so it boots after Identity (`10`) and Multitenancy (`30`) but before consuming modules like Catalog (`600`).
+The module loads at order `500` so it boots after Identity (`100`) and Multitenancy (`200`) but before consuming modules like Catalog (`600`).
 
 <Callout type="note" title="Billing data is not per-tenant">
 Unlike Catalog, Tickets, or Chat, the Billing module uses a single shared database — not a per-tenant database. `BillingDbContext` does not inherit tenant isolation. Subscriptions, invoices, and usage snapshots all carry an explicit `TenantId` column instead, and handlers filter on it manually. This is deliberate: billing is an admin/finance concern that needs to query *across* tenants (cross-tenant invoice reports, batch monthly job, etc.).
+
+Because the isolation is manual, every read handler is **root-gated**: only a caller from the root tenant may pass an arbitrary `tenantId` filter (or see all tenants); any other caller is forcibly pinned to their own tenant id, regardless of what they pass. If you add a new raw-`BillingDbContext` handler, copy that pattern — it's the module's standing security rule.
 </Callout>
 
 ## The invoice state machine
@@ -70,50 +77,60 @@ Unlike Catalog, Tickets, or Chat, the Billing module uses a single shared databa
 ```csharp
 // src/Modules/Billing/Modules.Billing/Domain/Invoice.cs
 
-public sealed class Invoice : AggregateRoot
+public sealed class Invoice : AggregateRoot<Guid>
 {
-    public InvoiceStatus Status { get; private set; }    // Draft | Issued | Paid | Void
+    public InvoiceStatus Status { get; private set; }     // Draft | Issued | Paid | Void
+    public InvoicePurpose Purpose { get; private set; }   // Subscription | Usage
 
     public static Invoice CreateDraft(
-        Guid tenantId,
+        string tenantId,
         string invoiceNumber,
         int periodYear,
         int periodMonth,
-        string currency) { /* ... */ }
+        string currency,
+        InvoicePurpose purpose,
+        DateTime? periodStartUtc,
+        DateTime? periodEndUtc) { /* ... */ }
 
-    public void AddLineItem(
+    public InvoiceLineItem AddLineItem(
         InvoiceLineItemKind kind,
         string description,
         decimal quantity,
         decimal unitPrice)
     {
-        EnsureStatus(InvoiceStatus.Draft);   // only Draft accepts line items
-        // ...
+        RequireStatus(InvoiceStatus.Draft);   // only Draft accepts line items
+        // ... recalculates SubtotalAmount
     }
 
     public void Issue(DateTime? dueAtUtc = null)
     {
-        EnsureStatus(InvoiceStatus.Draft);
+        RequireStatus(InvoiceStatus.Draft);
         Status = InvoiceStatus.Issued;
-        DueAtUtc = dueAtUtc ?? CreatedAt.AddDays(14);
+        IssuedAtUtc = DateTime.UtcNow;
+        DueAtUtc = dueAtUtc ?? IssuedAtUtc.Value.AddDays(14);
     }
 
     public void MarkPaid()
     {
-        EnsureStatus(InvoiceStatus.Issued);
+        if (Status is InvoiceStatus.Paid) return;          // idempotent
+        if (Status is not InvoiceStatus.Issued)
+            throw new InvalidOperationException($"Cannot mark invoice as paid from status {Status}.");
         Status = InvoiceStatus.Paid;
+        PaidAtUtc = DateTime.UtcNow;
     }
 
     public void Void(string? reason = null)
     {
-        if (Status == InvoiceStatus.Paid)
-            throw new CustomException("Cannot void a paid invoice.", HttpStatusCode.Conflict);
+        if (Status is InvoiceStatus.Paid)
+            throw new InvalidOperationException("Paid invoices cannot be voided.");
+        if (Status is InvoiceStatus.Void) return;          // idempotent
         Status = InvoiceStatus.Void;
+        VoidedAtUtc = DateTime.UtcNow;
     }
 }
 ```
 
-Each transition enforces the source state — you can't void a Paid invoice, can't `MarkPaid` a Draft, can't add line items to an Issued invoice. Violations throw `CustomException` with `HttpStatusCode.Conflict` (409), which the global exception handler turns into a `ProblemDetails` response.
+Each transition enforces the source state — you can't void a Paid invoice, can't `MarkPaid` a Draft, can't add line items to an Issued invoice. Re-paying a Paid invoice and re-voiding a Void one are deliberate no-ops (idempotent); genuinely invalid transitions throw `InvalidOperationException`. Enum values like `Status` serialize as **strings** in API responses (`"Issued"`, not `1`) — the host registers a global `JsonStringEnumConverter`.
 
 ## Public API
 
@@ -123,75 +140,85 @@ The contracts assembly exposes every command, query, response, and enum that cal
 
 | Type | Purpose |
 |---|---|
-| `CreatePlanCommand(key, name, currency, monthlyBasePrice, overageRates)` | Admin: define a new plan |
-| `UpdatePlanCommand(planId, name, monthlyBasePrice, overageRates)` | Admin: re-price an existing plan |
-| `GetPlansQuery()` | List all active plans |
+| `CreatePlanCommand(key, name, currency, monthlyBasePrice, overageRates?, interval, annualPrice?)` | Admin: define a new plan |
+| `UpdatePlanCommand(planId, name, monthlyBasePrice, overageRates?, interval, annualPrice?)` | Admin: re-price an existing plan |
+| `GetPlansQuery(includeInactive?)` | List plans (active only by default) |
+| `GetPlanTermQuery(planKey)` | Resolve a plan's id + term length — used by Multitenancy's renew flow |
 
 ### Subscriptions
 
 | Type | Purpose |
 |---|---|
-| `AssignSubscriptionCommand(tenantId, planId, startUtc)` | Move a tenant onto a plan (replaces the active one) |
-| `GetSubscriptionQuery(tenantId)` | Admin: fetch a tenant's current subscription |
-| `GetMySubscriptionQuery()` | Tenant: fetch its own subscription (claims-scoped) |
+| `AssignSubscriptionCommand(tenantId, planKey)` | Move a tenant onto a plan (cancels + replaces the active one) |
+| `GetSubscriptionQuery(tenantId?)` | Current subscription — root may pass any tenant id; others always get their own |
 
 ### Invoices
 
 | Type | Purpose |
 |---|---|
-| `GenerateInvoicesCommand(periodYear, periodMonth)` | Batch: create Draft invoices for every active tenant |
+| `GenerateInvoicesCommand(periodYear, periodMonth)` | Batch: create Draft usage invoices for every active tenant |
 | `IssueInvoiceCommand(invoiceId, dueAtUtc?)` | Draft → Issued |
 | `MarkInvoicePaidCommand(invoiceId)` | Issued → Paid |
 | `VoidInvoiceCommand(invoiceId, reason?)` | Issued/Draft → Void |
-| `GetInvoicesQuery(tenantId?, status)` | Admin: paginated cross-tenant invoice list |
-| `GetMyInvoicesQuery(status?)` | Tenant-scoped invoice list |
+| `GetInvoicesQuery(tenantId?, status?, periodYear?, periodMonth?, paging)` | Admin: paginated cross-tenant invoice list (root-gated) |
+| `GetMyInvoicesQuery(status?, periodYear?, periodMonth?, paging)` | Tenant-scoped invoice list |
 | `GetInvoiceByIdQuery(invoiceId)` | Single invoice with line items |
 
 ### Usage
 
 | Type | Purpose |
 |---|---|
-| `CaptureUsageSnapshotsCommand(tenantId, resourceUsage)` | Record metering data for the overage calc |
-| `GetUsageSnapshotsQuery(tenantId, startUtc, endUtc)` | Query history for a period |
+| `CaptureUsageSnapshotsCommand(tenantId, periodYear, periodMonth)` | Record one snapshot per `QuotaResource` for a tenant + period (idempotent) |
+| `GetUsageSnapshotsQuery(tenantId?, periodYear?, periodMonth?)` | Query history (root-gated for cross-tenant reads) |
 
 ## Endpoints
 
-All routes are mounted under `/api/v1/billing` and require the relevant `Billing.*` permission.
+All routes are mounted under `/api/v1/billing` and require the relevant `Billing.*` permission — except the two `/me` self-service reads, which are open to any authenticated tenant user so the dashboard can show the current plan and invoices.
 
-| Verb | Route | Endpoint class |
+| Verb | Route | Permission |
 |---|---|---|
-| POST | `/plans` | `CreatePlanEndpoint` |
-| GET | `/plans` | `GetPlansEndpoint` |
-| PUT | `/plans/{planId}` | `UpdatePlanEndpoint` |
-| POST | `/subscriptions` | `AssignSubscriptionEndpoint` |
-| GET | `/subscriptions/{tenantId}` | `GetSubscriptionEndpoint` |
-| GET | `/subscriptions/my` | `GetMySubscriptionEndpoint` |
-| POST | `/invoices/generate` | `GenerateInvoicesEndpoint` |
-| POST | `/invoices/{invoiceId}/issue` | `IssueInvoiceEndpoint` |
-| POST | `/invoices/{invoiceId}/mark-paid` | `MarkInvoicePaidEndpoint` |
-| POST | `/invoices/{invoiceId}/void` | `VoidInvoiceEndpoint` |
-| GET | `/invoices` | `GetInvoicesEndpoint` |
-| GET | `/invoices/my` | `GetMyInvoicesEndpoint` |
-| GET | `/invoices/{invoiceId}` | `GetInvoiceByIdEndpoint` |
-| GET | `/invoices/{invoiceId}/pdf` | `GetInvoicePdfEndpoint` |
-| POST | `/usage/capture` | `CaptureUsageSnapshotsEndpoint` |
-| GET | `/usage/snapshots` | `GetUsageSnapshotsEndpoint` |
+| POST | `/plans` | `Billing.Manage` |
+| GET | `/plans` | `Billing.View` |
+| PUT | `/plans/{planId}` | `Billing.Manage` |
+| POST | `/subscriptions` | `Billing.Manage` |
+| GET | `/subscriptions?tenantId=` | `Billing.View` |
+| GET | `/subscriptions/me` | authenticated |
+| POST | `/invoices/generate` | `Billing.Manage` |
+| POST | `/invoices/{invoiceId}/issue` | `Billing.Manage` |
+| POST | `/invoices/{invoiceId}/pay` | `Billing.Manage` |
+| POST | `/invoices/{invoiceId}/void` | `Billing.Manage` |
+| GET | `/invoices` | `Billing.View` |
+| GET | `/invoices/me` | authenticated |
+| GET | `/invoices/{invoiceId}` | `Billing.View` |
+| GET | `/invoices/{invoiceId}/pdf` | `Billing.View` |
+| POST | `/usage/snapshots/capture` | `Billing.Manage` |
+| GET | `/usage` | `Billing.View` |
 
 ## Configuration
 
-Billing reads no `IOptions<T>` — the defaults are baked into the domain. You configure it by editing two places.
+**The `Billing` appsettings section** governs the tenant lifecycle side (it's bound by the Multitenancy and Identity modules as `TenantBillingOptions` / `TenantGraceOptions`, but it's billing behaviour, so it lives here):
 
-**Plan catalogue** — seeded by `BillingDbInitializer` when the module first starts, or manage via the `/plans` endpoints at runtime. Plan `Key` should be canonical lowercase (e.g. `starter`, `growth`, `enterprise`) and match the keys used by the Quota building block so quota and billing stay aligned.
+```jsonc
+// appsettings.json
+{
+  "Billing": {
+    "DefaultPlanKey": "free",   // plan assigned when CreateTenant has no explicit plan
+    "GraceWindowDays": 7        // days past ValidUpto before requests are hard-blocked
+  }
+}
+```
+
+**Plan catalogue** — seeded by `BillingDbInitializer` when the module first starts, or manage via the `/plans` endpoints at runtime. Plan `Key` should be canonical lowercase (e.g. `free`, `pro`, `enterprise`) and match the keys used by the Quota building block so quota and billing stay aligned.
 
 **Hangfire schedule** — the recurring job is registered at module startup via the `IRecurringJobManager`:
 
 ```csharp
 // MonthlyInvoiceJob registration (BillingModule.cs)
-recurringJobs.AddOrUpdate<MonthlyInvoiceJob>(
+jobManager.AddOrUpdate(
     "billing-monthly-invoices",
-    job => job.RunAsync(CancellationToken.None),
+    Job.FromExpression<MonthlyInvoiceJob>(j => j.RunAsync(CancellationToken.None)),
     "5 0 1 * *",                  // 00:05 UTC on the 1st of every month
-    TimeZoneInfo.Utc);
+    new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
 ```
 
 To change the cadence, edit the cron expression. To run an ad-hoc generation (back-fill, testing), call `POST /api/v1/billing/invoices/generate` with the period.
@@ -203,16 +230,16 @@ To change the cadence, edit the cron expression. To run an ad-hoc generation (ba
 `MarkInvoicePaidCommand` is the seam. Replace the handler (or add a decorator) to call your gateway:
 
 ```csharp
-public sealed class MarkInvoicePaidCommandHandler(IBillingDbContext db, IStripeClient stripe)
-    : ICommandHandler<MarkInvoicePaidCommand, Unit>
+public sealed class MarkInvoicePaidCommandHandler(BillingDbContext db, IStripeClient stripe)
+    : ICommandHandler<MarkInvoicePaidCommand, Guid>
 {
-    public async ValueTask<Unit> Handle(MarkInvoicePaidCommand cmd, CancellationToken ct)
+    public async ValueTask<Guid> Handle(MarkInvoicePaidCommand cmd, CancellationToken ct)
     {
         var invoice = await db.Invoices.FirstAsync(i => i.Id == cmd.InvoiceId, ct).ConfigureAwait(false);
         // ... charge via gateway, capture payment-method-id on the invoice, then:
         invoice.MarkPaid();
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
-        return Unit.Value;
+        return invoice.Id;
     }
 }
 ```
@@ -221,11 +248,11 @@ For inbound webhooks (Stripe → your app), expose a webhook endpoint, validate 
 
 ### Add a new overage resource
 
-`BillingPlan.OverageRates` is a `Dictionary<string, decimal>`. Decide a stable resource key (e.g. `api_call`, `storage_gb`), and:
+`BillingPlan.OverageRates` is keyed by the `QuotaResource` enum (`ApiCalls`, `StorageBytes`, `Users`, `ActiveFeatureFlags`), so overage resources line up one-to-one with what the Quota building block meters:
 
-1. Capture usage via `CaptureUsageSnapshotsCommand` whenever the resource is consumed.
+1. Add the new member to `QuotaResource` and give it a gauge/counter so Quota tracks it.
 2. Update the plan(s) via `UpdatePlanCommand` to set the per-unit overage rate.
-3. The monthly job picks it up automatically.
+3. The monthly job (which captures snapshots per period via `IUsageReporter`) picks it up automatically.
 
 ### Emit domain events on plan changes
 
@@ -243,7 +270,7 @@ Then handle it in another module via `IDomainEventHandler<SubscriptionReactivate
 
 ## Tests
 
-Two integration test files at `src/Tests/Integration.Tests/Tests/Billing/` cover the end-to-end flows. There are no domain-unit tests for the state machines (they're guarded by the integration tests). If you customize the invariants, add `Modules.Billing.Tests` and unit-test the `Invoice` and `Subscription` aggregates directly.
+Unit tests live at `src/Tests/Billing.Tests/` (domain state machines, services, validators). Integration tests at `src/Tests/Integration.Tests/Tests/Billing/` (8 files) cover the endpoint surface, tenant isolation/root-gating, the tenant billing lifecycle (create + renew → subscription + invoice), the monthly job, usage metering, and PDF rendering.
 
 ## Related
 

@@ -1,6 +1,6 @@
 ---
 title: Caching building block
-lastUpdated: 2026-05-19
+lastUpdated: 2026-06-11
 description: HybridCache (L1 in-memory + L2 Valkey or distributed memory) with OpenTelemetry instrumentation, stampede protection, and a shared multiplexer for DataProtection.
 sidebar:
   label: Caching
@@ -12,7 +12,7 @@ seo:
   keywords: 'hybridcache .net 10, hybridcache redis backplane, l1 l2 cache dotnet, stampede protection .net, opentelemetry cache metrics'
 ---
 
-The Caching block wires `Microsoft.Extensions.Caching.Hybrid` for the whole platform. L1 is in-process memory; L2 is **Valkey** (a Redis-compatible, BSD-licensed Redis fork) when `CachingOptions:Redis` is set, otherwise the in-process `DistributedMemoryCache`. The block decorates the underlying `HybridCache` with `ObservableHybridCache` to emit OpenTelemetry metrics + activities, and it shares the `IConnectionMultiplexer` with DataProtection so the whole host opens **one Valkey connection pool**, not three.
+The Caching block wires `Microsoft.Extensions.Caching.Hybrid` for the whole platform. L1 is in-process memory; L2 is **Valkey** (a Redis-compatible, BSD-licensed Redis fork) when `CachingOptions:Redis` is set, otherwise the in-process `DistributedMemoryCache`. The block decorates the underlying `HybridCache` with `ObservableHybridCache` to emit OpenTelemetry metrics + activities, and it shares the `IConnectionMultiplexer` with DataProtection key persistence so the whole host opens **one Valkey connection pool**, not one per feature.
 
 <Callout type="tip" title="Stampede protection is the win">
 HybridCache coalesces concurrent identical requests into a single source fetch automatically. The first caller blocks on the source; the rest of the wave wait on the same task. You don't write lock code; you just call `GetOrCreateAsync` and the cache does the right thing.
@@ -27,10 +27,10 @@ HybridCache coalesces concurrent identical requests into a single source fetch a
 ### Decorator
 
 - **`ObservableHybridCache(inner)`** — wraps the framework `HybridCache` to emit:
-  - `cache.hits` / `cache.misses` (OTel counter)
-  - `cache.duration` (OTel histogram, ms)
-  - `cache.payload.bytes` (OTel histogram)
-  - Activities under `ActivitySource("Hero.Caching")` with `cache.key`, `cache.hit`, `cache.payload.bytes` tags.
+  - `fsh.cache.hits` / `fsh.cache.misses` (OTel counters; L1 and L2 hits are both counted as "hit" — HybridCache doesn't surface which layer served the read)
+  - `fsh.cache.invalidations` (OTel counter; `RemoveAsync` + `RemoveByTagAsync`)
+  - `fsh.cache.factory.duration` (OTel histogram, ms; recorded only on a miss)
+  - Activities under `ActivitySource("FSH.Caching")` with `cache.system`, `cache.key`, `cache.hit` (or `cache.tag`) tags.
 
 ### Options
 
@@ -44,7 +44,7 @@ HybridCache coalesces concurrent identical requests into a single source fetch a
 
 ### Telemetry helper
 
-- **`CachingTelemetry`** — the `ActivitySource` + meters the decorator emits. Use it directly if you wrap further.
+- **`CachingTelemetry`** — the `ActivitySource` + meter the decorator emits (both named `FSH.Caching`, exposed as `ActivitySourceName` / `MeterName` constants). Wire them into the OTel pipeline via `metrics.AddMeter(...)` / `tracing.AddSource(...)`.
 
 ## How modules consume it
 
@@ -71,7 +71,7 @@ await cache.GetOrCreateAsync(key, factory, tags: ["tenant:" + tenantId.ToString(
 await cache.RemoveByTagAsync("tenant:" + tenantId.ToString(), ct).ConfigureAwait(false);
 ```
 
-Identity uses HybridCache for role-permission lookups (the `RolePermissionSyncer` warms the cache); Multitenancy uses it as the `DistributedCacheStore` in front of the tenant EF store; Webhooks uses it for typing-indicator throttle keys; Chat uses it for the typing throttle.
+Identity uses HybridCache for per-user permission sets (`UserPermissionService`, warmed by the `RolePermissionSyncer`) and impersonation grants (`ImpersonationGrantService`); Multitenancy caches tenant themes (`TenantThemeService`) and fronts the tenant EF store with Finbuckle's `DistributedCacheStore`, which rides on the same `IDistributedCache` this block registers.
 
 ## Configuration
 
@@ -118,7 +118,7 @@ Resolve `HybridCache` from a hosted service and `GetOrCreateAsync` your hot keys
 
 - **L1 has no backplane.** After `RemoveByTag` on one instance, peer instances' L1 copies aren't invalidated. The `DefaultLocalCacheExpiration` (2 min default) bounds the staleness window — don't set it too high if you rely on fast invalidation.
 - **Payload size cap is silent.** Entries larger than `MaximumPayloadBytes` are skipped (with a warning log), not stored. If your hot-path cache value is suddenly 1.5 MB, lookup will miss every time. Log-search for "payload too large" warnings before assuming the cache is broken.
-- **One multiplexer, three consumers.** Caching, DataProtection, and SignalR (when realtime is enabled) share the same `IConnectionMultiplexer`. Bumping connection pool size affects all three.
+- **One multiplexer, two consumers.** Caching and DataProtection key persistence share the same `IConnectionMultiplexer`. The SignalR backplane (`AddHeroRealtime`) reads the same `CachingOptions:Redis` string but opens its **own** connection — so a multi-instance host with realtime enabled holds two Valkey connections, not one.
 - **`DistributedMemoryCache` is per-process.** Two instances of the API can't see each other's cache. This is intentional for test fixtures; if you accidentally ship it to multi-instance prod, multi-tenant cache invalidation breaks. Always check `CachingOptions:Redis` is set in production config.
 
 ## Critical files

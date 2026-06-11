@@ -1,6 +1,6 @@
 ---
 title: Running tests
-lastUpdated: 2026-05-19
+lastUpdated: 2026-06-11
 description: Commands and CI patterns for running the unit / integration / architecture suites locally and in CI.
 sidebar:
   label: Running tests
@@ -26,9 +26,9 @@ dotnet test src/FSH.Starter.slnx
 
 This runs every test project. Expect:
 
-- Unit projects: sub-second each
-- Architecture project: ~1-2 seconds
-- Integration project: 30-60 seconds (cold Testcontainers) / ~5-10 seconds (warm)
+- Unit projects: seconds each
+- Architecture project: a few seconds — no containers
+- Integration projects: a few minutes — container startup, migrations, and ~700 real HTTP round-trips (Docker required)
 
 ## Run a single project
 
@@ -41,6 +41,9 @@ dotnet test src/Tests/Architecture.Tests/
 
 # Integration tests only — Docker must be running
 dotnet test src/Tests/Integration.Tests/
+
+# Production-middleware integration tests (separate assembly, own process)
+dotnet test src/Tests/Integration.Middleware.Tests/
 ```
 
 ## Filter by name
@@ -50,10 +53,7 @@ dotnet test src/Tests/Integration.Tests/
 dotnet test --filter "FullyQualifiedName~ProductsEndpointTests"
 
 # Single test method
-dotnet test --filter "FullyQualifiedName~ProductsEndpointTests.POST_products_Should_ReturnCreated_And_PersistProduct_When_PayloadIsValid"
-
-# By trait or category
-dotnet test --filter "Category=Integration"
+dotnet test --filter "FullyQualifiedName~BrandsEndpointTests.CreateBrand_Should_Return200_And_Persist_When_AuthorizedAdmin"
 ```
 
 The `~` operator does substring match; `=` does exact match. Combine with `&` and `|`:
@@ -75,7 +75,7 @@ To disable parallelism across classes (e.g. for shared state):
 }
 ```
 
-The kit's integration project uses **class-level parallelism with shared fixtures** — `IClassFixture<FshWebApplicationFactory>` shares the factory across tests in a class; xUnit runs classes in parallel where the fixtures permit.
+The kit's integration project uses a **collection fixture** — every test class joins `[Collection(FshCollectionDefinition.Name)]`, sharing one `FshWebApplicationFactory` (and one container set) across the whole suite. xUnit runs classes within a collection sequentially, which is why unique test data matters less than raw isolation here — but keep names unique anyway; it costs nothing.
 
 ## Verbose output
 
@@ -103,7 +103,7 @@ dotnet tool install --global dotnet-reportgenerator-globaltool
 reportgenerator -reports:**/coverage.cobertura.xml -targetdir:coveragereport
 ```
 
-The HTML report lands in `coveragereport/index.html`. Coverage targets in the kit hover around **75-85%** for unit projects; integration tests push effective coverage higher.
+The HTML report lands in `coveragereport/index.html`. CI collects coverage from the unit and integration jobs separately, merges the two with ReportGenerator, and **fails the build below 80% line coverage** — a ratchet that gets raised as coverage grows. See [CI/CD](/docs/deployment/ci-cd/).
 
 ## Docker requirement for integration tests
 
@@ -118,90 +118,36 @@ If Docker isn't available, integration tests fail with `Testcontainers.DockerNot
 
 ## CI — GitHub Actions
 
-A minimal workflow:
+The kit ships its own path-scoped workflows in `.github/workflows/` — you don't need to write one. On every backend change, `backend.yml` builds with `-warnaserror`, runs the 12 unit + architecture projects and the two integration projects (each with coverage collection), smoke-tests the DbMigrator container, and merges coverage behind an **80% line-coverage gate**. GitHub-hosted runners (`ubuntu-latest`) have Docker pre-installed, so Testcontainers works without extra setup.
 
-```yaml
-# .github/workflows/test.yml
-name: tests
+The full pipeline — jobs, gates, publishing — is documented on the [CI/CD page](/docs/deployment/ci-cd/). Local parity:
 
-on: [push, pull_request]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.0.x'
-      - name: Restore
-        run: dotnet restore src/FSH.Starter.slnx
-      - name: Build
-        run: dotnet build src/FSH.Starter.slnx --no-restore -c Release
-      - name: Test (unit + architecture)
-        run: dotnet test src/FSH.Starter.slnx --no-build -c Release
-                       --filter "FullyQualifiedName!~Integration.Tests"
-                       --logger "trx;LogFileName=test-results.trx"
-      - name: Test (integration)
-        run: dotnet test src/Tests/Integration.Tests/ --no-build -c Release
-                       --logger "trx;LogFileName=integration-results.trx"
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results
-          path: '**/*.trx'
+```bash
+dotnet build src/FSH.Starter.slnx -c Release -warnaserror   # the CI build gate
+dotnet test  src/FSH.Starter.slnx -c Release                # everything (needs Docker)
 ```
-
-GitHub-hosted runners (`ubuntu-latest`) have Docker pre-installed, so Testcontainers works without extra setup.
-
-## CI — speed optimisations
-
-For repos that run tests on every push, the slow piece is integration tests. Three knobs:
-
-- **Skip integration on draft PRs.** Run unit + architecture only on `pull_request: types: [opened, synchronize]` and integration on `push: branches: [main]`.
-- **Cache the NuGet packages.** `actions/cache` against `~/.nuget/packages` keyed by `**/packages.lock.json`.
-- **Reuse the Testcontainers image cache.** Cache `/var/lib/docker` (advanced) or accept the first-run cold start (simpler).
-
-For repos with many integration tests, **shard** them across multiple jobs:
-
-```yaml
-strategy:
-  matrix:
-    shard: [1, 2, 3, 4]
-steps:
-  - run: dotnet test src/Tests/Integration.Tests/ --filter "FullyQualifiedName~Shard${{ matrix.shard }}"
-```
-
-Tag tests with `[Trait("Shard", "1")]` to assign them.
 
 ## Watch mode (local iteration)
 
 `dotnet watch` reruns tests on file change — useful while iterating on a single test:
 
 ```bash
-dotnet watch test --project src/Tests/Identity.Tests/ \
-  -- --filter "FullyQualifiedName~RegisterUserCommandHandlerTests"
+dotnet watch --project src/Tests/Identity.Tests/ test \
+  --filter "FullyQualifiedName~RegisterUserCommandHandlerTests"
 ```
 
-It picks up file edits via `dotnet-watch`, recompiles, and reruns the filter. Fast feedback loop without the project's startup cost on every change.
+It picks up file edits, recompiles, and reruns the filter. Fast feedback loop without retyping the command on every change.
 
 ## Container cleanup
 
-Testcontainers spins up containers and keeps them running between test sessions in the same process. If something goes wrong (a test killed by Ctrl-C mid-run), containers can leak:
+The kit's containers are created with `WithAutoRemove(true)`, and Testcontainers' reaper (Ryuk) cleans up after crashed runs — so leaks are rare. If a hard kill (machine sleep, Docker restart mid-run) leaves something behind:
 
 ```bash
-# List leaked Testcontainers containers
-docker ps -a | grep testcontainers
+# List anything Testcontainers-labelled
+docker ps -a --filter "label=org.testcontainers"
 
-# Stop them
-docker stop $(docker ps -aq --filter "label=testcontainers")
-
-# Remove them
-docker rm $(docker ps -aq --filter "label=testcontainers")
-
-# Or just everything Testcontainers-labelled
-docker container prune --filter "label=testcontainers"
+# Remove leftovers
+docker rm -f $(docker ps -aq --filter "label=org.testcontainers")
 ```
 
 ## Related

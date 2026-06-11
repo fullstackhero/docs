@@ -1,6 +1,6 @@
 ---
 title: Jobs building block
-lastUpdated: 2026-05-19
+lastUpdated: 2026-06-11
 description: Hangfire 1.8 wiring with multi-tenant context preservation, DI-aware activator, basic-auth dashboard, telemetry filter, and stale-lock cleanup.
 sidebar:
   label: Jobs
@@ -12,10 +12,10 @@ seo:
   keywords: 'hangfire .net 10, hangfire multi-tenant, hangfire job activator dependency injection, hangfire dashboard auth, hangfire postgres'
 ---
 
-The Jobs block wires Hangfire 1.8 into the kit. The interesting parts are the **tenant-aware job filter** (preserves multi-tenant context across enqueue → execute), the **DI-aware activator** (jobs get scoped service resolution), the **OpenTelemetry filter** (activities for every job), the **basic-auth dashboard** at `/hangfire`, and a **stale-lock cleanup service** for after-crash recovery.
+The Jobs block wires Hangfire 1.8 into the kit. The interesting parts are the **tenant-aware job filter** (preserves multi-tenant context across enqueue → execute), the **DI-aware activator** (jobs get scoped service resolution), the **OpenTelemetry filter** (activities for every job), the **basic-auth dashboard** at `/jobs`, and a **stale-lock cleanup service** for after-crash recovery.
 
 <Callout type="tip" title="Enqueue from a request, run with the same tenant">
-The kit's job filter captures the current tenant and current user from `ICurrentUser` at enqueue time and restores them before the job body runs. You enqueue `client.EnqueueAsync(() => job.RunAsync(...))` and the job sees the same `ICurrentUser.GetTenant()` it would have seen in the request that enqueued it.
+`FshJobFilter` captures the resolved tenant and the authenticated user id as job parameters at enqueue time; `FshJobActivator` restores both into the job's fresh DI scope before the body runs. You enqueue `jobs.Enqueue<MyJob>(j => j.RunAsync(...))` from a request and the job sees the same tenant context the request had.
 </Callout>
 
 ## What it ships
@@ -23,17 +23,17 @@ The kit's job filter captures the current tenant and current user from `ICurrent
 ### Extensions
 
 - **`AddHeroJobs(services)`** — registers the Hangfire server with 5 workers, 30-second heartbeat, queues `default` + `email`, and 30-second polling. Reads `DatabaseOptions:Provider` to select Postgres (`Hangfire.PostgreSql`) or SQL Server storage. Registers `FshJobActivator`, `FshJobFilter`, `LogJobFilter`, `HangfireTelemetryFilter`, plus `HangfireStaleLockCleanupService`.
-- **`UseHeroJobDashboard(app, configuration)`** — wires the Hangfire dashboard at the route configured in `HangfireOptions:Route` (default `/hangfire`) behind a basic-auth filter using `HangfireOptions:UserName` + `HangfireOptions:Password`.
+- **`UseHeroJobDashboard(app, configuration)`** — wires the Hangfire dashboard at the route configured in `HangfireOptions:Route` (default `/jobs`) behind a basic-auth filter using `HangfireOptions:UserName` + `HangfireOptions:Password`.
 
 ### Service interface
 
-- **`IJobService`** — convenience facade over Hangfire's static `BackgroundJob` API. `EnqueueAsync`, `ScheduleAsync`, `AddOrUpdateRecurringJob`, etc.
+- **`IJobService`** — convenience facade over Hangfire's static `BackgroundJob` API: `Enqueue` / `Enqueue<T>` (with an optional queue overload), `Schedule` / `Schedule<T>` (by `TimeSpan` delay or `DateTimeOffset`), `Delete`, `Requeue`. All return/accept Hangfire job-id strings. Recurring jobs go through Hangfire's `IRecurringJobManager` directly.
 - **`HangfireService : IJobService`** — implementation.
 
 ### Filters
 
-- **`FshJobActivator : IJobActivator`** — resolves job classes from a fresh `IServiceScope` per job, so every job gets a clean scoped DbContext, ICurrentUser, etc.
-- **`FshJobFilter`** — captures tenant + user at enqueue, restores them inside the activator's scope before the job runs.
+- **`FshJobActivator : JobActivator`** — resolves job classes from a fresh `IServiceScope` per job, restoring the captured tenant (via Finbuckle's `IMultiTenantContextSetter`) and user id (via `ICurrentUserInitializer`) before resolution — so the job's scoped DbContext is built with the right tenant.
+- **`FshJobFilter : IClientFilter`** — at enqueue time, stamps the current tenant + user id onto the job as parameters (skipped when there's no HTTP context, e.g. recurring-job creation).
 - **`LogJobFilter`** — logs every state transition (Enqueued, Processing, Succeeded, Failed) through `ILogger`.
 - **`HangfireTelemetryFilter`** — opens an OpenTelemetry activity per job with `job.name`, `job.queue`, `job.id` tags.
 - **`HangfireCustomBasicAuthenticationFilter`** — gates the dashboard via basic auth.
@@ -44,7 +44,7 @@ The kit's job filter captures the current tenant and current user from `ICurrent
 
 ### Options
 
-- **`HangfireOptions`** — `UserName`, `Password`, `Route`.
+- **`HangfireOptions`** — `UserName` (required, min 3 chars), `Password` (required, min 12 chars — both validated at startup, no safe default), `Route` (default `/jobs`).
 
 ## How modules consume Jobs
 
@@ -62,22 +62,22 @@ public sealed class SendInvoiceEmailCommandHandler(IJobService jobs)
 }
 ```
 
-Or register a recurring job during module startup:
+Or register a recurring job — the kit's pattern is to resolve `IRecurringJobManager` inside the module's `MapEndpoints` (it's null when jobs are disabled, so guard it):
 
 ```csharp
-public void ConfigureServices(IHostApplicationBuilder builder)
+var jobManager = endpoints.ServiceProvider.GetService<IRecurringJobManager>();
+if (jobManager is not null)
 {
-    builder.Services.AddSingleton<IConfigureOptions<RecurringJobsConfig>>(/* … */);
+    // Fire at 00:05 UTC on the 1st of every month; the job bills the previous period.
+    jobManager.AddOrUpdate(
+        "billing-monthly-invoices",
+        Job.FromExpression<MonthlyInvoiceJob>(j => j.RunAsync(CancellationToken.None)),
+        "5 0 1 * *",
+        new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
 }
-
-// somewhere in MapMiddlewares or a hosted service
-recurringJobManager.AddOrUpdate<MonthlyInvoiceJob>(
-    "billing-monthly-invoices",
-    job => job.RunAsync(CancellationToken.None),
-    "5 0 1 * *");                   // 00:05 UTC on the 1st of each month
 ```
 
-The Billing module ships `MonthlyInvoiceJob`; the Files module ships `PurgeOrphanedFilesJob` (hourly) and `PurgeDeletedFilesJob` (daily); the Auditing module ships `AuditRetentionJob` (opt-in).
+The Billing module ships `MonthlyInvoiceJob` (monthly); the Files module ships `PurgeOrphanedFilesJob` (hourly) and `PurgeDeletedFilesJob` (daily, 03:30 UTC); the Auditing module ships `AuditRetentionJob` (cron from `AuditRetentionOptions`, no-op until enabled).
 
 ## Configuration
 
@@ -85,8 +85,8 @@ The Billing module ships `MonthlyInvoiceJob`; the Files module ships `PurgeOrpha
 {
   "HangfireOptions": {
     "UserName": "admin",
-    "Password": "set-via-secrets",
-    "Route": "/hangfire"
+    "Password": "set-via-secrets-min-12-chars",
+    "Route": "/jobs"
   }
 }
 ```
@@ -124,14 +124,14 @@ The Webhooks module uses this exact pattern.
 - **Hangfire serializes arguments** when enqueuing. Pass primitives (Guid, string, int) — not large object graphs. If you need state, look it up inside the job from the DI-resolved DbContext.
 - **`FshJobActivator` creates a new scope per job.** Don't hold scoped state across jobs; each invocation gets a fresh DbContext.
 - **Dashboard auth is basic.** Use HTTPS in production. Consider IP whitelisting in your reverse proxy in addition.
-- **Stale-lock cleanup runs after startup.** It defers ~10 seconds so it doesn't interfere with legitimate startup-time job acquisition; you'll see the cleanup log entries a few seconds after the host is fully up.
+- **Stale-lock cleanup runs after startup.** It defers a few seconds so it doesn't interfere with legitimate startup-time lock acquisition; it's best-effort and logs a warning with the count when it actually releases something.
 
 ## Critical files
 
 - `src/BuildingBlocks/Jobs/Extensions.cs`
 - `src/BuildingBlocks/Jobs/Services/HangfireService.cs`
-- `src/BuildingBlocks/Jobs/Filters/FshJobFilter.cs`
-- `src/BuildingBlocks/Jobs/Filters/FshJobActivator.cs`
+- `src/BuildingBlocks/Jobs/FshJobFilter.cs`
+- `src/BuildingBlocks/Jobs/FshJobActivator.cs`
 - `src/BuildingBlocks/Jobs/HangfireStaleLockCleanupService.cs`
 
 ## Related

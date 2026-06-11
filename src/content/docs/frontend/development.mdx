@@ -1,7 +1,7 @@
 ---
 title: Local development
-lastUpdated: 2026-05-19
-description: Running the React frontends with Vite HMR, building for production, deploying to static hosts or behind Nginx, runtime config injection patterns.
+lastUpdated: 2026-06-11
+description: Running the React frontends with Vite HMR, building for production, deploying to static hosts or behind Nginx, runtime config via /config.json.
 sidebar:
   label: Local development
   order: 5
@@ -28,7 +28,7 @@ dotnet run --project src/Host/FSH.Starter.AppHost
 
 This starts everything:
 
-- API at http://localhost:5000
+- API at https://localhost:7030 (http on 5030)
 - Admin at http://localhost:5173
 - Dashboard at http://localhost:5174
 - Postgres at tcp/5432, Valkey at tcp/6379, MinIO at :9000
@@ -40,29 +40,25 @@ Vite HMR works through Aspire — edits to frontend files reload instantly in th
 ```bash
 cd clients/admin           # or clients/dashboard
 npm install                # first time only
-npm run dev                # http://localhost:5173
+npm run dev                # http://localhost:5173 (dashboard: 5174)
 ```
 
 This requires the backend to be running separately (either via Aspire, docker-compose, or `dotnet run` against the API project).
 
-The dev server reads `clients/{app}/.env.development` for the backend URL:
-
-```ini
-# clients/admin/.env.development
-VITE_API_BASE_URL=http://localhost:5000
-```
+The Vite dev server proxies API paths to the backend — `http://localhost:5030` for admin, `https://localhost:7030` for the dashboard by default. To point at a different backend, set `VITE_API_BASE_URL` when starting the dev server; it only steers the **dev proxy target**, it is never compiled into a build.
 
 ## The npm scripts
 
 ```jsonc
-// clients/admin/package.json
+// clients/admin/package.json (dashboard is identical apart from ports)
 {
   "scripts": {
-    "dev":      "vite",                  // dev server with HMR
-    "build":    "tsc -b && vite build",  // typecheck + production bundle
-    "preview":  "vite preview",          // serve the production bundle locally
-    "lint":     "eslint .",
-    "test":     "vitest"
+    "dev":         "vite --port 5173",        // dev server with HMR
+    "build":       "tsc -b && vite build",    // typecheck + production bundle
+    "preview":     "vite preview --port 4173",// serve the production bundle locally
+    "lint":        "eslint .",
+    "test:e2e":    "playwright test",         // route-mocked E2E suite
+    "test:e2e:ui": "playwright test --ui"
   }
 }
 ```
@@ -90,56 +86,53 @@ clients/admin/dist/
 
 `dist/` is a static site — pure HTML / JS / CSS. No server runtime required.
 
-## Runtime configuration (env-var-driven)
+## Runtime configuration (`/config.json`)
 
 Vite hardcodes `VITE_*` env vars into the bundle at build time. That's fine for static URLs, but you usually want **one built image** that runs against multiple environments (dev, staging, prod) with different API URLs.
 
-The kit's solution: inject a `window.__ENV__` script at container startup via `envsubst`. The frontend reads from `window.__ENV__` at boot.
+The kit's solution: each app fetches `/config.json` once at boot — before React mounts — and reads every environment-dependent value from it. In dev, Vite serves `public/config.json`; in production, the container renders it from environment variables at startup.
+
+```jsonc
+// clients/admin/public/config.json (dev defaults)
+{
+  "apiBase": "",                   // "" = same-origin (dev proxy / reverse proxy)
+  "defaultTenant": "root",
+  "dashboardUrl": "http://localhost:5174",  // admin only — impersonation handoff target
+  "inactivityIdleMs": 600000,
+  "inactivityWarningMs": 60000
+}
+```
+
+The dashboard's variant swaps `dashboardUrl` for a `demoMode` flag (login-page demo-account picker).
 
 ### The container pattern
 
-```dockerfile
-# clients/admin/Dockerfile (simplified)
-FROM node:20-alpine AS build
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build
-
-FROM nginx:1.27-alpine
-COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY env.template.js /usr/share/nginx/html/env.template.js
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
-```
+`clients/{app}/Dockerfile` is a two-stage build — `node:22-alpine` runs `npm ci && npm run build`, then `nginx:alpine` serves `dist/`. The entrypoint renders the runtime config before starting Nginx:
 
 ```sh
-# entrypoint.sh
-#!/bin/sh
-envsubst < /usr/share/nginx/html/env.template.js > /usr/share/nginx/html/env.js
+# clients/{app}/docker/docker-entrypoint.sh
+: "${FSH_API_URL:?FSH_API_URL is required (e.g. https://api.example.com)}"
+: "${FSH_DEFAULT_TENANT:=root}"
+
+envsubst < /usr/share/nginx/html/config.json.template \
+       > /usr/share/nginx/html/config.json
+
 exec nginx -g 'daemon off;'
 ```
 
-```js
-// env.template.js — substituted at container start
-window.__ENV__ = {
-  API_BASE_URL: '${API_BASE_URL}',
-  SIGNALR_HUB_URL: '${SIGNALR_HUB_URL}',
-};
-```
-
-```html
-<!-- index.html -->
-<script src="/env.js"></script>
+```jsonc
+// clients/admin/docker/config.json.template
+{
+  "apiBase": "${FSH_API_URL}",
+  "defaultTenant": "${FSH_DEFAULT_TENANT}",
+  "dashboardUrl": "${FSH_DASHBOARD_URL}"
+}
 ```
 
 At deploy time, set the env vars on the container:
 
 ```bash
-docker run -e API_BASE_URL=https://api.example.com fsh-admin
+docker run -e FSH_API_URL=https://api.example.com -e FSH_DASHBOARD_URL=https://app.example.com fsh-admin
 ```
 
 The same image runs everywhere; only env vars differ.
@@ -147,49 +140,51 @@ The same image runs everywhere; only env vars differ.
 ### Reading runtime config in code
 
 ```ts
-// clients/{app}/src/env.ts
-declare global {
-  interface Window { __ENV__?: { API_BASE_URL?: string; SIGNALR_HUB_URL?: string }; }
-}
+// main.tsx awaits this before mounting React
+await loadRuntimeConfig();          // fetch("/config.json", { cache: "no-store" })
 
-export const env = {
-  API_BASE_URL:   window.__ENV__?.API_BASE_URL  ?? import.meta.env.VITE_API_BASE_URL  ?? '/api',
-  SIGNALR_HUB_URL: window.__ENV__?.SIGNALR_HUB_URL ?? import.meta.env.VITE_SIGNALR_HUB_URL ?? '/realtime/hub',
-};
+// everywhere else
+import { env } from "@/env";
+env.apiBase; env.defaultTenant; env.inactivityIdleMs;
 ```
 
-`window.__ENV__` (runtime) takes precedence; `import.meta.env` (build-time) is the fallback; a default URL is the last resort.
+`env.*` throws if read before the config loads — a deliberate fail-fast so a misordered import surfaces immediately instead of silently using the wrong API URL.
 
 ## Nginx configuration for SPAs
 
-`nginx.conf` (simplified — the kit's actual file is more detailed):
+The kit's actual file, `clients/{app}/docker/nginx.conf`:
 
 ```nginx
 server {
-    listen 80;
-    server_name _;
-    root /usr/share/nginx/html;
-    index index.html;
+  listen 80;
+  server_name _;
+  root /usr/share/nginx/html;
+  index index.html;
 
-    # SPA routing — every non-asset path falls through to index.html
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
+  # Long-lived caching for hashed asset bundles
+  location ~* \.(?:js|css|woff2?|png|jpg|jpeg|svg|ico|webp)$ {
+    expires 1y;
+    add_header Cache-Control "public, immutable";
+  }
 
-    # Long-cache static assets (their filenames carry hashes)
-    location /assets/ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
+  # Runtime config — must be re-fetched on every deploy
+  location = /config.json {
+    add_header Cache-Control "no-store";
+    add_header X-Content-Type-Options "nosniff";
+  }
 
-    # Never cache index.html so runtime config updates immediately
-    location = /index.html {
-        add_header Cache-Control "no-cache, no-store, must-revalidate";
-    }
+  # SPA fallback with security headers
+  location / {
+    try_files $uri /index.html;
+    add_header X-Frame-Options "DENY";
+    add_header X-Content-Type-Options "nosniff";
+    add_header Referrer-Policy "strict-origin-when-cross-origin";
+  }
 
-    # gzip + brotli compression
-    gzip on;
-    gzip_types text/css application/javascript application/json image/svg+xml;
+  # Block dotfiles
+  location ~ /\. {
+    deny all;
+  }
 }
 ```
 
@@ -203,15 +198,14 @@ Drag-drop the `dist/` folder, or connect the repo and configure:
 
 - Build command: `cd clients/admin && npm install && npm run build`
 - Output directory: `clients/admin/dist`
-- Environment variables: `VITE_API_BASE_URL=https://api.example.com` (build-time)
 
-For runtime config, use the platform's edge config or rewrite `env.js` from an edge function.
+For runtime config, ship a per-environment `config.json` alongside the build output (it's just a static file), or generate it in the build command.
 
 ### S3 + CloudFront
 
 1. `npm run build`, then `aws s3 sync dist/ s3://fsh-admin-bucket/`
 2. CloudFront distribution in front, with a default-root-object of `index.html` + a custom error response that serves `index.html` for 404 (so SPA routing works).
-3. Set cache TTLs: short on `index.html`, long on `/assets/*`.
+3. Set cache TTLs: no-store on `config.json`, short on `index.html`, long on the hashed assets.
 
 ### Cloudflare Pages
 
@@ -219,49 +213,50 @@ Connect the repo, configure build command + output directory. Cloudflare's Worke
 
 ## Testing
 
-The kit ships Vitest configuration. Run:
+Both apps ship Playwright E2E suites — fully **route-mocked** (no live backend required) with seeded JWTs, so they run fast and deterministic in CI:
 
 ```bash
-npm test                   # all tests
-npm test -- --watch        # watch mode
+npm run test:e2e           # headless run
+npm run test:e2e:ui        # Playwright's interactive UI mode
 ```
 
-Tests live alongside source as `*.test.ts(x)`. The setup is minimal — the kit doesn't ship a full Storybook / Chromatic visual-regression stack.
+Tests live under `clients/{app}/tests/`. There is no unit-test runner (Vitest) wired — the coverage strategy is E2E against mocked routes plus the backend's own xUnit + integration suites.
 
-## Linting + formatting
+## Linting
 
-ESLint + Prettier are wired:
+ESLint is wired (flat config at `clients/{app}/eslint.config.js`, extending the React + TypeScript + a11y rule sets):
 
 ```bash
 npm run lint               # report
 npm run lint -- --fix      # auto-fix
 ```
 
-The kit's ESLint config sits in `clients/{app}/eslint.config.js` (flat config). It extends the standard React + TypeScript + a11y rule sets.
+## The dev server proxy
 
-## When the dev server proxies API calls
-
-Vite's dev server can proxy API calls to the backend so you don't deal with CORS during development:
+Vite proxies API paths to the backend so you don't deal with CORS during development:
 
 ```ts
-// clients/{app}/vite.config.ts
-export default defineConfig({
-  server: {
-    proxy: {
-      '/api':      { target: env.VITE_API_BASE_URL, changeOrigin: true },
-      '/realtime': { target: env.VITE_API_BASE_URL, changeOrigin: true, ws: true },
-    },
+// clients/dashboard/vite.config.ts (excerpt)
+server: {
+  port: 5174,
+  strictPort: true,
+  proxy: {
+    // ws: true forwards the WebSocket upgrade used by SignalR's hub
+    "/api":     { target: apiBase, changeOrigin: true, secure: false, ws: true },
+    "/health":  { target: apiBase, changeOrigin: true, secure: false },
+    "/openapi": { target: apiBase, changeOrigin: true, secure: false },
+    "/scalar":  { target: apiBase, changeOrigin: true, secure: false },
   },
-});
+},
 ```
 
-With this in place, you can use relative URLs (`/api/v1/...`) in code and the dev server forwards them. Production builds embed the full URL via `env.API_BASE_URL`.
+With this in place, relative URLs (`/api/v1/...`) work in dev, matching the production same-origin default (`"apiBase": ""`). One nuance: the dashboard's dev server serves a `config.json` whose `apiBase` points **directly** at the API, so the long-lived SSE + SignalR streams bypass the proxy — otherwise they pin connections to `localhost:5174` and HTTP/1.1's ~6-per-host cap can starve lazy route-chunk loads.
 
 ## Common issues
 
-- **CORS errors in dev** — your `vite.config.ts` proxy isn't picking up the right backend URL, or you're using absolute URLs in client code. Switch to relative URLs + verify the proxy config.
+- **CORS errors in dev** — your proxy isn't picking up the right backend URL. Set `VITE_API_BASE_URL` when starting `npm run dev`, or fix the backend's CORS config if you're hitting it directly.
 - **SignalR fails to connect after deploy** — your reverse proxy isn't forwarding WebSocket upgrade headers. Add `proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade";` to Nginx.
-- **"Refused to load script" CSP violations** — your `Content-Security-Policy` `script-src` doesn't include the inline `env.js` script. Either widen the policy, or use a hash, or move runtime config to a non-inline mechanism.
+- **App boots to an error about `/config.json`** — the runtime config file is missing or unreachable. In containers, check the `FSH_*` env vars (the entrypoint refuses to start without `FSH_API_URL`); on static hosts, make sure `config.json` deployed next to `index.html`.
 - **HMR not updating in Aspire** — `dotnet watch` doesn't always proxy WebSocket upgrades for Vite. Run `npm run dev` separately in that case.
 
 ## Related

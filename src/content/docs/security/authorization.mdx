@@ -1,21 +1,21 @@
 ---
 title: Authorization
-lastUpdated: 2026-05-19
-description: Permission-based authorization — fine-grained gates on every endpoint via .RequirePermission() with a flat registry, role-and-group aggregation, and the silent-no-op gotcha that catches every team once.
+lastUpdated: 2026-06-11
+description: Permission-based authorization — fine-grained gates on every endpoint via .RequirePermission() with a flat registry, default + fallback policy wiring, and the silent-no-op gotcha that catches every team once.
 sidebar:
   label: Authorization
   order: 2
 pageType: concept
 seo:
   title: 'Authorization in .NET 10 — permission gates'
-  description: 'How fullstackhero gates every endpoint via .RequirePermission(perm) with a flat permission registry, role + group aggregation, and the…'
+  description: 'How fullstackhero gates every endpoint via .RequirePermission(perm) with a flat permission registry, role aggregation, and the…'
   keywords: 'asp.net core authorization, permission based authorization dotnet, requirepermission .net 10, role permission asp.net identity, requiredpermissionattribute'
 ---
 
 fullstackhero uses **permission-based authorization** with explicit gates on every endpoint — not blanket role checks. Roles are groupings of permissions; permissions are the unit of authorization. Users belong to roles (and optionally groups); roles carry permissions; endpoints check permissions.
 
 ```csharp
-endpoints.MapDelete("/products/{productId}", handler)
+endpoints.MapDelete("/products/{productId:guid}", handler)
          .RequirePermission(CatalogPermissions.Products.Delete);
 ```
 
@@ -25,14 +25,36 @@ That indirection — user → role → permission → endpoint — is what makes
 `RequiredPermissionAttribute` lives in the Shared building block and implements `IRequiredPermissionMetadata`. If you copy or re-declare the attribute in another assembly **without implementing that interface**, every `.RequirePermission()` call silently stops gating — the build passes, requests succeed, **no authorization happens**. This is the nastiest failure mode in the kit's auth pipeline. Always import the attribute from the Shared block.
 </Callout>
 
+## The policy wiring — default AND fallback
+
+The permission gate is a single authorization policy named `RequiredPermission`. The Identity module registers it and then wires it as **both** the `DefaultPolicy` **and** the `FallbackPolicy`:
+
+```csharp
+// Modules.Identity/Authorization/Jwt/JwtAuthenticationExtensions.cs
+services.AddAuthorizationBuilder().AddRequiredPermissionPolicy();
+services.AddAuthorization(options =>
+{
+    options.DefaultPolicy  = options.GetPolicy(RequiredPermissionDefaults.PolicyName)!;
+    options.FallbackPolicy = options.GetPolicy(RequiredPermissionDefaults.PolicyName);
+});
+```
+
+Both assignments matter, and the second one is the lesson every team learns the hard way:
+
+- **FallbackPolicy** covers endpoints with no auth metadata at all — nothing slips through unauthenticated just because someone forgot to annotate it.
+- **DefaultPolicy** covers endpoints that opt in via `.RequireAuthorization()` — including the module route groups (Catalog, Billing, Chat, Files, …). Without it, a group-level `.RequireAuthorization()` attaches ASP.NET Core's built-in authenticated-only default policy, which **suppresses the fallback** — so `.RequirePermission(...)` was never evaluated and any authenticated tenant member could perform gated writes. That fail-open was a real bug, fixed in PR #1290 and pinned by an integration regression test (`CreateProduct_Should_Return403_When_AuthenticatedUserLacksPermission`).
+
+If you fork the auth setup, keep both lines. The policy itself requires an authenticated user (JWT bearer scheme) plus the permission requirement.
+
 ## How a permission flows through
 
-1. **Declared** as an `FshPermission` constant in a module's `*.Contracts/Authorization/{Module}Permissions.cs`.
-2. **Registered** via `PermissionConstants.Register(MyPermissions.All)` during the module's `ConfigureServices`.
-3. **Assigned** to a role via `UpdateRolePermissionsCommand` (or seeded at startup).
-4. **Granted** to a user via `AssignUserRolesCommand` (the user inherits all permissions of their roles + groups).
-5. **Issued** as a claim in the JWT access token (the `permissions` array).
-6. **Checked** at the endpoint via `.RequirePermission(perm)` — read from the claim, no DB round-trip per request.
+1. **Declared** as a constant in a module's `*.Contracts/Authorization/{Module}Permissions.cs`, alongside an `FshPermission` record for the registry.
+2. **Registered** via `PermissionConstants.Register(MyPermissions.All)` in the module's `ConfigureServices`.
+3. **Assigned** to a role as a role claim (`ClaimType = "permission"`) — via the role-permissions admin endpoint or the startup syncer.
+4. **Granted** to a user by putting the user in that role.
+5. **Checked** at the endpoint: `.RequirePermission(perm)` attaches `RequiredPermissionAttribute` metadata; `RequiredPermissionAuthorizationHandler` resolves the **current user's effective permission set server-side** and verifies it contains the required permission.
+
+The permission set is *not* a JWT claim. The JWT carries the user's **roles**; the handler resolves roles → permission claims from the database, cached in HybridCache (1 hour in Redis, 2 minutes in-process). That means permission changes take effect on live sessions without re-issuing tokens — see "When changes take effect" below.
 
 ## Declaring a permission
 
@@ -42,19 +64,26 @@ public static class CatalogPermissions
 {
     public static class Products
     {
-        public static readonly FshPermission Create     = new("Create product",      "Create",      "Products");
-        public static readonly FshPermission View       = new("View products",       "Read",        "Products");
-        public static readonly FshPermission Update     = new("Update product",      "Update",      "Products");
-        public static readonly FshPermission Delete     = new("Delete product",      "Delete",      "Products");
-        public static readonly FshPermission AdjustStock = new("Adjust product stock","AdjustStock", "Products");
+        public const string Resource = "Catalog.Products";
+        public const string View   = $"Permissions.{Resource}.View";
+        public const string Create = $"Permissions.{Resource}.Create";
+        public const string Update = $"Permissions.{Resource}.Update";
+        public const string Delete = $"Permissions.{Resource}.Delete";
     }
     // ... Brands, Categories
 
-    public static IReadOnlyList<FshPermission> All { get; } = /* aggregate everything */;
+    public static IReadOnlyList<FshPermission> All { get; } =
+    [
+        new("View Products",   ActionConstants.View,   Products.Resource, IsBasic: true),
+        new("Create Products", ActionConstants.Create, Products.Resource),
+        new("Update Products", ActionConstants.Update, Products.Resource),
+        new("Delete Products", ActionConstants.Delete, Products.Resource),
+        // ...
+    ];
 }
 ```
 
-Each `FshPermission` has a `Name` property (computed as `Permissions.{Resource}.{Action}` — e.g. `Permissions.Products.Create`).
+Two shapes, one name. The `const string` is what endpoints reference; the `FshPermission(Description, Action, Resource)` record is what the registry holds — its `Name` is computed as `Permissions.{Resource}.{Action}` and must match the constant. The flags matter: `IsBasic: true` permissions are granted to the built-in Basic role, `IsRoot: true` ones are reserved for the root tenant's Admin.
 
 ## Registering during module startup
 
@@ -77,65 +106,58 @@ endpoints.MapPost("/products", handler)
          .RequirePermission(CatalogPermissions.Products.Create);
 ```
 
-The equivalent attribute form (used in older controller-based code paths):
+The equivalent attribute form:
 
 ```csharp
-[RequiredPermission(nameof(CatalogPermissions.Products.Create))]
-public IResult CreateProduct(...) { ... }
+[RequiredPermission(CatalogPermissions.Products.Create)]
 ```
 
-Both register the same metadata; `RequiredPermissionAuthorizationHandler` reads it from the endpoint's `MetadataCollection` and validates the user's claims against the registered permission.
+Both produce the same metadata — `.RequirePermission()` is literally `WithMetadata(new RequiredPermissionAttribute(...))`. `RequiredPermissionAuthorizationHandler` reads it from the endpoint's metadata via the `IRequiredPermissionMetadata` interface and checks the user's effective permission set. Endpoints with **no** permission metadata pass the handler (authentication is still enforced by the policy itself).
 
-## Roles, groups, and permission aggregation
+## Roles, groups, and aggregation
 
-- **Roles** are flat (no inheritance hierarchy). A user can be in multiple roles; the user's effective permission set is the **union** of every role's permissions.
-- **Groups** are user collections that can have roles. A user inherits permissions from groups they belong to in addition to their direct roles.
-- The kit's `IUserPermissionService` resolves the effective permission set when issuing a JWT — claim-level enforcement is then cheap.
+- **Roles** are flat (no inheritance hierarchy). A user can be in multiple roles; the user's effective permission set is the **union** of every role's permission claims.
+- **Groups** are user collections that can carry roles. A user in a group inherits the group's roles — those roles show up as role claims in the user's JWT alongside their directly assigned roles.
+- The built-in roles are `Admin` and `Basic`. Admin gets every non-root permission (the root tenant's Admin also gets the `IsRoot` ones); Basic gets the `IsBasic` subset.
 
-```
-User: alice
-  ├─ Roles: ["catalog-editor", "viewer"]
-  │         catalog-editor → Products.Create, Products.Update
-  │         viewer         → Products.View, Brands.View, Categories.View
-  └─ Groups: ["region-east"]
-            region-east → Tickets.View, Tickets.Update
+## When changes take effect
 
-Effective permissions: union of all of the above
-JWT claim "permissions": ["Products.Create", "Products.Update",
-                          "Products.View", "Brands.View",
-                          "Categories.View", "Tickets.View", "Tickets.Update"]
-```
+Effective permissions are resolved server-side and cached per user (HybridCache: 1 h distributed, 2 min local). The kit invalidates that cache aggressively:
 
-The `permissions` claim is the source of truth at the gate. Role + group reshuffling at admin time **does not** invalidate live tokens — they continue to carry the snapshot from when they were issued. Revoke the sessions (or wait for token expiry) to apply changes.
+- **Updating a role's permissions** invalidates the cache for every user holding that role — directly or via group membership (`InvalidateAffectedUsersAsync`).
+- **Assigning/removing a user's roles** invalidates that user's entry.
+
+So a permission grant or revocation applies to live sessions within seconds — no token re-issue needed, because permissions were never baked into the token. Role *claims* in the JWT, by contrast, are a login-time snapshot; they refresh on the next token issue.
 
 ## The role-permission syncer
 
-`RolePermissionSyncer` + `RolePermissionSyncHostedService` keep the user's permission claim cache fresh. At app startup, they read every role's permission set into HybridCache. When `UpdateRolePermissionsCommand` runs, the cache is updated. Token issuance reads from cache, not DB.
+`RolePermissionSyncer` (driven by `RolePermissionSyncHostedService` at startup) walks every tenant and inserts any **newly registered** permissions that are missing from the built-in `Admin` / `Basic` roles' claim rows. It's idempotent — only missing claims are added — and if it writes anything it drops the per-user permission cache so logged-in sessions pick the new permissions up immediately. This is what makes "add a permission to a module, restart, Admin can use it" work without a manual seeding step.
+
+Custom roles are yours to manage — the syncer only touches the built-in two.
 
 ## Anonymous endpoints
 
-Skip `.RequirePermission` and apply `AllowAnonymous` instead:
+Because the fallback policy gates everything by default, anonymous endpoints must opt out explicitly:
 
 ```csharp
-endpoints.MapPost("/users/self-register", handler)
+endpoints.MapPost("/self-register", handler)
          .AllowAnonymous();
 ```
 
-The `PathAwareAuthorizationHandler` lets some endpoints be anonymous and others gated, in the same hub of routes. The auth pipeline doesn't require a JWT for anonymous endpoints.
+Separately, `PathAwareAuthorizationHandler` (an `IAuthorizationMiddlewareResultHandler`) lets the `/scalar`, `/openapi`, and `/favicon.ico` paths through the authorization middleware so the API docs UI works without a token.
 
-## Audit trail of permission decisions
+## Auditing authorization activity
 
-The Auditing module captures every permission denial:
+The Auditing module's security log (`/api/v1/audits/security`, gated by the audit-trail view permission) captures logins, token issuance/revocation, and impersonation events out of the box. The `SecurityAction` enum also defines `PermissionDenied` / `PolicyFailed` (default severity: Warning) for your own handlers to write via the audit client:
 
 ```csharp
 await Audit.ForSecurity(SecurityAction.PermissionDenied)
     .WithUser(currentUser.GetUserId())
     .WithSecurityContext(ipAddress, userAgent)
-    .WithSeverity(AuditSeverity.Warning)
     .WriteAsync(ct);
 ```
 
-Query `/api/v1/audits/security` filtered by `EventType=Security, Severity>=Warning` to see permission failures over time. Spikes from a single user typically mean the user's role is misconfigured; spikes from many users on one endpoint suggest a deploy that changed permission requirements.
+The kit does **not** automatically write an audit row for every 403 — if you want a denial trail, emit it where you enforce custom checks.
 
 ## The silent-no-op gotcha (again)
 
@@ -146,7 +168,6 @@ Symptoms:
 - Build passes.
 - Endpoint responds normally to authenticated requests.
 - Authorization is effectively off — any authenticated user can hit the endpoint.
-- Architecture test `RequiredPermissionAttributeIsCanonicalTests` exists to catch this — make sure it stays green.
 
 Always import `RequiredPermissionAttribute` from `FSH.Framework.Shared.Identity.Authorization`. Never declare a same-named local copy.
 
@@ -154,5 +175,5 @@ Always import `RequiredPermissionAttribute` from `FSH.Framework.Shared.Identity.
 
 - [Identity module](/docs/modules/identity/) — role + permission management endpoints.
 - [Shared building block](/docs/building-blocks/shared/) — `PermissionConstants`, `FshPermission`, `RequiredPermissionAttribute`.
-- [Authentication](/docs/security/authentication/) — issuing the JWT that carries the permission claim.
-- [Auditing module](/docs/modules/auditing/) — capture permission-deny events.
+- [Authentication](/docs/security/authentication/) — issuing the JWT whose identity the permission check resolves.
+- [Auditing module](/docs/modules/auditing/) — the security event log.

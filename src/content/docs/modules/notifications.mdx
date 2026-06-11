@@ -1,6 +1,6 @@
 ---
 title: Notifications module
-lastUpdated: 2026-05-19
+lastUpdated: 2026-06-11
 description: Per-user inbox driven by integration events from other modules — denormalized rows, real-time SignalR push, idempotent mark-read.
 sidebar:
   label: Notifications
@@ -12,7 +12,7 @@ seo:
   keywords: '.net notifications inbox, realtime notifications signalr, integration events dotnet, in-app notification module'
 ---
 
-The Notifications module is the inbox layer of fullstackhero. It owns one denormalized row type (`Notification`), exposes four read/mark endpoints, and is driven entirely by integration events published by other modules (Chat mentions today; tickets, billing, webhooks can opt in next). New notifications are pushed to the recipient in real time via the same SignalR hub Chat uses, so the bell-icon badge updates without a refresh. Around **200 lines of code across the runtime project** — intentionally thin.
+The Notifications module is the inbox layer of fullstackhero. It owns one denormalized row type (`Notification`), exposes four read/mark endpoints, and is driven entirely by integration events published by other modules. Today it consumes Chat mentions (inbox row + realtime push) and the Billing lifecycle events (tenant-admin emails for invoices and expiry); tickets, webhooks, and anything else can opt in next. New notifications are pushed to the recipient in real time via the same SignalR hub Chat uses, so the bell-icon badge updates without a refresh. Around **800 lines of code across the runtime project** — intentionally thin.
 
 <Callout type="tip" title="It's a bridge, not a hub">
 This module has no business logic of its own. It's a destination — other modules publish integration events that describe what happened ("user X was mentioned in channel Y"), and the handler materialises a row plus a SignalR push. Adding new notification types means adding a new `IIntegrationEventHandler` here, not redesigning the inbox.
@@ -20,29 +20,36 @@ This module has no business logic of its own. It's a destination — other modul
 
 ## What ships in v10
 
-- **One row type** — `Notification(Id, UserId, Type, Title, Body?, Link, Source, MetadataJson, CreatedAtUtc, ReadAtUtc?)`. Denormalized so the inbox renders without back-references into the source module.
+- **One row type** — `Notification(Id, UserId, Type, Title, Body?, Link?, Source, MetadataJson, CreatedAtUtc, ReadAtUtc?)`. Denormalized so the inbox renders without back-references into the source module.
 - **Real-time push** — the integration-event handler broadcasts a `NotificationCreated` SignalR event to the recipient's `user:{id}` group immediately after writing the row.
 - **Idempotent mark-read** — `Notification.ReadAtUtc ??= DateTime.UtcNow` means calling mark-read twice is a no-op.
-- **Bulk mark-all-read** via `ExecuteUpdateAsync` — single SQL `UPDATE`, no row materialisation, scoped to the caller.
-- **Four endpoints** — `GET /` (inbox), `GET /unread-count` (badge), `POST /{id}/read` (single), `POST /read-all` (bulk).
+- **Bulk mark-all-read** via `ExecuteUpdateAsync` — single SQL `UPDATE`, no row materialisation, scoped to the caller; returns the number of rows touched.
+- **Four endpoints** — `GET /` (inbox, with an `unreadOnly` filter), `GET /unread-count` (badge), `POST /{id}/read` (single), `POST /read-all` (bulk).
+- **Billing lifecycle emails** — handlers for the Billing module's `InvoiceIssued`, `TenantNearingExpiry`, `TenantEnteredGrace`, and `TenantExpired` integration events email the tenant admin via the Mailing building block's `IMailService`.
 - **Free-form `Type` + `MetadataJson`** — source modules pick the strings (`chat.mention`, `ticket.assigned`, `billing.invoice.issued`) and the UI uses them to render the right icon and link.
+- **2 permissions** — `Notifications.Inbox.View` and `Notifications.Inbox.MarkRead`, both granted to Basic users by default.
 
 ## Architecture at a glance
 
 ```
 src/Modules/Notifications/
-├── Modules.Notifications/                       ~200 LoC
+├── Modules.Notifications/                       ~800 LoC
 │   ├── NotificationsModule.cs                   IModule — order 750 (BEFORE Chat 800)
 │   ├── Domain/Notification.cs                   AggregateRoot, denormalized inbox row
 │   ├── Data/NotificationsDbContext.cs           Schema: notifications
 │   ├── IntegrationEventHandlers/
-│   │   └── MentionedInChannelIntegrationEventHandler.cs   Chat mention bridge
+│   │   ├── MentionedInChannelIntegrationEventHandler.cs   Chat mention → inbox + push
+│   │   ├── InvoiceIssuedEmailHandler.cs                   Billing → tenant-admin email
+│   │   ├── TenantNearingExpiryEmailHandler.cs             Billing → tenant-admin email
+│   │   ├── TenantEnteredGraceEmailHandler.cs              Billing → tenant-admin email
+│   │   ├── TenantExpiredEmailHandler.cs                   Billing → tenant-admin email
+│   │   └── BillingEmailSender.cs / BillingEmailBodies.cs  Shared email plumbing
 │   └── Features/v1/                             4 endpoints
-└── Modules.Notifications.Contracts/             Commands, queries, DTOs
+└── Modules.Notifications.Contracts/             Commands, queries, DTOs, permissions
 ```
 
-<Callout type="warning" title="Module order matters">
-Notifications loads at order `750`, Chat at `800`. The order ensures Notifications' integration-event handlers are registered before Chat starts publishing events. Get this wrong and the first `MentionedInChannelIntegrationEvent` finds no handler and silently disappears.
+<Callout type="note" title="Module order">
+Notifications loads at order `750`, before Chat at `800` — consumers ahead of producers. Handler *discovery* doesn't actually depend on this (integration-event handlers are assembly-scanned into DI at startup and resolved at publish time), but keeping the consumer at a lower order keeps the dependency direction obvious and DI/middleware registration deterministic.
 </Callout>
 
 ## The handler bridge
@@ -53,96 +60,105 @@ The whole module is essentially a fan-out from integration events to inbox rows 
 // src/Modules/Notifications/Modules.Notifications/IntegrationEventHandlers/MentionedInChannelIntegrationEventHandler.cs
 
 public sealed class MentionedInChannelIntegrationEventHandler(
-    INotificationsDbContext db,
+    NotificationsDbContext db,
     IHubContext<AppHub> hub,
-    IUserService users)
+    IMultiTenantContextAccessor<AppTenantInfo> tenantAccessor,
+    ILogger<MentionedInChannelIntegrationEventHandler> logger)
     : IIntegrationEventHandler<MentionedInChannelIntegrationEvent>
 {
-    public async ValueTask HandleAsync(MentionedInChannelIntegrationEvent evt, CancellationToken ct)
+    public async Task HandleAsync(MentionedInChannelIntegrationEvent @event, CancellationToken ct = default)
     {
+        // Fail loud on a tenant mismatch rather than write to the wrong tenant — the DbContext
+        // captures its tenant at construction.
+        var ambientTenantId = tenantAccessor.MultiTenantContext.TenantInfo?.Id;
+        if (!string.Equals(ambientTenantId, @event.TenantId, StringComparison.Ordinal))
+            throw new InvalidOperationException("Tenant context mismatch ...");
+
         var notification = Notification.Create(
-            userId: evt.MentionedUserId,
+            userId: @event.MentionedUserId,
             type: "chat.mention",
-            title: $"@{evt.AuthorUsername} mentioned you",
-            body: evt.MessagePreview,
-            link: $"/chat/{evt.ChannelId}?message={evt.MessageId}",
-            source: "Modules.Chat",
-            metadataJson: JsonSerializer.Serialize(new { evt.ChannelId, evt.MessageId, evt.AuthorUserId }));
+            title: string.IsNullOrEmpty(@event.ChannelName)
+                ? "You were mentioned in a conversation"
+                : $"You were mentioned in #{@event.ChannelName}",
+            body: @event.BodyPreview,
+            link: $"/chat/{@event.ChannelId}?messageId={@event.MessageId}",
+            source: @event.Source,
+            metadata: new { channelId = @event.ChannelId, messageId = @event.MessageId, /* … */ });
 
         db.Notifications.Add(notification);
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
 
-        await hub.Clients.Group($"user:{evt.MentionedUserId}").SendAsync(
-            "NotificationCreated",
-            NotificationDto.From(notification),
-            ct).ConfigureAwait(false);
+        await hub.Clients.Group($"user:{@event.MentionedUserId}")
+            .SendAsync("NotificationCreated", new { id = notification.Id, /* dto fields */ }, ct)
+            .ConfigureAwait(false);
     }
 }
 ```
 
-The handler runs **synchronously** in the originating SendMessage request scope. If the write or push fails, the SendMessage call fails. That's deliberate — fail-fast over silent loss of notifications. If you need it to be optional later, wrap with a try-catch and log.
+The handler runs **synchronously** in the originating SendMessage request scope (in-memory bus, synchronous dispatch). If the write or push fails, the SendMessage call fails. That's deliberate — fail-fast over silent loss of notifications. If you need it to be optional later, wrap with a try-catch and log. The tenant-mismatch guard exists because the DbContext captures its tenant at construction — a publisher that didn't establish the Finbuckle tenant context would otherwise leak rows cross-tenant silently.
 
 ## The row type
 
 ```csharp
 // src/Modules/Notifications/Modules.Notifications/Domain/Notification.cs
 
-public sealed class Notification : AggregateRoot
+public sealed class Notification : AggregateRoot<Guid>
 {
-    public Guid UserId { get; private set; }
+    public string UserId { get; private set; } = default!;
     public string Type { get; private set; } = default!;        // e.g. "chat.mention"
     public string Title { get; private set; } = default!;
     public string? Body { get; private set; }
-    public string Link { get; private set; } = default!;
-    public string Source { get; private set; } = default!;      // e.g. "Modules.Chat"
-    public string? MetadataJson { get; private set; }           // opaque, source-defined shape
-    public DateTime CreatedAtUtc { get; private set; }
+    public string? Link { get; private set; }
+    public string Source { get; private set; } = default!;      // originating module, e.g. "Chat"
+    public string MetadataJson { get; private set; } = "{}";    // opaque, source-defined shape
     public DateTime? ReadAtUtc { get; private set; }            // null = unread
+    public DateTime CreatedAtUtc { get; private set; }
 
     public void MarkRead() => ReadAtUtc ??= DateTime.UtcNow;    // idempotent
 }
 ```
 
-A covering composite index on `(UserId, ReadAtUtc, CreatedAtUtc DESC)` makes both the inbox list and the unread-count query single-pass.
+A composite index on `(UserId, ReadAtUtc, CreatedAtUtc)` covers the inbox list (always `WHERE UserId = ? ORDER BY CreatedAtUtc DESC`, optionally unread-filtered) and the unread-count query. `MetadataJson` is stored as `jsonb`.
 
 ## Public API
 
 | Type | Purpose |
 |---|---|
-| `ListNotificationsQuery(pageNum, pageSize)` | Caller-scoped paginated list, newest first |
+| `ListNotificationsQuery(unreadOnly, page, pageSize)` | Caller-scoped paginated list, newest first |
 | `GetUnreadCountQuery()` | Integer for the bell badge |
 | `MarkNotificationReadCommand(notificationId)` | Idempotent; 404 on cross-user access |
-| `MarkAllNotificationsReadCommand()` | Bulk caller-scoped via `ExecuteUpdateAsync` |
+| `MarkAllNotificationsReadCommand()` | Bulk caller-scoped via `ExecuteUpdateAsync`; returns rows updated |
 
 ## Endpoints
 
-| Verb | Route | What it does |
-|---|---|---|
-| GET | `/api/v1/notifications` | Paginated inbox |
-| GET | `/api/v1/notifications/unread-count` | Unread count for the badge |
-| POST | `/api/v1/notifications/{id}/read` | Mark single notification read |
-| POST | `/api/v1/notifications/read-all` | Mark every unread notification read |
+| Verb | Route | Permission | What it does |
+|---|---|---|---|
+| GET | `/api/v1/notifications` | `Inbox.View` | Paginated inbox (`?unreadOnly=true` to filter) |
+| GET | `/api/v1/notifications/unread-count` | `Inbox.View` | Unread count for the badge |
+| POST | `/api/v1/notifications/{id}/read` | `Inbox.MarkRead` | Mark single notification read |
+| POST | `/api/v1/notifications/read-all` | `Inbox.MarkRead` | Mark every unread notification read |
+
+## The billing email bridge
+
+Not every notification is an inbox row. The same module also hosts the **email** side of tenant lifecycle notifications: four handlers subscribe to the Billing module's integration events (`InvoiceIssuedIntegrationEvent`, `TenantNearingExpiryIntegrationEvent`, `TenantEnteredGraceIntegrationEvent`, `TenantExpiredIntegrationEvent`), resolve the tenant admin's address from the tenant store, and send templated emails through the Mailing building block's `IMailService`. Subjects and bodies live in `BillingEmailBodies.cs`; `BillingEmailSender.cs` wraps send + logging so a mail failure never breaks the originating billing operation. Same bridge pattern, different sink — keep both flavours here so source modules never know how a notification is delivered.
 
 ## How to extend
 
 ### Add a new notification type from another module
 
-1. Define an integration event in your module's `*.Contracts` assembly:
+1. Define an integration event in your module's `*.Contracts` assembly. `IIntegrationEvent` is a flat contract — carry the envelope fields as record parameters:
 
 ```csharp
-// Modules.Tickets.Contracts/IntegrationEvents/TicketAssignedIntegrationEvent.cs
+// Modules.Tickets.Contracts/Events/TicketAssignedIntegrationEvent.cs
 public sealed record TicketAssignedIntegrationEvent(
+    Guid Id,
+    DateTime OccurredOnUtc,
+    string? TenantId,
+    string CorrelationId,
+    string Source,
     Guid TicketId,
-    long TicketNumber,
-    Guid AssigneeUserId,
-    string AssignerUsername) : IIntegrationEvent
-{
-    public Guid Id => Guid.NewGuid();
-    public DateTime OccurredOnUtc => DateTime.UtcNow;
-    public Guid? TenantId => /* current tenant */;
-    public Guid? CorrelationId => null;
-    public string Source => "Modules.Tickets";
-}
+    string TicketNumber,
+    string AssigneeUserId) : IIntegrationEvent;
 ```
 
 2. Publish it from the tickets module's `AssignTicketCommandHandler` via `IEventBus.PublishAsync`.
@@ -153,15 +169,16 @@ public sealed record TicketAssignedIntegrationEvent(
 public sealed class TicketAssignedNotificationHandler(/* deps */)
     : IIntegrationEventHandler<TicketAssignedIntegrationEvent>
 {
-    public async ValueTask HandleAsync(TicketAssignedIntegrationEvent evt, CancellationToken ct)
+    public async Task HandleAsync(TicketAssignedIntegrationEvent evt, CancellationToken ct = default)
     {
         var notification = Notification.Create(
             userId: evt.AssigneeUserId,
             type: "ticket.assigned",
-            title: $"Ticket #{evt.TicketNumber} assigned to you",
+            title: $"Ticket {evt.TicketNumber} assigned to you",
+            body: null,
             link: $"/tickets/{evt.TicketId}",
-            source: "Modules.Tickets",
-            metadataJson: JsonSerializer.Serialize(new { evt.TicketId, evt.TicketNumber }));
+            source: evt.Source,
+            metadata: new { evt.TicketId, evt.TicketNumber });
         // ... write + push as in the mention handler
     }
 }
@@ -187,7 +204,8 @@ Add a `NotificationPreference` aggregate (per-user mute list of `Type` strings) 
 
 ## Tests
 
-The module has no dedicated tests — its handlers are exercised by Chat's integration tests (`src/Tests/Integration.Tests/Tests/Chat/`) which assert that a mention produces an inbox row and a SignalR push.
+- `src/Tests/Integration.Tests/Tests/Notifications/NotificationsEndpointTests.cs` — the four endpoints (list, unread count, mark-read, read-all).
+- Chat's `MentionAndNotificationTests.cs` (`src/Tests/Integration.Tests/Tests/Chat/`) asserts the full bridge: a mention produces an inbox row and a SignalR push.
 
 ## Related
 

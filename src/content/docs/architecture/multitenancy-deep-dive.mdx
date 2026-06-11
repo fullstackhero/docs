@@ -1,6 +1,6 @@
 ---
 title: Multitenancy deep dive
-lastUpdated: 2026-05-19
+lastUpdated: 2026-06-11
 description: How tenancy is the default in every layer — Finbuckle strategies, EF Core global query filter, IGlobalEntity opt-out, named filters, cross-tenant query discipline.
 sidebar:
   label: Multitenancy deep-dive
@@ -22,9 +22,9 @@ Tenancy is enforced at three layers, each protecting the next:
 
 | Layer | Where | What enforces it |
 |---|---|---|
-| HTTP request | `BuildingBlocks/Web` | Finbuckle resolves the tenant from the JWT claim, `tenant` header, or `?tenant=` query; `MultiTenantMiddleware` sets the context. |
-| Data access | `BuildingBlocks/Persistence` | `BaseDbContext` applies an EF Core global query filter to every `IHasTenant` entity. |
-| Background work | `BuildingBlocks/Jobs` | `FshJobFilter` captures the tenant at enqueue and restores it before the job runs. |
+| HTTP request | Multitenancy module (`UseHeroMultiTenantDatabases()` in `Program.cs`) | Finbuckle's `UseMultiTenant()` resolves the tenant from the `tenant` header or `?tenant=` query and sets the context — first thing in the pipeline. |
+| Data access | `BuildingBlocks/Persistence` | `BaseDbContext` applies Finbuckle's tenant query filter to every entity that doesn't opt out. |
+| Background work | `BuildingBlocks/Jobs` | `FshJobFilter` captures the tenant at enqueue; `FshJobActivator` restores it before the job runs. |
 
 You don't write `WHERE tenant_id = @tenantId` in your queries. The filter is on every entity, every time, unless you explicitly bypass it.
 
@@ -35,11 +35,11 @@ Finbuckle.MultiTenant 10 resolves the tenant on every request. The kit configure
 ```csharp
 // MultitenancyModule.ConfigureServices (simplified)
 builder.Services.AddMultiTenant<AppTenantInfo>()
-    .WithClaimStrategy("tenant")                  // 1. claim
-    .WithHeaderStrategy("tenant")                 // 2. header — the real primary in normal flow
-    .WithDelegateStrategy(ResolveFromQuery)       // 3. ?tenant= fallback
-    .WithDistributedCacheStore(TimeSpan.FromHours(1))
-    .WithEFCoreStore<TenantDbContext, AppTenantInfo>();
+    .WithClaimStrategy(ClaimConstants.Tenant)         // 1. claim — no-op pre-auth (see below)
+    .WithHeaderStrategy(MultitenancyConstants.Identifier)  // 2. "tenant" header — the primary resolver
+    .WithDelegateStrategy(/* ?tenant= query fallback */)   // 3. query string
+    .WithDistributedCacheStore(TimeSpan.FromMinutes(60))
+    .WithStore<EFCoreStore<TenantDbContext, AppTenantInfo>>(ServiceLifetime.Scoped);
 ```
 
 <Callout type="warning" title="ClaimStrategy is pre-auth">
@@ -52,22 +52,27 @@ The kit caches resolved tenants in `DistributedCacheStore` for 60 minutes (Valke
 
 A SuperAdmin (whose JWT carries `tenant=root`) can scope a single request to another tenant. This is needed for cross-tenant admin operations like searching users in tenant X before starting impersonation.
 
-The kit implements this as **post-auth middleware**, not as a Finbuckle strategy — because the strategy chain runs before auth, it can't tell whether the caller is actually the root user. The middleware lives in `MultitenancyModule.ConfigureMiddleware`; it runs after `UseAuthentication`, checks `User.IsInRoot()`, reads the `tenant` header, looks up the target, and replaces the `TenantContext` on the `HttpContext`.
+The kit implements this as **post-auth middleware**, not as a Finbuckle strategy — because the strategy chain runs before auth, it can't tell whether the caller is actually the root user. The middleware lives in `MultitenancyModule.ConfigureMiddleware` (which `UseModuleMiddlewares` runs right after `UseAuthentication`): it checks the caller's `tenant` claim is `root`, reads the `tenant` header, looks the target up in the store, and swaps the resolved context via `IMultiTenantContextSetter`.
+
+The same `ConfigureMiddleware` also hosts the **deactivated/expired-tenant guard**: every request from a non-root tenant is rejected if the tenant is inactive or past `ValidUpto` plus the configured grace window — enforced per request, not just at login.
 
 ## Layer 2 — Data access
 
 `BaseDbContext` (in `BuildingBlocks/Persistence`) is the EF Core base every module's `DbContext` inherits. Its `OnModelCreating` does two things:
 
 ```csharp
+// BuildingBlocks/Persistence/Context/BaseDbContext.cs
 protected override void OnModelCreating(ModelBuilder modelBuilder)
 {
+    ArgumentNullException.ThrowIfNull(modelBuilder);
+    modelBuilder.AppendGlobalQueryFilter<ISoftDeletable>(QueryFilters.SoftDelete, s => !s.IsDeleted);
     base.OnModelCreating(modelBuilder);
-    modelBuilder.ApplyTenantIsolationByDefault();          // mark IHasTenant entities IsMultiTenant()
-    modelBuilder.AppendGlobalQueryFilter<ISoftDeletable>(e => !((ISoftDeletable)e).IsDeleted);
+    // Default-on tenant isolation: entities not marked IGlobalEntity get IsMultiTenant().
+    modelBuilder.ApplyTenantIsolationByDefault();
 }
 ```
 
-`ApplyTenantIsolationByDefault()` walks every entity that doesn't implement `IGlobalEntity` and calls `entityBuilder.IsMultiTenant()` on it — which is Finbuckle's hook to install the tenant filter. The result: a query like `await db.Products.ToListAsync(ct)` automatically becomes `WHERE tenant_id = @currentTenantId`.
+`ApplyTenantIsolationByDefault()` walks every entity that doesn't implement `IGlobalEntity` and calls `IsMultiTenant().AdjustUniqueIndexes()` on it — Finbuckle's hook to install the tenant filter (and widen unique indexes to include the tenant column). The result: a query like `await db.Products.ToListAsync(ct)` automatically becomes `WHERE tenant_id = @currentTenantId`.
 
 <Callout type="warning" title="A subclass DbContext must call base.OnModelCreating LAST">
 The filters are applied inside `BaseDbContext.OnModelCreating`. A module
@@ -91,44 +96,52 @@ common way to accidentally break isolation in a new module.
 
 If you mark an entity `IGlobalEntity`, the global tenant filter is **not** applied. Queries against the table return rows for every tenant; access control becomes the handler's responsibility.
 
-**`IgnoreNamedQueryFilter("SoftDelete")`** — the kit registers SoftDelete as a *named* filter, so individual queries can bypass it without bypassing the tenant filter:
+**`IgnoreQueryFilters([QueryFilters.SoftDelete])`** — the kit registers SoftDelete as a *named* filter (the tenant filter stays anonymous, Finbuckle-owned), so individual queries can drop just the soft-delete filter without touching the tenant filter:
 
 ```csharp
 var trashed = await db.Products
-    .IgnoreNamedQueryFilter("SoftDelete")
+    .IgnoreQueryFilters([QueryFilters.SoftDelete])
     .Where(p => p.IsDeleted)
     .ToListAsync(ct).ConfigureAwait(false);
 ```
 
-This is the pattern for "list trashed items" queries. The tenant filter still applies; the soft-delete filter doesn't.
+This is the pattern for "list trashed items" queries (see `ListTrashedProductsQueryHandler` and friends). The tenant filter still applies; the soft-delete filter doesn't.
 
 ### Cross-tenant queries (rare, but real)
 
-Auditing needs to query across tenants. Tenant-admin reports need cross-tenant aggregations. The pattern:
+Auditing needs to query across tenants — a root operator pulling another tenant's audit trail. The real code, from the Auditing module's `GetAuditsQueryHandler`:
 
 ```csharp
-// Auditing module's GetAuditsQueryHandler
-var audits = await db.AuditRecords
-    .IgnoreQueryFilters()                         // turn off ALL filters
-    .Where(a => allowedTenantIds.Contains(a.TenantId.Value))
-    .Where(a => !a.IsDeleted)                     // re-apply soft delete manually
-    .ToListAsync(ct).ConfigureAwait(false);
+// Cross-tenant access requires an explicit permission check first…
+var allowed = await _permissions
+    .HasPermissionAsync(userId, AuditingPermissions.AuditTrails.ViewCrossTenant, ct)
+    .ConfigureAwait(false);
+if (!allowed)
+{
+    throw new ForbiddenException("Cross-tenant audit access requires Permissions.AuditTrails.ViewCrossTenant.");
+}
+
+// …then bypass the filter and IMMEDIATELY re-scope to the requested tenant.
+return _dbContext.AuditRecords
+    .AsNoTracking()
+    .IgnoreQueryFilters()
+    .Where(a => a.TenantId == requested);
 ```
 
-The pattern: use `IgnoreQueryFilters()` deliberately, then **re-filter explicitly** to whatever scope the caller is allowed to see. Don't sprinkle this; reserve it for specific admin / audit query handlers and gate them with the strictest permissions.
+The pattern: gate with an explicit permission, use `IgnoreQueryFilters()` deliberately, then **re-filter explicitly** to the exact scope the caller asked for — never return rows for *all* tenants. Don't sprinkle this; reserve it for specific admin / audit query handlers.
 
 ## Layer 3 — Background work
 
-Hangfire jobs run on threads that have no `HttpContext`, so the tenant context that `MultiTenantMiddleware` set on the originating request is gone by the time the job dequeues. `FshJobFilter` (in `BuildingBlocks/Jobs`) handles this:
+Hangfire jobs run on threads that have no `HttpContext`, so the tenant context resolved on the originating request is gone by the time the job dequeues. Two pieces in `BuildingBlocks/Jobs` handle this:
 
-- **At enqueue time** — the filter captures `ICurrentUser.GetTenant()` and stores it as a Hangfire job parameter.
-- **At execute time** — the filter reads the stored parameter and pushes it onto `IMultiTenantContextSetter` before the job body runs. The job sees the same tenant the request did.
+- **At enqueue time** — `FshJobFilter` reads the current tenant (via `IMultiTenantContextAccessor`) and user id, and stores them as Hangfire job parameters.
+- **At execute time** — `FshJobActivator` reads the stored parameters back and pushes the tenant onto `IMultiTenantContextSetter` (and the user onto `ICurrentUserInitializer`) before the job body runs. The job sees the same tenant the request did.
 
-The same pattern works for integration-event handlers under `WebhookFanoutHandler`: the handler explicitly restores `tenants.SetTenant(evt.TenantId.Value)` before querying the subscription table. Forget this and the Finbuckle query filter returns no rows on the background thread.
+The same pattern shows up in integration-event handlers: `WebhookFanoutHandler` installs the event's `TenantId` via `IMultiTenantContextSetter` before querying the subscription table, then restores the previous context in a `finally`. Forget this and the Finbuckle query filter returns no rows on the background thread.
 
 ## Per-tenant connection strings
 
-Each `AppTenantInfo` row carries an optional `ConnectionString`. When set, Finbuckle's `EFCoreStore` overrides the DbContext's connection at runtime. This lets a high-value tenant get its own database without changing application code.
+Each `AppTenantInfo` row carries an optional `ConnectionString`. When set, `BaseDbContext.OnConfiguring` switches the DbContext to that connection at runtime. This lets a high-value tenant get its own database without changing application code.
 
 When not set, all tenants share the kit's main database with row-level isolation via the global query filter. For most teams, row-level isolation is sufficient through the kit's lifecycle and scales further than you'd expect — Postgres handles hundreds of thousands of tenants in one database fine. Reach for per-tenant databases only when you have a compliance requirement (HIPAA, PCI-DSS) or a single tenant whose data volume genuinely needs its own physical store.
 
@@ -144,10 +157,10 @@ await cache.GetOrCreateAsync(
     cancellationToken: ct).ConfigureAwait(false);
 ```
 
-The tag-based eviction lets you invalidate a tenant's entire cache on plan change, suspension, or sign-out:
+The tag-based eviction lets you invalidate a tenant's entire cache on plan change, suspension, or sign-out (`CacheKeys.Tags.Tenant(...)` is the kit's helper for the tag):
 
 ```csharp
-await cache.RemoveByTagAsync($"tenant:{tenantId}", ct).ConfigureAwait(false);
+await cache.RemoveByTagAsync(CacheKeys.Tags.Tenant(tenantId), ct).ConfigureAwait(false);
 ```
 
 L1 (in-memory) cache has no backplane; the kit's `DefaultLocalCacheExpiration` (2 minutes) bounds the cross-node staleness window after a peer's `RemoveByTag`.

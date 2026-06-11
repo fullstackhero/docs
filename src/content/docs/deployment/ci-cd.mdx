@@ -1,6 +1,6 @@
 ---
 title: CI/CD Pipeline
-lastUpdated: 2026-05-27
+lastUpdated: 2026-06-11
 description: The GitHub Actions setup — path-scoped backend and frontend pipelines, a pinned SDK, deduplicated test + coverage, CodeQL, the template smoke guard, and how container images and NuGet packages are published.
 sidebar:
   label: CI/CD
@@ -16,7 +16,7 @@ The kit ships **four** GitHub Actions workflows in `.github/workflows/`:
 
 | Workflow | Purpose |
 |---|---|
-| **`backend.yml`** | Builds, tests, and publishes the .NET backend (API container + NuGet packages). Runs only when backend code changes. |
+| **`backend.yml`** | Builds, tests, and publishes the .NET backend (API + DbMigrator containers, CLI + template NuGet packages). Runs only when backend code changes. |
 | **`frontend.yml`** | Lints, builds, and E2E-tests the two React apps. Runs only when `clients/**` changes. |
 | **`codeql.yml`** | CodeQL security analysis on backend PRs + a weekly scan. |
 | **`template-smoke.yml`** | Guards the distribution path: scaffolding from the `dotnet new` template must always build. |
@@ -41,9 +41,9 @@ Triggers on pushes to `main`, `v*` tags, and PRs to `main`, plus manual `workflo
 | **Integration Tests** | Detect changes | backend changed | `Integration.Tests` + `Integration.Middleware.Tests` via `WebApplicationFactory` + Testcontainers (Docker on the runner), **with coverage collection**. Uploads its coverage as an artifact. |
 | **DbMigrator Container Smoke** | Detect changes | backend changed | Publishes the `fsh-db-migrator` image (Dockerfile-less SDK publish) and runs `apply --catalog-only` against an ephemeral Postgres 17 — asserts it finishes successfully. Catches container-publish and DI-graph regressions. |
 | **Coverage Gate** | Unit + Integration | backend changed | **Merges** the coverage artifacts from the two test jobs with ReportGenerator and **fails if line coverage drops below 80%**. It does *not* re-run the tests — a ratchet; raise `MIN_LINE` as coverage grows. |
-| **Publish Dev Containers** | Unit + Integration | push to `main` | Publishes the API image to GHCR tagged `dev-<sha>` and `dev-latest`. |
-| **Publish Release** | Unit + Integration | `v*` tag, or `workflow_dispatch` on `main` | Packs NuGet packages + the template, pushes to NuGet.org, and publishes the API image to GHCR tagged `<version>` and `latest`. |
-| **Backend CI** | all of the above | always | The single required status check. Always runs (even when the heavy jobs are skipped on a client-only PR) and fails only if a job it depends on actually **failed or was cancelled** — skipped is fine. |
+| **Publish Dev Containers** | Unit + Integration | push to `main` | Publishes the API **and** DbMigrator images to GHCR tagged `dev-<sha>` and `dev-latest`. |
+| **Publish Release** | Unit + Integration | `v*` tag, or `workflow_dispatch` on `main` | Packs the `fsh` CLI + the `dotnet new` template, pushes both to NuGet.org, and publishes the API + DbMigrator images to GHCR tagged `<version>` and `latest`. |
+| **Backend CI** | the test, smoke, and coverage jobs | always | The single required status check. Always runs (even when the heavy jobs are skipped on a client-only PR) and fails only if a job it depends on actually **failed or was cancelled** — skipped is fine. Publish jobs are deliberately not gated on. |
 
 <Callout type="note" title="Why unit and integration coverage are merged, not re-run">
 Each test job collects coverage as it runs, and the **Coverage Gate** downloads both artifacts and merges them. Earlier the gate re-ran the whole solution on top of the dedicated test jobs, so every push tested the code twice. Merging keeps the same 80% floor while running each test exactly once.
@@ -61,7 +61,7 @@ Because the pipelines are path-scoped, a client-only PR never starts the backend
 
 ### Releasing
 
-A release publishes both **NuGet packages** (the BuildingBlocks, selected module Contracts, the `fsh` CLI, and the `dotnet new` template) and the **API container image**. Two ways to trigger it:
+A release publishes exactly two **NuGet packages** — the `fsh` CLI tool and the `dotnet new` template — plus the **API and DbMigrator container images**. The distribution model is source-ownership: consumers get the full source via the template, not per-module/BuildingBlocks packages. Two ways to trigger it:
 
 ```bash
 # Tag-driven (recommended): the tag name is the version

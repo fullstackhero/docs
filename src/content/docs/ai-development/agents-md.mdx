@@ -1,7 +1,7 @@
 ---
 title: AGENTS.md & the .agents Folder
 description: The canonical AGENTS.md guide, the CLAUDE.md/GEMINI.md bridges, the .agents folder structure, and the on-demand rule files that encode every convention.
-lastUpdated: 2026-05-24
+lastUpdated: 2026-06-11
 sidebar:
   label: AGENTS.md & .agents/
   order: 1
@@ -44,6 +44,7 @@ AGENTS.md                     ← canonical guide (CLAUDE.md / GEMINI.md import 
 │   ├── caching.md  jobs.md  resilience.md  storage.md
 │   ├── security.md              CORS, security headers, rate limiting, idempotency, quotas
 │   ├── realtime.md  logging.md  testing.md  integration-testing.md
+│   ├── buildingblocks-protection.md   read before touching src/BuildingBlocks (it's protected)
 │   ├── modules/                 one file per module (identity, multitenancy, chat, files,
 │   │                            webhooks, auditing, billing, catalog, tickets, notifications)
 │   └── frontend/                shared.md · admin.md · dashboard.md (the two React apps)
@@ -70,6 +71,7 @@ migration work, read `database.md`."*
 | CORS, security headers, rate limiting, idempotency, quotas | `security.md` |
 | SignalR / SSE · logging & OpenTelemetry | `realtime.md` · `logging.md` |
 | Unit tests · integration tests (Testcontainers) | `testing.md` · `integration-testing.md` |
+| Modifying `src/BuildingBlocks` (protected — read first) | `buildingblocks-protection.md` |
 | A specific module's quirks | `modules/{module}.md` |
 | Any React work · the operator app · the tenant app | `frontend/shared.md` · `frontend/admin.md` · `frontend/dashboard.md` |
 

@@ -1,6 +1,6 @@
 ---
 title: fullstackhero vs ABP Framework
-lastUpdated: 2026-05-19
+lastUpdated: 2026-06-11
 description: A fair comparison of fullstackhero and ABP Framework for building production .NET 10 applications. License, architecture, learning curve, and when to pick which.
 sidebar:
   label: vs ABP Framework
@@ -28,8 +28,8 @@ ABP Framework and fullstackhero both target the same problem — getting a produ
 | DI | Standard `Microsoft.Extensions.DependencyInjection` | Custom `IServiceCollection` extensions and module-level conventions |
 | Mediator | Mediator 3.0.2 source generator (no runtime reflection) | ABP's own service registration + dynamic proxying |
 | Validation | FluentValidation 12.1 | DataAnnotations + ABP's `IValidatableObject` extensions |
-| Multitenancy | Finbuckle.MultiTenant 10.0.8 — claim / header / query strategies | First-party module: `Volo.Abp.MultiTenancy` |
-| ORM | EF Core 10.0.8 (PostgreSQL 17 default; SQL Server provider available) | EF Core with abstraction layer + LINQ via repository pattern |
+| Multitenancy | Finbuckle.MultiTenant 10.1 — claim / header / query strategies | First-party module: `Volo.Abp.MultiTenancy` |
+| ORM | EF Core 10 (PostgreSQL via Npgsql by default; SQL Server provider available) | EF Core with abstraction layer + LINQ via repository pattern |
 | Background jobs | Hangfire 1.8 | ABP's `IBackgroundJobManager` (multiple providers) |
 | Realtime | SignalR + Server-Sent Events | SignalR via ABP modules |
 | Observability | Serilog 4 + OpenTelemetry 1.15 (OTLP exporter), pre-wired | OpenTelemetry support; configuration via ABP modules |

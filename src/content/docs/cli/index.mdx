@@ -1,7 +1,7 @@
 ---
 title: Overview
-lastUpdated: 2026-05-28
-description: The fsh CLI — scaffold projects, check your environment, and stay current. (Coming soon.)
+lastUpdated: 2026-06-11
+description: The fsh CLI — scaffold projects, check your environment, and stay current.
 sidebar:
   order: 1
 pageType: reference
@@ -9,12 +9,66 @@ seo:
   title: 'fsh CLI — scaffold and manage fullstackhero projects'
 ---
 
-A NuGet-distributed dotnet tool for scaffolding fullstackhero projects and verifying your environment.
+A NuGet-distributed dotnet tool ([Spectre.Console](https://spectreconsole.net/), source at `src/Tools/CLI`) for scaffolding fullstackhero projects and verifying your environment. Four commands: `new`, `doctor`, `info`, `update`.
 
-<Callout type="warning" title="Coming soon">
-The `fsh` CLI (`FullStackHero.CLI`) isn't published to NuGet yet — it's on the
-way and lands soon. The commands documented here describe how it will work once
-it ships. For now, [clone the repo](/docs/getting-started/install/) to run the kit.
+<Callout type="warning" title="Prerelease — scaffolding isn't end-to-end yet">
+`FullStackHero.CLI` is on NuGet as a **`10.0.0-rc` prerelease**:
+
+```bash
+dotnet tool install -g FullStackHero.CLI --prerelease
+```
+
+`fsh new` scaffolds from the `FullStackHero.NET.StarterKit` template package,
+whose 10.x version isn't published yet — so it can't produce the current kit
+today. Until the stable release, [clone the repo](/docs/getting-started/install/)
+to get the kit. You can also run the CLI straight from a clone:
+
+```bash
+dotnet run --project src/Tools/CLI -- doctor
+```
 </Callout>
+
+## fsh new
+
+Scaffolds a fresh, fully renamed project from the latest template. Run bare for the interactive wizard (project name, include Aspire?, include the React apps?), or pass everything as flags.
+
+```bash
+fsh new MyApp
+fsh new MyApp --no-aspire --no-frontend
+fsh new MyApp --non-interactive -o ./somewhere-else
+```
+
+| Flag | What it does |
+|---|---|
+| `[name]` | Project name — used for the solution, namespaces, and folders |
+| `-o, --output` | Output directory (defaults to `./<name>`) |
+| `--no-aspire` | Exclude the .NET Aspire AppHost project |
+| `--no-frontend` | Exclude the React admin + dashboard apps |
+| `--skip-install` | Skip `npm install` for the React apps after scaffolding |
+| `--non-interactive` | Skip prompts and use defaults (name becomes required) |
+| `--git` | Initialize a git repository (on by default) |
+| `--dry-run` | Show what would be created without creating anything |
+
+Beyond renaming, `new` does the setup you'd otherwise do by hand: installs the template if it's missing, replaces the shared dev JWT signing key with a unique per-project one, generates `deploy/docker/.env` with strong random secrets so `docker compose up` works immediately, runs `npm install` in both React apps, and makes the initial commit on a `main` branch.
+
+## fsh doctor
+
+Checks your environment and prints a pass/warn/fail table:
+
+- **.NET SDK** — present and version 10+
+- **Git** — installed
+- **Docker** — installed *and* running
+- **FSH template** — installed (warns with the install command if not)
+- **Ports** — `5030`, `7030` (API) and `15888` (Aspire dashboard) free
+
+Exits non-zero if a required tool is missing, so it's scriptable.
+
+## fsh info
+
+Shows the CLI version, the latest version on NuGet (and whether an update is available), the installed and latest template versions, your .NET SDK version, and links to the docs and release notes.
+
+## fsh update
+
+Updates both halves in one go: `dotnet tool update -g FullStackHero.CLI` for the CLI, then reinstalls the latest `FullStackHero.NET.StarterKit` template.
 
 <SectionIndex section="cli" />

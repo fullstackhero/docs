@@ -1,133 +1,128 @@
 ---
 title: Observability
-lastUpdated: 2026-05-19
-description: Serilog 4 structured logging + OpenTelemetry 1.15 traces, metrics, and logs over OTLP — with Mediator and EF Core instrumentation.
+lastUpdated: 2026-06-11
+description: Serilog structured logging + OpenTelemetry traces and metrics over OTLP — with Mediator, EF Core, Npgsql, Redis, and Hangfire instrumentation.
 sidebar:
   label: Observability
   order: 3
 pageType: concept
 seo:
   title: 'Observability in .NET 10 — Serilog + OpenTelemetry + OTLP'
-  description: 'How fullstackhero wires Serilog 4 structured logging with HTTP-context enrichers, OpenTelemetry 1.15 traces (incl. Mediator pipeline) + metrics + logs via…'
+  description: 'How fullstackhero wires Serilog structured logging with HTTP-context enrichers, OpenTelemetry traces (incl. Mediator pipeline) + metrics + logs via…'
   keywords: 'opentelemetry .net 10, serilog asp.net core, otlp exporter dotnet, mediator tracing, honeycomb datadog grafana .net'
 ---
 
-Observability is on by default in fullstackhero. Every HTTP request is traced; every Mediator command is traced; every EF Core query is traced; every Hangfire job is traced. Structured logs flow through Serilog with HTTP-context enrichers, and metrics + logs cross the OTLP exporter to whatever collector you point it at (Aspire dashboard locally, Honeycomb / Datadog / Grafana Cloud / Tempo / Loki / etc. in prod).
+Observability is on by default in fullstackhero (`EnableOpenTelemetry = true` in `FshPlatformOptions`). Every HTTP request is traced; every Mediator command is traced; every EF Core / Npgsql query is traced; every Hangfire job is traced. Structured logs flow through Serilog with an HTTP-context enricher, and traces + metrics + logs cross the OTLP exporter to whatever collector you point it at (Aspire dashboard locally; Honeycomb / Datadog / Grafana / Tempo / Loki in prod).
 
 <Callout type="tip" title="You won't write tracing code">
-Adding a Mediator pipeline behavior (`MediatorTracingBehavior`) means every `mediator.Send(new MyCommand(...))` opens an `Activity` automatically. Same for HTTP, EF, and Hangfire — handled by the standard ASP.NET Core OTel instrumentation. The kit's job is wiring; you focus on what to log explicitly.
+A Mediator pipeline behavior (`MediatorTracingBehavior`) means every `mediator.Send(new MyCommand(...))` opens an `Activity` automatically. Same for HTTP, EF, and Hangfire — handled by the standard instrumentation packages plus two kit-specific hooks. The kit's job is wiring; you focus on what to log explicitly.
 </Callout>
 
 ## What gets observed without you doing anything
 
 | Source | Instrumentation | Telemetry |
 |---|---|---|
-| ASP.NET Core | `OpenTelemetry.Instrumentation.AspNetCore` | Request traces, server metrics |
-| HttpClient | `OpenTelemetry.Instrumentation.Http` | Outbound HTTP traces |
-| EF Core | `OpenTelemetry.Instrumentation.EntityFrameworkCore` | Query traces with SQL |
-| Valkey | `OpenTelemetry.Instrumentation.StackExchangeRedis` | Cache call traces |
-| Postgres | `Npgsql.OpenTelemetry` | Driver-level traces |
-| .NET runtime | `OpenTelemetry.Instrumentation.Runtime` | GC, threadpool, exception metrics |
-| Mediator | `MediatorTracingBehavior` (kit-specific) | Command/query traces |
-| Hangfire | `HangfireTelemetryFilter` (kit-specific) | Per-job traces with `job.name`, `job.queue`, `job.id` |
-| HybridCache | `ObservableHybridCache` decorator | Hit/miss counts, duration, payload bytes |
+| ASP.NET Core | `AddAspNetCoreInstrumentation` | Request traces (health paths filtered out) + server metrics |
+| HttpClient | `AddHttpClientInstrumentation` | Outbound HTTP traces + metrics |
+| EF Core | `AddEntityFrameworkCoreInstrumentation` | Query traces |
+| Postgres | `AddNpgsql` / `AddNpgsqlInstrumentation` | Driver-level traces + metrics |
+| Valkey | `AddRedisInstrumentation` | Cache call traces (command text suppressed when `Data:FilterRedisCommands` is on) |
+| .NET runtime | `AddRuntimeInstrumentation` | GC, threadpool, exception metrics |
+| Mediator | `MediatorTracingBehavior` (kit-specific) | A span per command/query with `mediator.request_type`, error status + `exception.type`/`exception.message` on failure |
+| Hangfire | `HangfireTelemetryFilter` (kit-specific, source `FSH.Hangfire`) | A span per job execution with `hangfire.job_id`, `hangfire.job_type`, `hangfire.job_method` |
+| HybridCache | `ObservableHybridCache` decorator (source/meter `FSH.Caching`) | Spans per cache op + hit/miss/invalidation counters, factory duration |
 
-All under one `ActivitySource` graph, exported to OTLP.
+Requests to `/health*` and `/alive` are excluded from request tracing so probes don't drown your trace store.
 
 ## Logging — Serilog with enrichers
 
-`AddHeroLogging` configures Serilog with these enrichers on every log entry:
+`AddHeroLogging` configures Serilog (reading the `Serilog` section of appsettings) and adds the kit's `HttpRequestContextEnricher`, which stamps every log event written during a request with:
 
-- `RequestId` — ASP.NET Core's per-request id
-- `TraceId` — the OTel trace id (links logs to traces)
-- `SpanId` — the current span id
-- `UserId` — current authenticated user (when available)
-- `TenantId` — resolved tenant for the current request
-- `CorrelationId` — for cross-request workflows
+- `RequestMethod`, `RequestPath`, `UserAgent`
+- `UserId`, `Tenant`, `UserEmail` — when the request is authenticated
+
+The shipped `Serilog` config adds `FromLogContext`, `WithMachineName`, `WithThreadId`, `WithCorrelationId`, `WithProcessId`, and `WithProcessName` enrichers, writes to the console, and quiets the chatty framework categories (`Microsoft`, `Hangfire`, `Finbuckle`, EF Core) to warning-or-worse.
 
 ```csharp
 _logger.LogInformation("Created product {Sku} for tenant {TenantId}", product.Sku, tenantId);
 ```
 
-Outputs to console + file by default. Add OTLP sink for Loki / Grafana Cloud / Honeycomb log ingestion:
+Structured logging only — message templates or `[LoggerMessage]` source generators, never string interpolation (the build treats analyzer warnings as errors).
 
-```jsonc
-{
-  "Serilog": {
-    "WriteTo": [
-      { "Name": "Console" },
-      { "Name": "File", "Args": { "path": "logs/.log", "rollingInterval": "Day" } },
-      { "Name": "OpenTelemetry", "Args": { "endpoint": "https://api.honeycomb.io/v1/logs" } }
-    ]
-  }
-}
-```
+**Log export over OTLP is automatic.** Serilog owns the logging pipeline, so the kit exports logs from *inside* Serilog via the OpenTelemetry sink — added automatically when either the `OTEL_EXPORTER_OTLP_ENDPOINT` env var is present (Aspire injects it) or `OpenTelemetryOptions:Exporter:Otlp:Enabled` is true with an endpoint configured. The sink reuses the same `service.name` as traces/metrics so the dashboard groups all three signals under one resource.
 
 ## Tracing — what shows up in traces
 
-A typical request trace looks like this:
+A typical request trace:
 
 ```
 HTTP POST /api/v1/catalog/products                      [12ms]
-├─ Mediator.Send<CreateProductCommand>                  [11ms]
-│  ├─ ValidationBehavior                                [<1ms]
-│  ├─ CreateProductCommandHandler                       [9ms]
-│  │  ├─ EF: SELECT * FROM Brands WHERE Id = @brandId   [2ms]
-│  │  ├─ EF: SELECT * FROM Categories WHERE Id = @catId [1ms]
-│  │  └─ EF: INSERT INTO Products...                    [4ms]
-│  └─ MediatorTracingBehavior (parent span)
+├─ Mediator CreateProductCommand                        [11ms]
+│  ├─ EF: SELECT ... FROM "Brands" ...                  [2ms]
+│  ├─ EF: SELECT ... FROM "Categories" ...              [1ms]
+│  └─ EF: INSERT INTO "Products" ...                    [4ms]
 └─ HTTP response 201 Created
 ```
 
-Every step is a span with start time, duration, and structured attributes. Trace context propagates to outbound HTTP calls (Webhooks deliveries, third-party APIs) so a single trace id follows the request across processes.
+Every step is a span with start time, duration, and structured attributes. Trace context propagates to outbound HTTP calls (webhook deliveries, third-party APIs) so a single trace id follows the request across processes. By default `Data:FilterEfStatements` / `Data:FilterRedisCommands` suppress raw statement text to keep PII and noise out of spans.
 
 ## Metrics — what's measured
 
-- **Runtime metrics** — GC counts, threadpool size, exception count, allocation rate (`OpenTelemetry.Instrumentation.Runtime`).
-- **HTTP server metrics** — request duration (histogram), in-flight requests (counter), responses by status code.
-- **Cache metrics** — `cache.hits`, `cache.misses`, `cache.duration` (histogram, ms), `cache.payload.bytes` (histogram) — emitted by `ObservableHybridCache`.
-- **Hangfire metrics** — jobs enqueued, jobs succeeded, jobs failed (per queue).
-- **Custom metrics** — register `Meter` and `Counter<T>` instances anywhere; the kit's OTel registration picks them up automatically.
+- **Runtime metrics** — GC counts, threadpool size, exception count, allocation rate.
+- **HTTP server metrics** — `http.server.duration` histogram with kit-tuned buckets (10 ms → 5 s by default; override via `Http:Histograms:BucketBoundaries`).
+- **Cache metrics** — `fsh.cache.hits`, `fsh.cache.misses`, `fsh.cache.invalidations` (counters) and `fsh.cache.factory.duration` (histogram, ms) from `ObservableHybridCache`.
+- **Module metrics** — the host opts module meters in via `Metrics:MeterNames` (shipped: `FSH.Modules.Identity`, `FSH.Modules.Multitenancy`, `FSH.Modules.Auditing`).
+- **Custom metrics** — create a `Meter` and add its name to `Metrics:MeterNames`; the OTel registration picks it up.
+
+The metric export interval defaults to 10 s (instead of the SDK's 60 s) so dashboards populate quickly after a restart; set `OTEL_METRIC_EXPORT_INTERVAL` to override.
 
 ## Configuration
 
+The section is `OpenTelemetryOptions`:
+
 ```jsonc
 {
-  "OpenTelemetry": {
-    "ServiceName": "fullstackhero",
-    "Endpoint": "http://localhost:4317",       // OTLP gRPC endpoint
-    "Protocol": "Grpc"                          // or "HttpProtobuf"
+  "OpenTelemetryOptions": {
+    "Enabled": true,
+    "Tracing": { "Enabled": true },
+    "Metrics": {
+      "Enabled": true,
+      "MeterNames": [ "FSH.Modules.Identity", "FSH.Modules.Multitenancy", "FSH.Modules.Auditing" ]
+    },
+    "Exporter": {
+      "Otlp": {
+        "Enabled": false,                    // dev default — Aspire injects its own endpoint via env vars
+        "Endpoint": "http://localhost:4317",
+        "Protocol": "grpc"                   // or "http/protobuf"
+      }
+    },
+    "Jobs": { "Enabled": true },             // Hangfire spans
+    "Mediator": { "Enabled": true },         // MediatorTracingBehavior
+    "Http": { "Histograms": { "Enabled": true } },
+    "Data": {
+      "FilterEfStatements": true,            // keep SQL text out of spans
+      "FilterRedisCommands": true            // keep Redis command text out of spans
+    }
   }
 }
 ```
 
-For Aspire local dev, the AppHost wires the dashboard's OTLP endpoint automatically and traces show up live. For prod, point `Endpoint` at your observability backend's OTLP receiver.
+Two things are deliberately **not** config keys:
 
-Disable specific instrumentations by removing them from `AddHeroOpenTelemetry` — but the defaults are tuned for cost / signal balance.
-
-## Querying observability data
-
-Three queries every team learns:
-
-1. **Trace by user** — filter by `user.id = "..."` to see every request a single user made.
-2. **Trace by tenant** — filter by `tenant.id = "..."` to see one tenant's load profile.
-3. **Slowest queries** — filter by `db.statement EXISTS` and order by duration desc.
-
-The kit's enrichers attach `user.id`, `tenant.id`, and `correlation.id` to every span and log line, so all three are one query away.
+- **Service name** — resolved from the `OTEL_SERVICE_NAME` env var (Aspire and most collectors inject it) with the application name as fallback, so the kit's telemetry groups under the same resource the orchestrator already knows.
+- **The Aspire endpoint** — when `OTEL_EXPORTER_OTLP_ENDPOINT` is present in the environment, the kit exports to it *even if* `Exporter:Otlp:Enabled` is false, and lets the SDK read endpoint/protocol/headers from the standard `OTEL_EXPORTER_OTLP_*` env vars. That's how traces show up live in the Aspire dashboard with zero config.
 
 ## What to add yourself
 
 The kit ships **infrastructure tracing**. You add **business tracing** — spans for the long-running steps your handlers do that aren't already covered:
 
 ```csharp
-public sealed class GenerateInvoicesCommandHandler(/* ... */)
+public sealed class GenerateInvoicesCommandHandler(ActivitySource source /* , ... */)
     : ICommandHandler<GenerateInvoicesCommand, Unit>
 {
-    private static readonly ActivitySource Source = new("Modules.Billing");
-
     public async ValueTask<Unit> Handle(GenerateInvoicesCommand cmd, CancellationToken ct)
     {
-        using var activity = Source.StartActivity("GenerateInvoicesForPeriod");
+        using var activity = source.StartActivity("GenerateInvoicesForPeriod");
         activity?.SetTag("period.year", cmd.PeriodYear);
         activity?.SetTag("period.month", cmd.PeriodMonth);
         // ...
@@ -135,7 +130,9 @@ public sealed class GenerateInvoicesCommandHandler(/* ... */)
 }
 ```
 
-Custom counters for domain-specific metrics ("invoices issued per period", "webhooks delivered per tenant") give you product dashboards out of the box.
+The kit registers a shared `ActivitySource` (named after the application) in DI and subscribes the tracer to it — inject it rather than newing your own, or add your custom source name in the Web block's tracing registration.
+
+Custom counters for domain-specific metrics ("invoices issued per period", "webhooks delivered per tenant") give you product dashboards out of the box — register the meter name in `Metrics:MeterNames`.
 
 ## Related
 
