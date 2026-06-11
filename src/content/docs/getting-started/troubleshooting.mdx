@@ -1,0 +1,244 @@
+---
+title: Troubleshooting
+lastUpdated: 2026-06-11
+description: Symptom → cause → fix for the failure modes you actually hit on first run and in the daily dev loop.
+sidebar:
+  order: 6
+pageType: guide
+seo:
+  title: 'Troubleshooting — first-run and dev-loop fixes for the .NET 10 starter kit'
+  description: 'Fix the real failure modes: Postgres container exits after an Aspire bump, orphaned persistent containers, Valkey RDB mismatch, missing migrations, JWT signing key validation, SignalR CORS, port conflicts, and more.'
+  keywords: 'fullstackhero troubleshooting, aspire postgres exited, relation does not exist, testcontainers docker, signalr cors, hangfire dashboard 401'
+---
+
+Every entry below is a failure mode someone actually hit, in symptom → cause → fix
+form. Resource and volume names come straight from
+`src/Host/FSH.Starter.AppHost/AppHost.cs` — the AppHost derives a per-app prefix from
+its assembly name, so for a stock clone the prefix is **`fsh-starter`** and the Docker
+volumes are `fsh-starter-postgres-data`, `fsh-starter-redis-data`, and
+`fsh-starter-minio-data`. If you renamed the solution, swap the prefix accordingly.
+
+## First run
+
+### React apps die immediately at AppHost launch
+
+**Symptom:** the `fsh-starter-admin` / `fsh-starter-dashboard` resources fail right after start; logs show `'vite' is not recognized` (Windows) or `sh: vite: not found`.
+
+Aspire launches both apps with `AddJavaScriptApp(...).WithNpm()` running their `dev`
+script — it does **not** run `npm install` for you. A fresh clone has no
+`node_modules` in either app.
+
+```bash
+cd clients/admin && npm install
+cd ../dashboard && npm install
+```
+
+Then relaunch the AppHost. This is a one-time step per clone (and again whenever
+`package-lock.json` changes).
+
+### Port conflicts
+
+**Symptom:** a resource fails to bind, or the browser shows a different app on a familiar port.
+
+These are the fixed ports the stack claims. Postgres and Valkey are *not* on this
+list — Aspire assigns them dynamic host ports (check the Aspire dashboard), so a
+locally installed Postgres on 5432 won't clash.
+
+| Port | What |
+|---|---|
+| 7030 / 5030 | API https / http (`launchSettings.json`) |
+| 5173 | Admin app (Vite) |
+| 5174 | Dashboard app (Vite) |
+| 5050 | pgAdmin |
+| 5540 | RedisInsight |
+| 9000 / 9001 | MinIO API / console |
+| 17273 / 15036 | Aspire dashboard https / http |
+| 4317 | Aspire OTLP ingestion |
+
+Find and kill whatever holds a port:
+
+```bash
+# Windows
+netstat -ano | findstr :5173
+taskkill /PID <pid> /F
+
+# macOS / Linux
+lsof -i :5173
+kill <pid>
+```
+
+## Containers & Aspire
+
+The infrastructure containers (`postgres`, its pgAdmin sidecar, `redis` (Valkey),
+`redis-insight`, `minio`) all use `ContainerLifetime.Persistent` — they survive
+AppHost shutdown on purpose. That's what makes restarts fast, and it's also the root
+of the next three entries.
+
+### Postgres exits after an Aspire version bump
+
+**Symptom:** the `postgres` container is `Exited (1)`; its log complains about existing data in `/var/lib/postgresql` (an initialized data directory from another major version).
+
+The AppHost calls `AddPostgres("postgres")` without pinning an image tag, so the
+Postgres major version tracks the Aspire package default — Aspire 13.4 moved it to
+PG 18. Your persistent data volume was initialized by the older major, and Postgres
+refuses to start on a data directory it can't read.
+
+Wipe the container and the volume (this deletes all local data — the migrator
+recreates and reseeds everything on the next launch):
+
+```bash
+# Find the container that mounts the volume
+docker ps -a --filter volume=fsh-starter-postgres-data --format "{{.ID}}  {{.Names}}  {{.Status}}"
+
+docker rm -f <container-id>
+docker volume rm fsh-starter-postgres-data
+```
+
+Relaunch the AppHost; the DbMigrator reapplies migrations and reseeds.
+
+### Containers orphaned from a deleted Docker network
+
+**Symptom:** after a Docker Desktop restart or an Aspire upgrade, containers show `Exited (255)` or hang in *Starting*; logs or `docker inspect` mention `network ... not found`; the API and both React apps sit in *Waiting* forever.
+
+Persistent containers outlive the Docker network Aspire created them on. When that
+network is gone (Docker restarted, Aspire bumped), the container references a
+network ID that no longer exists and can't start. Data volumes are separate objects —
+removing the container is safe.
+
+```bash
+docker ps -a
+docker rm -f <stale-container>   # e.g. the redis / redis-insight / postgres / minio container
+```
+
+Relaunch the AppHost; it recreates the containers on a fresh network and reattaches
+the existing volumes.
+
+### Valkey won't start — RDB written by a newer engine
+
+**Symptom:** the `redis` container (it runs Valkey) exits on start; the log complains it can't read the RDB dump (e.g. `Can't handle RDB format version ...`).
+
+The `fsh-starter-redis-data` volume holds a dump written by a newer engine version
+than the one now starting — RDB files are not backward-compatible. This happens when
+a newer image wrote the volume and you later run an older one. The volume only holds
+cache data, so wiping it is harmless:
+
+```bash
+docker rm -f <redis-container>
+docker volume rm fsh-starter-redis-data
+```
+
+## Database & migrations
+
+### "relation ... does not exist"
+
+**Symptom:** API requests fail with Npgsql `42P01: relation "..." does not exist`.
+
+The database is **not** migrated at API startup — migrations are applied by the
+separate DbMigrator. Under the AppHost this is automatic (the API waits for the
+migrator to complete), so you mainly hit this when running the API standalone
+against a fresh or out-of-date database.
+
+```bash
+dotnet run --project src/Host/FSH.Starter.DbMigrator -- apply --seed
+```
+
+`apply` migrates, `--seed` also seeds the root tenant + admin. Use
+`-- list-pending` to see what would run without applying anything.
+
+### seed-demo refuses to run
+
+**Symptom:** `[demo-seed] REFUSING to run — ASPNETCORE_ENVIRONMENT is 'Production'. seed-demo is dev-only by design.`
+
+The demo seeder (acme/globex tenants + demo users) hard-fails outside Development.
+The DbMigrator is a console host, which reads `DOTNET_ENVIRONMENT` — setting
+`ASPNETCORE_ENVIRONMENT` alone is ignored.
+
+```bash
+# PowerShell
+$env:DOTNET_ENVIRONMENT = "Development"; dotnet run --project src/Host/FSH.Starter.DbMigrator -- seed-demo
+
+# bash
+DOTNET_ENVIRONMENT=Development dotnet run --project src/Host/FSH.Starter.DbMigrator -- seed-demo
+```
+
+## API & configuration
+
+### API refuses to boot in Production — JWT signing key
+
+**Symptom:** startup throws `OptionsValidationException` with `No Key defined in JwtOptions config`, `SigningKey must be at least 32 characters long.`, or `SigningKey looks like a sample placeholder ('replace-with-…')`.
+
+`JwtOptions` is validated with `ValidateOnStart()`: the signing key must be present,
+at least 32 characters, and must not contain the `replace-with` sample placeholder —
+otherwise every token the API issued would be forgeable by anyone with repo access.
+`appsettings.json` and `appsettings.Production.json` ship with an **empty**
+`SigningKey` on purpose; only `appsettings.Development.json` has a dev-only default.
+
+```bash
+# Set a real secret (>= 32 chars) via environment variable
+JwtOptions__SigningKey="<your-random-32+-char-secret>"
+```
+
+Locally you can use user-secrets instead; in production use env vars or your secret
+store.
+
+<Callout type="warning" title="Same pattern, two more options">
+`HangfireOptions` (`UserName` min 3 chars, `Password` min 12) and `CorsOptions`
+(`AllowedOrigins` required when `AllowAll` is false) are validated at startup the
+same way — and both are intentionally blank in `appsettings.Production.json`. A
+Production boot needs all three configured.
+</Callout>
+
+### SignalR fails in dev while REST works
+
+**Symptom:** REST calls succeed, but the SignalR `/negotiate` request dies with a CORS error in the browser console.
+
+SignalR's negotiate always runs **credentialed**, and the CORS spec forbids the `*`
+wildcard with credentials — so a plain allow-anything policy silently breaks SignalR
+while ordinary fetches keep working. The kit's policy handles this: with
+`CorsOptions:AllowAll = true` (the Development default) it echoes the request origin
+via `SetIsOriginAllowed(_ => true)` + `AllowCredentials()`. If you hit this, your
+environment isn't using the Development config — either set `AllowAll` to `true` for
+dev, or list your frontend origin explicitly:
+
+```bash
+CorsOptions__AllowAll=true
+# or, for a locked-down config:
+CorsOptions__AllowedOrigins__0=https://app.example.com
+```
+
+Never replace the policy with `AllowAnyOrigin()` — it cannot be combined with
+credentials and reintroduces exactly this failure.
+
+### Hangfire dashboard prompts or returns 401
+
+**Symptom:** `/jobs` shows a Basic-auth prompt (`Hangfire Dashboard` realm) and rejects your credentials with 401.
+
+The dashboard is guarded by a Basic-authentication filter whose credentials come
+from `HangfireOptions` (`UserName` / `Password`, dashboard route defaults to
+`/jobs`). Under the AppHost the dev values are `admin` / `Password123!`. There is no
+safe default — in any other environment you must set them yourself, and startup
+validation rejects a missing username or a password shorter than 12 characters:
+
+```bash
+HangfireOptions__UserName=admin
+HangfireOptions__Password=<at-least-12-chars>
+```
+
+## Tests
+
+### Integration tests fail instantly — Docker not running
+
+**Symptom:** every test in `Integration.Tests` fails fast with `DockerUnavailableException`.
+
+The integration suite runs the real API over Testcontainers (PostgreSQL + MinIO
+spun up per test run), so a running Docker daemon is a hard requirement. This is
+environmental, not a regression.
+
+```bash
+# Start Docker Desktop / the docker daemon, then:
+dotnet test src/FSH.Starter.slnx
+```
+
+If you can't run Docker, run the unit-test projects individually (everything except
+`Integration.Tests` / `Integration.Middleware.Tests`) — they have no container
+dependency.

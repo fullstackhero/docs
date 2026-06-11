@@ -1,13 +1,13 @@
 ---
 title: Overview
-lastUpdated: 2026-05-19
+lastUpdated: 2026-06-11
 description: Two React + Vite + TypeScript apps ship with the kit — an admin console for operators and a tenant dashboard for end users.
 sidebar:
   order: 1
 pageType: guide
 seo:
   title: 'Frontend in .NET 10 — React + Vite admin + dashboard'
-  description: 'fullstackhero ships two production React 19 + Vite 7 + TypeScript 5.7 frontends — clients/admin (operator console) and clients/dashboard (tenant-facing).'
+  description: 'fullstackhero ships two production React 19 + Vite 7 + TypeScript frontends — clients/admin (operator console) and clients/dashboard (tenant-facing).'
   keywords: 'fullstackhero react frontend, vite admin console, react dashboard .net 10, jwt auth react vite, tenant theme react'
 ---
 
@@ -27,12 +27,13 @@ Both apps follow the same conventions for auth, API integration, route guards, a
 |---|---|---|
 | Audience | Operators, support, ops | End users (tenant members) |
 | Default port | 5173 | 5174 |
-| Pages | Users, Roles, Tenants, Impersonation, Audits, Webhooks, Billing, Health, Notifications, Settings | Catalog, Chat, Files, Tickets, Identity (profile + sessions + 2FA), System, Settings |
-| Realtime | SignalR notifications | SignalR (chat + notifications) + SSE feeds |
-| Auth | Same JWT bearer + refresh + 2FA flow as the API | Same |
-| Theming | Static (admin chrome) | Per-tenant theme from the Multitenancy module |
+| Pages | Users, Roles, Tenants, Impersonation, Audits, Webhooks, Billing (plans + invoices), Health, Notifications, Settings | Overview, Activity, Catalog, Chat, Files, Tickets, Invoices, Subscription, Identity (users / roles / groups), System (sessions, trash, audits, health), Settings |
+| Realtime | SignalR notifications | SignalR (chat + notifications + presence) + an SSE activity feed |
+| Auth | Same JWT bearer + refresh flow as the API | Same |
+| Theming | Kit palette + per-operator light/dark | Per-user appearance (mode, accent, font, density); per-tenant `TenantTheme` lives in the Multitenancy module |
+| Inactivity sign-out | 10 min idle + 60 s warning (config.json) | 20 min idle + 60 s warning (config.json) |
 
-Both run via `npm run dev` (Vite dev server with HMR) and build to static assets via `npm run build`. The kit's Aspire AppHost orchestrates both alongside the API for one-command local dev.
+Both run via `npm run dev` (Vite dev server with HMR) and build to static assets via `npm run build`. The kit's Aspire AppHost orchestrates both alongside the API for one-command local dev. Both read runtime configuration from `/config.json` at boot — no `VITE_*` build-time env baked into the bundle — so a single build artifact promotes across environments.
 
 ## Related
 

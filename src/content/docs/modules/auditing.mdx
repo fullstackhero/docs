@@ -1,6 +1,6 @@
 ---
 title: Auditing module
-lastUpdated: 2026-05-19
+lastUpdated: 2026-06-11
 description: Entity-change capture via SaveChanges interceptor, HTTP middleware for request/response audit, security events, exception capture, JSON masking, and a retention purge job.
 sidebar:
   label: Auditing
@@ -12,7 +12,7 @@ seo:
   keywords: 'ef core audit log .net 10, savechanges interceptor audit, json masking pii dotnet, audit trail postgres trigram, http audit middleware asp.net'
 ---
 
-The Auditing module is fullstackhero's forensic record of everything that happened: every entity change, every HTTP request, every security action, every exception. It uses an EF Core `SaveChanges` interceptor for entity capture, a middleware for HTTP activity, a fluent builder for explicit security and exception events, JSON masking for sensitive fields, a channel-based publisher for non-blocking writes, a SQL primary sink with a file DLQ for failures, and a Hangfire retention job that purges old records on a configurable schedule. Around **2,800 lines of code across 47 files**, plus a contracts assembly.
+The Auditing module is fullstackhero's forensic record of everything that happened: every entity change, every HTTP request, every security action, every exception. It uses an EF Core `SaveChanges` interceptor for entity capture, a middleware for HTTP activity, a fluent builder for explicit security and exception events, JSON masking for sensitive fields, a channel-based publisher for non-blocking writes, a SQL primary sink with a file DLQ for failures, and a Hangfire retention job that purges old records on a configurable schedule. Around **3,300 lines of code across 48 files**, plus a contracts assembly.
 
 <Callout type="tip" title="It's queryable from day one">
 Seven read-only endpoints expose audits filtered by tenant, user, event type, severity, time, correlation, trace, source, and free-text search across the JSON payload. Plug them into your admin app and you have an investigation surface without writing any query code.
@@ -35,28 +35,26 @@ Seven read-only endpoints expose audits filtered by tenant, user, event type, se
 
 ```
 src/Modules/Auditing/
-├── Modules.Auditing/                            ~2,800 LoC, 47 files
+├── Modules.Auditing/                            ~3,300 LoC, 48 files
 │   ├── AuditingModule.cs                        IModule entry — order 300
 │   ├── Core/
 │   │   ├── Audit.cs                             Fluent builder static factory
-│   │   └── EventPayloads/                       EntityChange, Security, Activity, Exception
+│   │   ├── ChannelAuditPublisher.cs             Non-blocking publisher
+│   │   ├── AuditBackgroundWorker.cs             Consumes channel, writes to sinks
+│   │   ├── DefaultAuditClient.cs                Implements IAuditClient
+│   │   └── SecurityAudit.cs                     Implements ISecurityAudit
 │   ├── Infrastructure/
 │   │   ├── Http/AuditHttpMiddleware.cs          Request/response capture
-│   │   └── Channels/ChannelAuditPublisher.cs    Non-blocking publisher
+│   │   └── Serialization/JsonMaskingService.cs  Implements IAuditMaskingService
 │   ├── Persistence/
 │   │   ├── AuditingSaveChangesInterceptor.cs    EF Core hook
 │   │   ├── AuditRecord.cs                       The single row type (JSON payload)
 │   │   ├── AuditDbContext.cs                    PostgreSQL with GIN trigram
-│   │   └── Sinks/SqlAuditSink.cs, FileAuditDlqSink.cs
-│   ├── Background/
-│   │   ├── AuditBackgroundWorker.cs             Consumes channel, writes to sinks
+│   │   ├── SqlAuditSink.cs, FileAuditDlqSink.cs Primary sink + file DLQ
 │   │   └── AuditRetentionJob.cs                 Hangfire daily purge
-│   ├── Services/
-│   │   ├── DefaultAuditClient.cs                Implements IAuditClient
-│   │   ├── SecurityAudit.cs                     Implements ISecurityAudit
-│   │   └── JsonMaskingService.cs                Implements IAuditMaskingService
 │   └── Features/v1/                             7 read endpoints
-└── Modules.Auditing.Contracts/                  ~700 LoC public surface
+└── Modules.Auditing.Contracts/                  Payload records (EntityChange, Security,
+                                                 Activity, Exception), options, enums, interfaces
 ```
 
 ## The fluent builder
@@ -66,7 +64,7 @@ The write surface is one factory class with four entry points:
 ```csharp
 // src/Modules/Auditing/Modules.Auditing/Core/Audit.cs
 
-await Audit.ForEntityChange(db, "catalog", "Products", "Product", productId, EntityOperation.Update, changes)
+await Audit.ForEntityChange("CatalogDbContext", "catalog", "Products", "Product", productId, EntityOperation.Update, changes)
     .WithUser(currentUser.GetUserId())
     .WithTrace(activity?.TraceId.ToString())
     .WithCorrelation(correlationId)
@@ -125,6 +123,10 @@ What you wire manually:
 | GET | `/api/v1/audits/exceptions` | Exception-only filter |
 | GET | `/api/v1/audits/summary` | Aggregations |
 
+All seven require `Permissions.AuditTrails.View`. Results are scoped to the caller's tenant; asking for another tenant's audits (or the all-tenants view) additionally requires `Permissions.AuditTrails.ViewCrossTenant` — without it the handler throws a 403 rather than silently narrowing.
+
+One serialization quirk: enums like `Severity` and `EventType` round-trip as **strings** (the host registers a global `JsonStringEnumConverter`), but the two `[Flags]` enums — `AuditTag` and `BodyCapture` — stay **numeric** via a dedicated `NumericEnumConverter`, because flag combinations don't have a single string name.
+
 ## Configuration
 
 ```jsonc
@@ -135,7 +137,7 @@ What you wire manually:
     "MaxRequestBytes": 8192,
     "MaxResponseBytes": 16384,
     "AllowedContentTypes": ["application/json", "application/problem+json"],
-    "ExcludePathStartsWith": ["/health", "/metrics", "/swagger", "/scalar", "/openapi"],
+    "ExcludePathStartsWith": ["/health", "/metrics", "/_framework", "/swagger", "/scalar", "/openapi"],
     "MinExceptionSeverity": "Error",
     "Retention": {
       "Enabled": false,                  // opt-in
@@ -182,9 +184,9 @@ services.AddScoped<IAuditMaskingService, CustomAuditMaskingService>();
 
 The single `AuditRecord` table stores arbitrary JSON payloads under `EventType`. To add a new payload class (e.g. `WebhookDeliveryEventPayload`):
 
-1. Add a record under `Modules.Auditing/Core/EventPayloads/`.
-2. Extend `AuditEventType` enum with a new value.
-3. Add a builder entry point on `Audit` static class.
+1. Add a payload record in `Modules.Auditing.Contracts` (next to `SecurityEventPayload` and friends).
+2. Extend the `AuditEventType` enum (in `AuditEnums.cs`) with a new value.
+3. Add a builder entry point on the `Audit` static class.
 4. Optionally add a dedicated read endpoint that filters by the new `EventType`.
 
 ### Opt an endpoint out of audit
@@ -203,7 +205,7 @@ endpoints.MapPost("/sensitive", handler)
 
 ## Tests
 
-- Unit tests at `src/Tests/Auditing.Tests/` (10 files) cover serialization, masking, retention logic.
+- Unit tests at `src/Tests/Auditing.Tests/` (5 test files) cover serialization, masking, retention logic.
 - Integration tests at `src/Tests/Integration.Tests/Tests/Auditing/` cover tenant isolation (no cross-tenant audit leaks) and the entity-change capture round-trip.
 
 ## Related

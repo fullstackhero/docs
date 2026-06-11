@@ -1,209 +1,119 @@
 ---
 title: Per-tenant theming
-lastUpdated: 2026-05-19
-description: How the tenant dashboard applies a per-tenant theme — palette, brand assets, typography, layout — pulled live from the Multitenancy module.
+lastUpdated: 2026-06-11
+description: How tenant branding works in the kit — the TenantTheme aggregate in the Multitenancy module, the admin branding editor, and the dashboard's per-user appearance system.
 sidebar:
   label: Theming
   order: 4
 pageType: concept
 seo:
-  title: 'Per-tenant theming in fullstackhero — React dashboard brand'
-  description: 'How the tenant dashboard pulls a TenantTheme from the Multitenancy module and applies per-tenant palette, brand assets, typography, and layout via CSS…'
+  title: 'Per-tenant theming in fullstackhero — TenantTheme + appearance'
+  description: 'How fullstackhero stores per-tenant branding (TenantTheme aggregate — palette, brand assets, typography, layout), edits it in the admin console, and handles per-user appearance in the dashboard.'
   keywords: 'react per-tenant theme, tenant branding saas, css custom properties theming, white label react app'
 ---
 
-The tenant dashboard ships **one React build** that renders **per-tenant brand** on every page. The kit's Multitenancy module owns a `TenantTheme` aggregate; the dashboard fetches it on sign-in and applies the palette, brand assets, typography, and layout via CSS custom properties. The admin console (operator-facing) deliberately stays themed in the kit's static palette.
+Theming in the kit has two layers that are easy to conflate, so let's name them up front:
 
-<Callout type="tip" title="Themes are data, not deploys">
-You don't ship a new build per tenant. The dashboard is one bundle that reads `TenantTheme` from the API on every login and re-applies CSS variables. Tenant designers can preview + save themes in the admin console; the change goes live without redeploying anything.
-</Callout>
+1. **Per-tenant branding** — the Multitenancy module owns a `TenantTheme` aggregate (colour palettes, brand assets, typography, layout) with permission-gated read/update/reset endpoints and an editor in the admin console. Themes are **data, not deploys** — editing one never requires a rebuild.
+2. **Per-user appearance** — the dashboard ships a rich appearance system (light/dark/system mode, accent colour, font, density, reduced motion) that each **user** controls from Settings → Appearance and that persists in localStorage.
 
-<Screenshot src="/screenshots/dashboard/themed-side-by-side.png"
-            alt="Three tenants of the dashboard with different brand themes"
-            caption="Same React build, three tenants — palette + logo + typography vary based on the resolved TenantTheme." />
+The `TenantTheme` store + editor are fully wired end-to-end on the backend and admin side. The dashboard does **not yet** read `TenantTheme` to repaint its chrome per tenant — its visual identity today comes from the per-user appearance system. If you want full white-label rendering, the wiring point is small and described [below](#rendering-tenanttheme-in-your-own-frontend).
 
 ## The `TenantTheme` model
 
-The Multitenancy module owns the aggregate (full reference in the [multitenancy module page](/docs/modules/multitenancy/)). The fields the dashboard reads:
+The aggregate lives at `src/Modules/Multitenancy/Modules.Multitenancy/Domain/TenantTheme.cs`; the API exchanges a structured `TenantThemeDto` (light palette, dark palette, brand assets, typography, layout).
 
 ### Palette
 
-Light mode + dark mode pairs for nine roles:
+Light mode + dark mode values for nine roles:
 
 | Role | Default light | Default dark | Used for |
 |---|---|---|---|
-| Primary | `#15803d` | `#22c55e` | Buttons, links, accents |
-| Secondary | `#1e293b` | `#cbd5e1` | Secondary buttons, badges |
-| Tertiary | `#475569` | `#94a3b8` | Tertiary text, dividers |
-| Background | `#ffffff` | `#0d0e11` | App background |
-| Surface | `#f8fafc` | `#1c1e22` | Cards, sheets, dialogs |
-| Error | `#dc2626` | `#ef4444` | Destructive actions, error banners |
-| Warning | `#d97706` | `#f59e0b` | Cautionary states |
-| Success | `#16a34a` | `#22c55e` | Success states |
-| Info | `#2563eb` | `#3b82f6` | Informational states |
+| Primary | `#2563EB` | `#38BDF8` | Buttons, links, accents |
+| Secondary | `#0F172A` | `#94A3B8` | Secondary buttons, badges |
+| Tertiary | `#6366F1` | `#818CF8` | Tertiary accents, dividers |
+| Background | `#F8FAFC` | `#0B1220` | App background |
+| Surface | `#FFFFFF` | `#111827` | Cards, sheets, dialogs |
+| Error | `#DC2626` | `#F87171` | Destructive actions, error banners |
+| Warning | `#F59E0B` | `#FBBF24` | Cautionary states |
+| Success | `#16A34A` | `#22C55E` | Success states |
+| Info | `#0284C7` | `#38BDF8` | Informational states |
 
 ### Brand assets
 
-- `LogoUrl` — light-mode logo, used in the sidebar + sign-in screen.
-- `LogoDarkUrl` — dark-mode logo, used when the user picks dark mode.
+- `LogoUrl` — light-mode logo.
+- `LogoDarkUrl` — dark-mode logo.
 - `FaviconUrl` — browser tab icon.
+
+Uploads go through the kit's storage service — the update endpoint accepts inline image data, stores it, and replaces (and cleans up) the previous asset.
 
 ### Typography
 
-- `FontFamily` — body font, e.g. `Inter, system-ui, sans-serif`.
-- `HeadingFontFamily` — display font for headings.
-- `FontSizeBase` — body font size in px (default 16).
+- `FontFamily` — body font (default `Inter, sans-serif`).
+- `HeadingFontFamily` — display font for headings (default `Inter, sans-serif`).
+- `FontSizeBase` — body font size in px (default 14).
 - `LineHeightBase` — body line height (default 1.5).
 
 ### Layout
 
-- `BorderRadius` — radius for cards, buttons, inputs.
-- `DefaultElevation` — shadow strength.
+- `BorderRadius` — radius for cards, buttons, inputs (CSS string, default `4px`).
+- `DefaultElevation` — shadow strength (default 1).
 
-## How it's applied
+### Default theme
 
-The dashboard fetches the theme post-login:
+`IsDefault` marks one theme as the platform default. Only the **root tenant** can set it; any tenant without its own saved theme resolves to the kit's built-in defaults.
 
-```tsx
-// clients/dashboard/src/lib/theme.ts (simplified)
-export function applyTenantTheme(theme: TenantThemeDto) {
-  const root = document.documentElement;
+## The endpoints
 
-  // Palette — light
-  root.style.setProperty('--color-primary',    theme.primaryColor);
-  root.style.setProperty('--color-secondary',  theme.secondaryColor);
-  root.style.setProperty('--color-background', theme.backgroundColor);
-  // ... etc.
+All three are **current-tenant-scoped** — they act on whichever tenant the request's `tenant` header resolves to (there's no `{id}` in the route) — and permission-gated:
 
-  // Palette — dark
-  root.style.setProperty('--color-primary-dark',    theme.darkPrimaryColor);
-  // ... etc.
+| Endpoint | Permission | Does |
+|---|---|---|
+| `GET /api/v1/tenants/theme` | `Tenants.ViewTheme` | Returns the tenant's theme, or the defaults if none is saved |
+| `PUT /api/v1/tenants/theme` | `Tenants.UpdateTheme` | Upserts the theme (validated — colour formats, font sizes) |
+| `POST /api/v1/tenants/theme/reset` | `Tenants.UpdateTheme` | Resets every field to the kit defaults |
 
-  // Typography
-  root.style.setProperty('--font-family',          theme.fontFamily);
-  root.style.setProperty('--font-family-heading',  theme.headingFontFamily);
-  root.style.setProperty('--font-size-base',       `${theme.fontSizeBase}px`);
-  root.style.setProperty('--line-height-base',     `${theme.lineHeightBase}`);
-
-  // Layout
-  root.style.setProperty('--radius', `${theme.borderRadius}px`);
-
-  // Favicon
-  const favicon = document.querySelector<HTMLLinkElement>("link[rel='icon']");
-  if (favicon && theme.faviconUrl) favicon.href = theme.faviconUrl;
-}
-```
-
-Tailwind classes resolve these variables. For example, the kit's Tailwind config maps:
-
-```css
-/* clients/dashboard/src/styles/tokens.css */
-@theme {
-  --color-primary: var(--color-primary, #15803d);
-  --color-background: var(--color-background, #ffffff);
-  /* ... */
-  --radius: var(--radius, 8px);
-}
-
-.dark {
-  --color-primary: var(--color-primary-dark, #22c55e);
-  --color-background: var(--color-background-dark, #0d0e11);
-  /* ... */
-}
-```
-
-…so a class like `bg-primary text-background rounded-[var(--radius)]` automatically picks up whichever tenant theme is loaded.
+Reads are cached via HybridCache (1 hour distributed / 2 minutes local) and invalidated on every update or reset, so theme fetches don't hit the database per request.
 
 ## Editing themes in the admin console
 
-The admin console's **Tenants → Theme editor** is where tenant designers preview + save changes.
+The branding card on the admin console's **tenant detail page** is the operator-facing editor. It scopes each call to the target tenant by overriding the `tenant` header — only root operators get past that override — and covers the light + dark palettes plus brand assets. Typography and layout exist on the DTO but are intentionally left out of the v1 editor; wire them in if your product needs them.
 
-<Screenshot src="/screenshots/admin/tenant-theme-editor-palette.png"
-            alt="Tenant theme editor — palette tab"
-            caption="Edit each colour role for light + dark mode; preview updates in the right rail in real time." />
+<Screenshot src="/screenshots/admin/tenant-theme-editor.png"
+            alt="Tenant branding editor"
+            caption="Edit each colour role for light + dark mode and the brand assets; Save persists, Reset restores the kit defaults." />
 
-<Screenshot src="/screenshots/admin/tenant-theme-editor-brand.png"
-            alt="Tenant theme editor — brand assets tab"
-            caption="Upload light + dark logos + favicon. Drag-drop or paste from clipboard; goes through the Files module's presigned upload." />
+**Save** persists via `PUT /api/v1/tenants/theme`; **Reset** calls `POST /api/v1/tenants/theme/reset`. Both invalidate the server-side cache immediately.
 
-<Screenshot src="/screenshots/admin/tenant-theme-editor-typography.png"
-            alt="Tenant theme editor — typography tab"
-            caption="Pick body + heading fonts (Google Fonts compatible), adjust base size + line height." />
+## The dashboard's appearance system (per-user)
 
-Click **Save** to persist via `PUT /api/v1/tenants/{id}/theme`; the change is visible to that tenant's users on their next page load. **Reset** restores the kit's defaults via `DELETE /api/v1/tenants/{id}/theme`.
+What a dashboard user can customise today is personal, not tenant-wide — Settings → Appearance:
 
-<Screenshot src="/screenshots/admin/tenant-theme-editor-preview.png"
-            alt="Tenant theme editor — live preview pane"
-            caption="The preview pane renders a representative sample of the dashboard UI under the current theme — buttons, cards, inputs, badges, charts." />
+- **Mode** — light / dark / system, applied with a View Transitions crossfade.
+- **Accent** — preset accent colours or a fully custom hue, applied as the eleven `--brand-*` CSS custom-property stops.
+- **Font, density, reduced motion** — per-user toggles.
 
-## A tenant signing in for the first time
+Everything persists in localStorage (`fsh.theme`, accent/font/density keys) and applies before the app paints, so there's no flash of the wrong mode. The dashboard's neutral greys are deliberately **untinted** (zero chroma) so whatever accent the user — or eventually the tenant — picks does the branding work without fighting a tinted chassis.
 
-Three scenarios:
+## Rendering `TenantTheme` in your own frontend
 
-1. **Tenant has a custom theme.** The dashboard fetches `TenantTheme` and applies it. The user sees the tenant's brand from the first render.
-2. **Tenant has no theme yet.** The fetch returns 404; the dashboard falls back to the kit's default green palette.
-3. **Root tenant has a default theme.** Root admins can set a default that new tenants inherit. The fetch returns the root's default for any tenant without their own theme.
+The server side is done; consuming it is the part you own. The shape:
 
-## Loading flash mitigation
+1. After login, call `GET /api/v1/tenants/theme` (the signed-in user needs `Tenants.ViewTheme`).
+2. Map the DTO onto CSS custom properties on `document.documentElement` — palette roles to colour variables, typography to `--font-*`, `BorderRadius` to your radius token.
+3. Swap the logo / favicon from `BrandAssets`.
+4. Cache the last-applied theme in localStorage and re-apply it synchronously in `index.html` before React mounts, so returning users see their brand on first paint instead of a default flash.
 
-A naïve implementation applies the theme **after** React renders, so users see a green flash before their tenant's purple loads. The kit mitigates this with a small inline script in `index.html`:
-
-```html
-<!-- clients/dashboard/index.html -->
-<script>
-  // Read the last-applied theme from localStorage on first paint.
-  // Apply CSS variables synchronously before React mounts.
-  try {
-    const cached = JSON.parse(localStorage.getItem('tenant-theme') || 'null');
-    if (cached?.primaryColor) {
-      document.documentElement.style.setProperty('--color-primary', cached.primaryColor);
-      // ... other variables
-    }
-  } catch {}
-</script>
-```
-
-After login, the actual fetched theme is saved back to localStorage for next time. First-time visitors still see the default flash; returning users see their brand from the first paint.
-
-## Dark mode
-
-Dark mode is per-user, stored in `localStorage`, not part of `TenantTheme`. The kit's pattern:
-
-```ts
-// Toggle
-document.documentElement.classList.toggle('dark');
-localStorage.setItem('color-scheme', isDark ? 'dark' : 'light');
-```
-
-When `.dark` is on the `<html>` element, Tailwind's `dark:` variants kick in and the dark palette variables (`--color-primary-dark`, etc.) override the light ones.
-
-## Customisation patterns
-
-### Add a new theme role
-
-To add a `BrandAccent` colour beyond the nine ships-with roles:
-
-1. Add the field to `TenantTheme` aggregate + EF migration.
-2. Add the field to `TenantThemeDto` + the editor form in the admin console.
-3. Add the CSS variable mapping in `clients/dashboard/src/styles/tokens.css`.
-4. Use `--color-brand-accent` in your components.
-
-### Per-section theming
-
-If you want a tenant-set "marketing pages use this theme, app pages use that theme" pattern, store two themes per tenant (one for the marketing surface, one for the dashboard). The kit's `TenantTheme` model is flat — extend the table with a `Scope` enum (`Dashboard`, `Marketing`, `Email`) and apply via a different fetch + CSS variable scope per route prefix.
-
-### Compiled-in fallback
-
-The kit's `tokens.css` ships fallback values for every variable, so the dashboard is renderable even if the theme fetch fails entirely. Test this path — disconnect from the API while signed in, refresh, and verify the dashboard still renders with the green fallback.
+Because every kit component already resolves colours through CSS variables, step 2 is a mapping exercise, not a redesign.
 
 ## What theming doesn't do
 
-- **It's not a full white-label.** The kit's component library (sidebar shape, navigation pattern, dialog conventions) stays the same. Theming changes the colours + fonts + assets; it doesn't change the layout.
-- **It doesn't theme the admin console.** Admin is for your operators; it stays in the kit's static palette so operators have a consistent surface across tenants.
-- **It doesn't ship a theme marketplace.** Tenants edit one theme each; there's no "browse themes" gallery. If you want that, add a `ThemeTemplate` aggregate with a one-click apply.
+- **It's not a full white-label.** The component library (sidebar shape, navigation pattern, dialog conventions) stays the same. Theming changes colours, fonts, and assets; it doesn't change layout.
+- **It doesn't theme the admin console.** Admin is for your operators; it stays in the kit's own palette so operators have a consistent surface across tenants.
+- **It doesn't ship a theme marketplace.** Tenants get one theme each; there's no "browse themes" gallery. If you want that, add a `ThemeTemplate` aggregate with a one-click apply.
 
 ## Related
 
 - [Multitenancy module](/docs/modules/multitenancy/) — the `TenantTheme` aggregate + endpoints.
-- [Tenant dashboard](/docs/frontend/dashboard/) — the app that applies themes.
-- [Admin console](/docs/frontend/admin/) — the editor surface.
+- [Tenant dashboard](/docs/frontend/dashboard/) — the per-user appearance system.
+- [Admin console](/docs/frontend/admin/) — the branding editor surface.

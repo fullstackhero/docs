@@ -1,6 +1,6 @@
 ---
 title: Mailing building block
-lastUpdated: 2026-05-19
+lastUpdated: 2026-06-11
 description: SMTP or SendGrid email abstraction behind a single IMailService, with multi-recipient delivery and HTML body support.
 sidebar:
   label: Mailing
@@ -22,68 +22,61 @@ The block sends mail; it does not template it. Build your HTML body in your hand
 
 ### Extension
 
-- **`AddHeroMailing(services)`** — reads `MailOptions:UseSendGrid`. If `true`, registers `SendGridMailService`. Else `SmtpMailService`. Both implement `IMailService`.
+- **`AddHeroMailing(services)`** — binds `MailOptions`, registers one process-wide `ISendGridClient` singleton (per-send client construction leaks sockets), and a transient `IMailService` factory that returns `SendGridMailService` when `MailOptions:UseSendGrid` is `true`, otherwise `SmtpMailService`.
 
 ### Service interface
 
 ```csharp
 public interface IMailService
 {
-    Task SendAsync(MailRequest request, CancellationToken ct = default);
+    Task SendAsync(MailRequest request, CancellationToken ct);
 }
 ```
 
 ### Request model
 
+`MailRequest` is a constructor-built class — recipients always come as a `Collection<string>`:
+
 ```csharp
-public sealed record MailRequest
-{
-    public required object To { get; init; }        // string OR IReadOnlyCollection<string>
-    public required string Subject { get; init; }
-    public required string Body { get; init; }
-    public bool BodyAsHtml { get; init; } = true;
-    public IReadOnlyCollection<string>? Cc { get; init; }
-    public IReadOnlyCollection<string>? Bcc { get; init; }
-    public IReadOnlyCollection<MailAttachment>? Attachments { get; init; }
-}
+public class MailRequest(
+    Collection<string> to,
+    string subject,
+    string? body = null,
+    string? from = null,
+    string? displayName = null,
+    string? replyTo = null,
+    string? replyToName = null,
+    Collection<string>? bcc = null,
+    Collection<string>? cc = null,
+    IDictionary<string, byte[]>? attachmentData = null,
+    IDictionary<string, string>? headers = null);
 ```
+
+The body is treated as HTML by both implementations (MailKit's `BodyBuilder.HtmlBody`; SendGrid sends it as both plain-text and HTML content). `From`/`DisplayName` on the request override the configured defaults per send.
 
 ### Implementations
 
-- **`SmtpMailService`** — uses MailKit + MimeKit. Reads `MailOptions:Smtp:*` for host, port, credentials, TLS.
-- **`SendGridMailService`** — uses the SendGrid SDK. One API call per `MailRequest`.
+- **`SmtpMailService`** — uses MailKit + MimeKit. Reads `MailOptions:Smtp:*` for host, port, credentials; connects with STARTTLS per send.
+- **`SendGridMailService`** — uses the SendGrid SDK via the shared `ISendGridClient`. One API call per `MailRequest`; the first `To` address is the primary recipient, `Cc`/`Bcc`/`ReplyTo`/attachments map onto the SendGrid message.
 
 ### Options
 
-- **`MailOptions`** — `From`, `DisplayName`, `UseSendGrid` (bool), `Smtp` (Host / Port / UserName / Password / EnableSSL), `SendGrid` (ApiKey).
+- **`MailOptions`** — `From`, `DisplayName`, `UseSendGrid` (bool), `Smtp` (`Host` / `Port` / `UserName` / `Password`), `SendGrid` (`ApiKey` plus optional `From` / `DisplayName` overrides).
 
 ## How modules consume Mailing
 
-Inject `IMailService` and call `SendAsync`:
+Inject `IMailService` and call `SendAsync` — or better, do what Identity does and push the send onto the Hangfire `email` queue so a slow SMTP server never blocks the request:
 
 ```csharp
-public sealed class ConfirmEmailCommandHandler(IMailService mail, IUserService users)
-    : ICommandHandler<ConfirmEmailCommand, Unit>
-{
-    public async ValueTask<Unit> Handle(ConfirmEmailCommand cmd, CancellationToken ct)
-    {
-        var user = await users.GetByIdAsync(cmd.UserId, ct).ConfigureAwait(false);
-        var token = /* generate confirm token */;
-        var link = $"https://app.example.com/confirm?token={token}";
+var mailRequest = new MailRequest(
+    new Collection<string> { user.Email },
+    "Confirm Your Email Address",
+    emailBody);
 
-        await mail.SendAsync(new MailRequest
-        {
-            To = user.Email,
-            Subject = "Confirm your email",
-            Body = $"<p>Welcome! <a href=\"{link}\">Confirm your email</a> to finish setup.</p>",
-            BodyAsHtml = true,
-        }, ct).ConfigureAwait(false);
-        return Unit.Value;
-    }
-}
+jobService.Enqueue("email", () => mailService.SendAsync(mailRequest, cancellationToken));
 ```
 
-Identity uses this exact shape for the four flows that need email: confirm, forgot-password, reset-password, and welcome.
+Identity uses this shape for its email flows: email confirmation, password reset, and the welcome mail.
 
 ## Configuration
 
@@ -99,8 +92,7 @@ Identity uses this exact shape for the four flows that need email: confirm, forg
       "Host": "smtp.example.com",
       "Port": 587,
       "UserName": "smtp-user",
-      "Password": "set-via-secrets",
-      "EnableSSL": true
+      "Password": "set-via-secrets"
     }
   }
 }
@@ -137,7 +129,7 @@ Build a separate `IMailTemplateRenderer` service. Resolve a Razor or Scriban tem
 
 ## Gotchas
 
-- **`MailRequest.To` is flexible.** It's `object` typed to accept either a single `string` or an `IReadOnlyCollection<string>`. The service handles both; be deliberate about which one you pass. Bulk lists of 100+ recipients should be split into multiple `SendAsync` calls so a single bad address doesn't fail the whole batch.
+- **`MailRequest.To` is always a `Collection<string>`** — even for one recipient. Note the SendGrid path builds a *single* email to `To[0]` (extra recipients ride along only as Cc/Bcc); the SMTP path addresses everyone in `To`. Bulk lists of 100+ recipients should be split into multiple `SendAsync` calls so a single bad address doesn't fail the whole batch.
 - **No built-in templating.** This is by design. If you need it, ship `IMailTemplateRenderer` next to your handlers.
 - **`SmtpMailService` opens a fresh connection per send.** Heavy traffic? Switch to SendGrid or wrap with a pool. The kit doesn't ship a long-lived SMTP client.
 - **SendGrid charges per API call.** Bulk personalisation via the SendGrid Personalisations API is faster and cheaper for newsletter-style use. The kit's wrapper is the transactional path; replace it for marketing.

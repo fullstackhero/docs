@@ -1,21 +1,22 @@
 ---
 title: Quick Start
-lastUpdated: 2026-05-28
-description: Clone fullstackhero and run it locally in under a minute. (The fsh CLI is coming soon.)
+lastUpdated: 2026-06-11
+description: Clone fullstackhero and run the whole stack locally with one command.
 sidebar:
   order: 3
 pageType: guide
 seo:
   title: 'Quick Start — clone and run the .NET 10 starter kit'
-  description: 'Clone the fullstackhero repo and run it locally via .NET Aspire. The FullStackHero.CLI dotnet tool is coming soon for one-command scaffolding.'
+  description: 'Clone the fullstackhero repo and run the full stack locally via .NET Aspire: Postgres, Valkey, MinIO, migrations, the API, and both React apps with one command.'
   keywords: 'fullstackhero quick start, clone .NET 10 starter kit, .NET Aspire local development, fsh CLI'
 ---
 
-<Callout type="warning" title="CLI coming soon">
-The one-command `fsh new` flow needs the `FullStackHero.CLI` NuGet tool, which
-isn't published yet — it lands soon. Until then, the fastest working path is a
-**git clone**, shown below. See [Install](/docs/getting-started/install/) for
-every path.
+<Callout type="warning" title="One-command scaffolding isn't live yet">
+The `fsh` CLI is on NuGet as a `10.0.0-rc` prerelease, but the matching
+`dotnet new` template package hasn't shipped its 10.x version yet — so `fsh new`
+can't scaffold the current kit. Until the stable release lands, the fastest
+working path is a **git clone**, shown below. See
+[Install](/docs/getting-started/install/) for every path.
 </Callout>
 
 The quickest way to run the kit today is to clone the repo and start it with .NET Aspire.
@@ -27,18 +28,42 @@ git clone https://github.com/fullstackhero/dotnet-starter-kit.git MyApp
 cd MyApp
 ```
 
-A clone keeps the original `FSH.Starter` project names — it doesn't rename the solution. Once the CLI ships, `fsh new MyApp` will scaffold a fully renamed project (and `fsh doctor` will verify your environment first).
+A clone keeps the original `FSH.Starter` project names — it doesn't rename the solution. Once the stable CLI + template ship, `fsh new MyApp` will scaffold a fully renamed project.
 
-## 2. Run
+## 2. Install frontend dependencies (one time)
+
+Aspire launches both React apps for you, but it doesn't install their packages:
+
+```bash
+cd clients/admin && npm install
+cd ../dashboard && npm install
+cd ../..
+```
+
+Skip this if you only want the API.
+
+## 3. Run
 
 ```bash
 dotnet run --project src/Host/FSH.Starter.AppHost
 ```
 
-Aspire brings up Postgres and Valkey containers, wires connection strings, launches the API host, and enables OTLP export. Open the Aspire dashboard to watch services start; the API serves at `https://localhost:5285` with OpenAPI and Scalar at `/scalar/v1`.
+Aspire brings up Postgres (with pgAdmin), Valkey, and MinIO in containers, runs the DbMigrator (migrations + seed) and the demo seeder, then starts the API and both React apps — all wired together with connection strings and OTLP export. Watch everything come up in the Aspire dashboard.
+
+Once it's green:
+
+| What | Where |
+|---|---|
+| API + Scalar docs | `https://localhost:7030/scalar` |
+| Admin app | `http://localhost:5173` |
+| Dashboard app | `http://localhost:5174` |
+
+Log in with one of the seeded [demo accounts](/docs/getting-started/demo-accounts/) — the dashboard login page has a persona picker in dev.
 
 ## Next
 
-- **[Install](/docs/getting-started/install/)** — every install path (GitHub template, Codespaces, and the upcoming CLI + `dotnet new` template).
+- **[Demo accounts](/docs/getting-started/demo-accounts/)** — the seeded tenants, personas, and what each one demonstrates.
+- **[Troubleshooting](/docs/getting-started/troubleshooting/)** — fixes for the common first-run failures (containers, volumes, ports, migrations).
+- **[Install](/docs/getting-started/install/)** — every install path (GitHub template, Codespaces, the CLI, and the `dotnet new` template).
 - **[Architecture](/docs/architecture/)** — the modular monolith + VSA mental model.
-- **[CLI](/docs/cli/)** — every `fsh` command and option (coming soon).
+- **[CLI](/docs/cli/)** — the `fsh` commands and where the NuGet release stands.

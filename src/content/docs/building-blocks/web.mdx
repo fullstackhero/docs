@@ -1,6 +1,6 @@
 ---
 title: Web building block
-lastUpdated: 2026-05-19
+lastUpdated: 2026-06-11
 description: The composition root for the host — AddHeroPlatform / UseHeroPlatform, module loader, global exception handler, validation pipeline, CurrentUser middleware, and observability.
 sidebar:
   label: Web
@@ -30,45 +30,49 @@ Your composition root has two real lines — `builder.AddHeroPlatform(o => ...)`
 - **`IModule`** interface — every module implements it:
   - `ConfigureServices(IHostApplicationBuilder)` — DI registration phase
   - `MapEndpoints(IEndpointRouteBuilder)` — endpoint registration phase
-  - `MapMiddlewares(WebApplication)` — middleware insertion phase
-- **`[FshModule(Order = n)]`** attribute — registration order; lower runs first.
-- **`ModuleLoader`** — discovers all `IModule` implementations via reflection at startup, runs ConfigureServices in order, then later MapEndpoints + MapMiddlewares.
+  - `ConfigureMiddleware(IApplicationBuilder)` — middleware insertion phase (default no-op)
+- **`[assembly: FshModule(typeof(XModule), order)]`** — assembly-level attribute; lower order runs first, ties break alphabetically.
+- **`ModuleLoader`** — `AddModules(builder, assemblies)` reads the `FshModule` attributes off the passed assemblies (and registers their FluentValidation validators), instantiates each module, and runs `ConfigureServices` in order. `UseModuleMiddlewares()` and `MapModules()` later replay `ConfigureMiddleware` + `MapEndpoints`.
 
 ### Cross-cutting
 
-- **`GlobalExceptionHandler : IExceptionHandler`** — converts `CustomException`, `NotFoundException`, `ForbiddenException`, `UnauthorizedException`, plus uncaught exceptions, into `ProblemDetails` (RFC 9457). Honors `Production` env hiding by default.
+- **`GlobalExceptionHandler : IExceptionHandler`** — converts exceptions into `ProblemDetails` (RFC 9457): `CustomException` and its subclasses map to their `StatusCode` with `ErrorMessages` in an `errors` extension; FluentValidation's `ValidationException` becomes a 400 with a per-property errors dictionary; `UnauthorizedAccessException` → 401, `KeyNotFoundException` → 404, `BadHttpRequestException` keeps its own status. Everything else is a generic 500 with the real message withheld (in every environment). Every response carries `traceId` + `correlationId` extensions.
 - **`ValidationBehavior<TRequest, TResponse>`** — Mediator pipeline behavior that runs FluentValidation against the request before the handler.
-- **`CurrentUserMiddleware`** — runs late in the pipeline (after authorization) to populate `ICurrentUser` from the JWT claims and request headers.
-- **`MediatorTracingBehavior`** — emits OpenTelemetry activities for every Mediator command/query.
+- **`CurrentUserMiddleware`** — registered last in the pipeline (after authorization) to populate `ICurrentUser` from the authenticated `ClaimsPrincipal` and tag the current OTel activity with user/tenant/correlation ids.
+- **`MediatorTracingBehavior`** — emits OpenTelemetry activities for every Mediator command/query (registered by `AddHeroOpenTelemetry`).
 
 ### Feature toggles (`FshPlatformOptions`)
 
 ```csharp
 builder.AddHeroPlatform(o =>
 {
-    o.EnableCaching     = true;   // adds HybridCache + Valkey
-    o.EnableJobs        = true;   // adds Hangfire
-    o.EnableMailing     = true;   // adds IMailService
-    o.EnableQuotas      = true;   // adds quota middleware
-    o.EnableIdempotency = true;   // adds the Idempotency-Key filter
-    o.EnableSse         = true;   // mounts SSE endpoints
-    o.EnableRealtime    = true;   // mounts SignalR hub
-    o.EnableFeatureFlags = true;
-    // EnableOpenApi, EnableOpenTelemetry default to true
+    o.EnableCaching      = true;   // adds HybridCache + Valkey (default off)
+    o.EnableJobs         = true;   // adds Hangfire (default off)
+    o.EnableMailing      = true;   // adds IMailService (default off)
+    o.EnableQuotas       = true;   // adds quota services (default off)
+    o.EnableSse          = true;   // adds SSE plumbing (default off)
+    o.EnableRealtime     = true;   // adds SignalR + Redis backplane (default off)
+    o.EnableFeatureFlags = true;   // adds Microsoft.FeatureManagement (default off)
+    // EnableCors, EnableOpenApi, EnableOpenTelemetry, EnableIdempotency default to true
 });
 ```
+
+`UseHeroPlatform` has its own `FshPipelineOptions` mirror: `UseCors`, `UseOpenApi`, `ServeStaticFiles`, `MapModules` (default true) and `MapSseEndpoints`, `MapRealtime`, `UseQuotas` (default false) — enabling a service in `AddHeroPlatform` is only half the job, you also flip the matching pipeline toggle.
 
 ### Sub-blocks the Web block wires
 
 - **`AddHeroLogging`** — Serilog with HTTP context enrichers.
-- **`AddHeroOpenTelemetry`** — full stack: traces, metrics, logs via OTLP exporter; Mediator + EF Core instrumentation.
-- **`AddHeroOpenApi`** — OpenAPI 3.1 + Scalar UI at `/scalar/v1`.
-- **`AddHeroVersioning`** — `Asp.Versioning.Http` with reader from header `X-Version` + URL segment.
-- **`AddHeroIdempotency`** — `Idempotency-Key` header support; replay protection via distributed cache.
-- **`AddHeroFeatureFlags`** — `Microsoft.FeatureManagement` with tenant overrides.
-- **`AddHeroSse`** — Server-Sent Events endpoint plumbing.
-- **`AddHeroRealtime`** — SignalR hub registration over a Valkey backplane.
-- **`AddHeroSecurityHeaders`** — CSP, HSTS, X-Frame-Options, X-Content-Type-Options.
+- **`AddHeroOpenTelemetry`** — traces + metrics via OTLP; registers `MediatorTracingBehavior` and wires the caching/Hangfire/module sources and meters.
+- **`AddHeroOpenApi`** — OpenAPI documents + Scalar UI at `/scalar`; `OpenApiOptions` (Title, Description, Versions, Contact, License).
+- **`AddHeroVersioning`** — `Asp.Versioning` with **URL-segment** versioning only (`api/v{version}/…`), default v1, assumed when unspecified.
+- **`AddHeroIdempotency`** — `IdempotencyEndpointFilter` + `IdempotencyOptions` (`HeaderName` default `Idempotency-Key`, `DefaultTtl` 24h, `MaxKeyLength` 128); replay protection via distributed cache.
+- **`AddHeroFeatureFlags`** — `Microsoft.FeatureManagement` with the `TenantFeatureFilter` for per-tenant overrides and a `FeatureGateEndpointFilter` for endpoints.
+- **`AddHeroSse`** — Server-Sent Events plumbing (`SseConnectionManager`, token service, endpoints via `MapHeroSseEndpoints`).
+- **`AddHeroRealtime`** — SignalR (`AppHub` at `/api/v1/realtime/hub` + presence endpoint) with a Redis backplane when `CachingOptions:Redis` is set.
+- **`UseHeroSecurityHeaders`** — security-headers middleware driven by `SecurityHeadersOptions` (CSP, HSTS, X-Frame-Options, X-Content-Type-Options…).
+- **`AddHeroResilience`** (on `IHttpClientBuilder`) — standard Polly resilience pipeline for outbound HTTP, tuned by `HttpResilienceOptions`.
+- **`AddHeroRateLimiting` / `UseHeroRateLimiting`** — fixed-window policies from `RateLimitingOptions`.
+- **`MapHeroHealthEndpoints`** — anonymous `/health/live` (process only) and `/health/ready` (all checks, 503 on failure), always mapped.
 
 ## How modules consume Web
 
@@ -76,28 +80,37 @@ A module's `IModule.ConfigureServices` adds its DI registrations; `MapEndpoints`
 
 ```csharp
 [assembly: FshModule(typeof(CatalogModule), 600)]
+
 public sealed class CatalogModule : IModule
 {
     public void ConfigureServices(IHostApplicationBuilder builder)
     {
-        builder.Services.AddHeroDbContext<CatalogDbContext>();
         PermissionConstants.Register(CatalogPermissions.All);
+        builder.Services.AddHeroDbContext<CatalogDbContext>();
         // ... more registrations
     }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints)
     {
-        var v1 = endpoints.MapGroup("api/v{version:apiVersion}/catalog")
-                          .WithTags("Catalog")
-                          .HasApiVersion(1);
-        v1.MapCreateBrandEndpoint();
-        v1.MapGetBrandsEndpoint();
+        var versionSet = endpoints.NewApiVersionSet()
+            .HasApiVersion(new ApiVersion(1))
+            .ReportApiVersions()
+            .Build();
+
+        var group = endpoints
+            .MapGroup("api/v{version:apiVersion}/catalog")
+            .WithTags("Catalog")
+            .WithApiVersionSet(versionSet)
+            .RequireAuthorization();
+
+        group.MapCreateBrandEndpoint();
+        group.MapSearchBrandsEndpoint();
         // ...
     }
 }
 ```
 
-The `ModuleLoader` runs `ConfigureServices` for every module in `[FshModule(Order)]` order, then later runs `MapEndpoints` for each.
+The `ModuleLoader` runs `ConfigureServices` for every module in the order declared by each module's assembly-level `[assembly: FshModule(typeof(XModule), order)]` attribute, then later runs `MapEndpoints` for each.
 
 ## The pipeline order
 
@@ -105,24 +118,25 @@ The `ModuleLoader` runs `ConfigureServices` for every module in `[FshModule(Orde
 
 1. `UseExceptionHandler()` — converts exceptions to ProblemDetails
 2. `UseResponseCompression()`
-3. `UseCors()` — **before** HTTPS redirect (preflight requests can't follow redirects)
+3. `UseHeroCors()` — **before** HTTPS redirect (preflight requests can't follow redirects)
 4. `UseHttpsRedirection()`
-5. Security headers
-6. `UseStaticFiles()` (optional)
-7. Job dashboard (`/hangfire`)
+5. `UseHeroSecurityHeaders()`
+6. `UseStaticFiles()` (optional, `ServeStaticFiles`)
+7. Hangfire dashboard (`/jobs` by default, `HangfireOptions:Route`)
 8. `UseRouting()`
 9. OpenAPI + Scalar
 10. `UseAuthentication()`
-11. Module-supplied middleware (via `ConfigureMiddleware`)
-12. `UseRateLimiter()`
-13. `UseAuthorization()`
-14. Module endpoint mapping (via `MapEndpoints`)
-15. Health endpoints, SSE endpoints, SignalR
-16. `CurrentUserMiddleware` (last so authorization is already resolved)
+11. Module-supplied middleware (via `ConfigureMiddleware` — e.g. Auditing's HTTP capture)
+12. `UseHeroRateLimiting()`
+13. `UseHeroQuotas()` (optional, `UseQuotas`)
+14. `UseAuthorization()`
+15. Module endpoint mapping (via `MapEndpoints`)
+16. Health endpoints (always), SSE endpoints + SignalR (optional)
+17. `CurrentUserMiddleware` (last so authorization is already resolved)
 
 ## Configuration
 
-The Web block reads many config sections — `Logging`, `Cors`, `OpenApi`, `OriginOptions`, `SecurityHeadersOptions`, plus the optional sub-block sections (`CachingOptions`, `HangfireOptions`, `MailOptions`, `FeatureManagement`, `IdempotencyOptions`, etc.). The kit's `appsettings.json` template ships a complete starter set.
+The Web block reads many config sections — `CorsOptions`, `OpenApiOptions`, `OriginOptions`, `SecurityHeadersOptions`, `RateLimitingOptions`, plus the optional sub-block sections (`CachingOptions`, `HangfireOptions`, `MailOptions`, `FeatureManagement`, `IdempotencyOptions`, `QuotaOptions`, `HttpResilienceOptions`). The kit's `appsettings.json` template ships a complete starter set.
 
 ## How to extend
 
@@ -153,8 +167,8 @@ Implement your own `IExceptionHandler`, register it as `services.AddExceptionHan
 
 - **CORS before HTTPS redirect.** Preflight `OPTIONS` requests cannot follow an HTTP→HTTPS redirect per the Fetch spec. The kit puts `UseCors` before `UseHttpsRedirection`. Don't reorder.
 - **`CurrentUserMiddleware` runs last.** It's after authorization, so anything between `UseAuthentication` and `CurrentUserMiddleware` runs with a populated `ClaimsPrincipal` but a null `ICurrentUser`. If you write middleware that needs `ICurrentUser`, place it after this one — or read claims directly.
-- **`AddHeroPlatform` defaults are conservative.** Caching, jobs, mailing, feature flags, idempotency, SSE, realtime, quotas are all **off** unless explicitly enabled. Only `OpenAPI` and `OpenTelemetry` default to on. This keeps the smallest possible host trivially deployable.
-- **The `ModuleLoader` is reflection-based and discovers types at startup once.** Adding a module means adding the project, adding the marker assembly to the host's `moduleAssemblies` array, **and** adding it to `AddMediator(o => o.Assemblies = [...])`. Forgetting the Mediator step is the silent failure mode: services build, endpoints map, but handlers aren't found at request time.
+- **`AddHeroPlatform` defaults are conservative.** Caching, jobs, mailing, feature flags, SSE, realtime, quotas are all **off** unless explicitly enabled. `EnableCors`, `EnableOpenApi`, `EnableOpenTelemetry`, and `EnableIdempotency` default to on (CORS and OpenAPI are additionally gated by configuration — no `CorsOptions` origins means no CORS middleware; `OpenApiOptions:Enabled` can switch docs off per environment).
+- **The `ModuleLoader` reads assembly attributes once at startup.** Adding a module means adding the project, adding the marker assembly to the host's `moduleAssemblies` array, **and** adding both marker types to `AddMediator(o => o.Assemblies = [...])` — in `Program.cs` *and* `DbMigrator/Program.cs` (four places total). Forgetting the Mediator step is the silent failure mode: services build, endpoints map, but handlers aren't found at request time.
 
 ## Critical files
 

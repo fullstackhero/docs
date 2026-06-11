@@ -1,0 +1,178 @@
+---
+title: Demo accounts & seed data
+lastUpdated: 2026-06-11
+description: Every demo tenant, user persona, and piece of sample data the seed-demo verb creates — what you can log in as and what you'll see.
+sidebar:
+  label: Demo accounts
+  order: 5
+pageType: reference
+seo:
+  title: 'Demo accounts in fullstackhero — tenants, personas, seed data'
+  description: 'Reference for the fullstackhero demo seed: the acme and globex tenants, every demo login (with dev passwords), custom roles, and the catalog, tickets, and chat data the seed-demo verb creates.'
+  keywords: 'fullstackhero demo accounts, seed-demo, demo tenants acme globex, .NET starter kit demo login, demo seed data'
+---
+
+When the Aspire stack comes up, the dashboard login page (`http://localhost:5174`) shows a
+**"Sign in with a demo account"** button. One click drops you into any persona — platform
+owner, tenant admin, support agent, regular member — without typing a thing. This page is
+the reference for what those accounts are and what data sits behind them.
+
+<Callout type="warning" title="Demo credentials are public — never seed production">
+Every password on this page is hardcoded in the repo, which means it's public knowledge.
+`seed-demo` is dev-only by design: the migrator **refuses to run the verb unless the
+environment is `Development`** and exits non-zero. Don't work around that guard, and don't
+ship a production `config.json` with `demoMode: true` — the picker would advertise
+credentials that (hopefully) don't exist there.
+</Callout>
+
+## Two layers of seeding
+
+The DbMigrator does all seeding — the API never mutates data at startup. There are two
+distinct layers, and it helps to keep them straight:
+
+| | `apply --seed` (baseline) | `seed-demo` (demo content) |
+|---|---|---|
+| **When** | Every environment, including production | Dev only — hard-refuses elsewhere |
+| **Tenants** | `root` only (on first run) | Adds `acme` and `globex` |
+| **Users** | The tenant admin per tenant — `admin@root.com` on root | 10 Acme users, 1 Globex user, `superadmin@root.com`, plus password realignment |
+| **Roles** | `Admin` + `Basic` with their permission claims, an Administrators group | Custom `Manager` + `Support` roles in Acme |
+| **Billing** | Default plans: `free`, `pro`, `pro-annual` | Active subscriptions + a term invoice for paid plans |
+| **Content** | None — fresh tenants start empty | Catalog, tickets, chat channels + messages |
+| **Password source** | `Seed:DefaultAdminPassword` | `Seed:DemoPassword` |
+
+So `admin@root.com` exists in *every* deployment (it comes from baseline seeding), while
+everything else on this page only exists after `seed-demo`.
+
+Both layers are idempotent — every step checks before writing, so re-running against an
+already-seeded database is a no-op.
+
+## The shared demo password
+
+Every demo account signs in with:
+
+```text
+Password123!
+```
+
+It's sourced from `Seed:DemoPassword` (the Aspire AppHost sets it; the API's
+`appsettings.Development.json` carries the same value). The seeder also **realigns the
+tenant admin passwords** — `admin@root.com`, `admin@acme.com`, `admin@globex.com` — to this
+shared password, so in the dev stack the root admin signs in with `Password123!` too.
+
+A deployment that runs only `apply --seed` (i.e. any non-dev environment) keeps whatever
+`Seed:DefaultAdminPassword` you configured for the root admin. The Aspire dev default for
+that is `123Pa$$word!`, but it's irrelevant in dev because `seed-demo` overwrites it.
+
+## The dashboard demo picker
+
+The picker groups accounts by tenant, exactly as defined in
+`clients/dashboard/src/pages/login.demo-accounts.ts`. Picking one fills tenant + email +
+password and signs in instantly.
+
+### Root — platform owner, super-tenant
+
+| Login | Name | Role | Use it to… |
+|---|---|---|---|
+| `admin@root.com` | Root Admin | Tenant Admin | Act as the platform owner — manage tenants, billing plans, all permissions |
+
+### Acme Corp — the populated tenant
+
+Acme is where most flows make sense: full catalog, open tickets, busy chat.
+
+| Login | Name | Role | Use it to… |
+|---|---|---|---|
+| `admin@acme.com` | Acme Admin | Tenant Admin | See everything a tenant admin can do — full access |
+| `manager@acme.com` | Maya Lin | Manager (custom role) | Manage catalog + tickets with read-only users — a mid-tier custom role |
+| `support@acme.com` | Sam Rivera | Support (custom role) | Work tickets only — watch most of the nav disappear |
+| `alice@acme.com` | Alice Nguyen | Basic | Experience the default-member baseline and permission gating |
+| `bob@acme.com` | Bob Patel | Basic | Same as Alice — handy for two-browser chat/DM testing |
+
+### Globex — the sparse tenant
+
+Globex is the "just onboarded" contrast: one extra user, two tickets, one quiet channel,
+and the free plan.
+
+| Login | Name | Role | Use it to… |
+|---|---|---|---|
+| `admin@globex.com` | Globex Admin | Tenant Admin | A tenant admin on the free plan with minimal activity |
+| `dave@globex.com` | Dave Hartwell | Basic | A lone member in a near-empty tenant |
+
+### Accounts that exist but aren't in the picker
+
+The seeder creates more Acme members than the picker advertises — they exist to make chat
+and tickets feel lived-in. You can log in as any of them manually with the shared password:
+`carol@`, `dan@`, `erin@`, `frank@`, `gina@`, `henry@acme.com` (all Basic).
+
+There's also `superadmin@root.com` (Admin role on the root tenant) — that's the account the
+**admin app's** demo picker surfaces, see below.
+
+## What `seed-demo` puts in each tenant
+
+| Data | Acme Corp | Globex |
+|---|---|---|
+| Plan / subscription | `pro-annual` (active) + an issued term invoice | `free` (active), no invoice — free plans don't invoice, same as production |
+| Users | Admin + 10 members, incl. the `Manager` and `Support` custom roles | Admin + 1 member |
+| Catalog | 4 brands, 11 categories, 10 products | Same dataset (catalog seeds for both demo tenants) |
+| Tickets | 6 tickets (`TK-1`–`TK-6`): 2 resolved, varied priorities, comments, assignees | 2 open tickets reported by Dave, unassigned |
+| Chat | `#general` + `#random` (public), `#engineering` (private), and an Alice↔Bob DM, all with messages | `#general` with a single welcome message |
+
+The custom roles are worth poking at — they're the demo for permission-driven UI:
+
+| Role | What it grants |
+|---|---|
+| **Manager** | Full CRUD on brands, categories, products, and tickets; view + update users; view roles, groups, sessions; revoke sessions |
+| **Support** | View, create, and update tickets; view users and sessions; revoke sessions — no catalog, no deletes |
+
+Fresh tenants you create yourself get none of this — they start with an empty catalog and
+populate via the API or admin UI.
+
+## How seeding runs
+
+### In the Aspire dev stack
+
+`dotnet run --project src/Host/FSH.Starter.AppHost` runs the migrator twice as one-shot
+jobs, and the API waits for both:
+
+1. **Migrator** — `apply --seed`: migrations + baseline seed (root tenant, roles, `admin@root.com`, default plans).
+2. **Demo seeder** — `seed-demo` with `DOTNET_ENVIRONMENT=Development`: everything on this page.
+
+### Manually
+
+```bash
+dotnet run --project src/Host/FSH.Starter.DbMigrator -- seed-demo
+```
+
+Two things must be true for the verb to run:
+
+- The environment must be `Development`. The migrator is a console host, so set
+  `DOTNET_ENVIRONMENT=Development` (it ignores `ASPNETCORE_ENVIRONMENT`).
+- `Seed:DemoPassword` must be configured. The migrator links the API's
+  `appsettings.Development.json`, which already carries `Password123!` — so in the
+  Development environment this just works. Override with the
+  `Seed__DemoPassword` environment variable if you want a different credential.
+
+The default connection string targets `localhost` Postgres; override
+`DatabaseOptions__ConnectionString` if your database lives elsewhere. Run `--help` on the
+migrator for the full verb/flag list.
+
+## Turning the picker off
+
+The two apps gate their pickers differently:
+
+- **Dashboard** — a runtime flag: `"demoMode": true` in `clients/dashboard/public/config.json`.
+  It's runtime (not a `VITE_` build-time var) so a single build artifact can be promoted
+  across environments — set it `true` in staging's `config.json`, `false` or omit it in
+  production's. Omitted means **off**.
+- **Admin** — gated on `import.meta.env.DEV`, so it only exists in dev builds
+  (`npm run dev`). A production build never includes it; there's nothing to configure.
+  It surfaces exactly one account: `superadmin@root.com` / `Password123!` on the `root`
+  tenant.
+
+The picker is a static list in the frontend — it never calls the API (the login page is
+unauthenticated, and the API shouldn't advertise credentials). If you add a demo account on
+the backend, mirror it in `login.demo-accounts.ts` by hand.
+
+## Related
+
+- [Quick Start](/docs/getting-started/quick-start/) — bring the whole stack up with one command.
+- [Operator impersonation](/docs/guides/operator-impersonation/) — what the root operator can do once signed in.

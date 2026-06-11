@@ -1,6 +1,6 @@
 ---
 title: Files module
-lastUpdated: 2026-05-19
+lastUpdated: 2026-06-11
 description: Presigned-URL file lifecycle with pluggable per-OwnerType access policies, soft delete + retention purge, optional scanner hook, and S3 / MinIO storage.
 sidebar:
   label: Files
@@ -12,7 +12,7 @@ seo:
   keywords: '.net file upload s3, minio presigned upload .net, tenant scoped storage dotnet, file access policy .net, dotnet file lifecycle module'
 ---
 
-The Files module is the kit's shared object-storage layer. Any other module that needs file uploads (Catalog product images, Chat attachments, user avatars) goes through it. Files are owned by an `OwnerType` (e.g. `Product`, `ChatChannel`, `User`) and an `OwnerId`; per-OwnerType `IFileAccessPolicy` implementations decide who can upload, read, and delete. Storage is MinIO / S3 via presigned URLs — the API never proxies bytes.
+The Files module is the kit's shared object-storage layer. Any other module that needs file uploads (Catalog product images, Chat attachments, user avatars) goes through it. Files are owned by an `OwnerType` (e.g. `Product`, `ChatChannel`, `User`) and an `OwnerId`; per-OwnerType `IFileAccessPolicy` implementations decide who can attach, read, delete, and change visibility. Storage is MinIO / S3 via presigned URLs — the API never proxies bytes. (The Storage building block also ships a local-disk provider with emulated presign tokens for environments without object storage.)
 
 <Callout type="tip" title="One module, one storage policy">
 If your module owns files, ship a `FileAccessPolicy : IFileAccessPolicy` next to the rest of its code. Register it during your module's `ConfigureServices`. The Files module never knows about your domain — your domain knows what's allowed.
@@ -21,30 +21,36 @@ If your module owns files, ship a `FileAccessPolicy : IFileAccessPolicy` next to
 ## What ships in v10
 
 - **Presigned upload flow** — `POST /files/upload-url` mints a presigned PUT URL with a 15-minute TTL (configurable). Client uploads directly to MinIO / S3. `POST /files/{id}/finalize` flips the file from `PendingUpload` to `Available`.
-- **Pluggable access policies** — `IFileAccessPolicy` interface registered per `OwnerType`. Catalog ships `ProductFileAccessPolicy`, Chat ships `ChatChannelFileAccessPolicy`, the Files module itself ships defaults for `MyFiles` and `User`.
-- **Per-category validation** — extensions whitelist + size cap per category (`Image` 10 MB, `Document` 25 MB, `Archive` 50 MB), configured in `appsettings`.
-- **File scanner hook** — `IFileScanner` interface with `NoOpFileScanner` as the default. Implement it to plug in ClamAV / S3 antivirus / VirusTotal; quarantined files transition to `Quarantined` instead of `Available`.
-- **Soft delete + retention** — deleted files go to trash; `PurgeDeletedFilesJob` (Hangfire daily 03:30 UTC) hard-deletes after 30 days.
+- **Pluggable access policies** — `IFileAccessPolicy` interface registered per `OwnerType`. Catalog ships `ProductFileAccessPolicy`, Chat ships `ChatChannelFileAccessPolicy`, the Files module itself registers `DefaultUploaderOnlyPolicy` for the built-in `MyFiles` and `User` owner types.
+- **Per-category validation** — extension whitelist + size cap per category (`Image` 10 MB, `Document` 25 MB, `Archive` 50 MB), configured in `appsettings`.
+- **Visibility** — files are `Public` or `Private`; `PATCH /files/{id}/visibility` flips it after upload (policy-gated, only on `Available` files). `GET /files/shared` lists the tenant's public free-standing files (`MyFiles` / `User` owner types) for a "Shared in tenant" surface.
+- **File scanner hook** — `IFileScanner.ScanAsync(storageKey)` with `NoOpFileScanner` as the default (always `Clean`). Implement it to plug in ClamAV / GuardDuty / VirusTotal; an `Infected` scan result transitions the file to `Quarantined` instead of `Available`.
+- **Soft delete + retention** — deleted files go to trash; `PurgeDeletedFilesJob` (Hangfire, daily 03:30 UTC) hard-deletes after 30 days. The tenant dashboard's Trash page restores from here (permission-gated tab).
 - **Orphan cleanup** — `PurgeOrphanedFilesJob` (hourly) deletes `PendingUpload` rows whose upload deadline passed without a finalize call.
-- **`FileFinalizedIntegrationEvent`** — published when a file becomes `Available`; the Catalog product-image flow and Chat attachment flow consume this.
+- **Storage quota metering** — finalize records the uploaded bytes against the tenant's `StorageBytes` quota.
+- **`FileFinalizedIntegrationEvent`** — published when a file is finalized (`Available` or `Quarantined`), carrying owner type/id, content type, size, and final status. No built-in consumer ships today — Catalog and Chat attach files via explicit commands carrying the `fileAssetId` + URL — but it's the hook for search indexing, notifications, and the like.
+- **5 permissions** — `Files.Upload`, `DeleteOwn`, `DeleteAny`, `ViewTrash`, `Restore`.
 
 ## Architecture at a glance
 
 ```
 src/Modules/Files/
-├── Modules.Files/                               ~500 LoC
+├── Modules.Files/                               ~1,600 LoC
 │   ├── FilesModule.cs                           IModule entry — order 350
-│   ├── Domain/FileAsset.cs                      AggregateRoot, state machine
+│   ├── FilesOptions.cs                          Bound from the "Files" appsettings section
+│   ├── Domain/FileAsset.cs                      AggregateRoot, state machine, ISoftDeletable
 │   ├── Data/FilesDbContext.cs                   Schema: files
+│   ├── Authorization/
+│   │   └── DefaultUploaderOnlyPolicy.cs         For MyFiles + User
 │   ├── Services/
 │   │   ├── FileAccessPolicyRegistry.cs          OwnerType → IFileAccessPolicy lookup
-│   │   ├── DefaultUploaderOnlyPolicy.cs         For MyFiles + User
+│   │   ├── StorageKeyBuilder.cs                 Tenant + category path generation
 │   │   └── NoOpFileScanner.cs                   Default IFileScanner
-│   ├── Background/
+│   ├── Jobs/
 │   │   ├── PurgeOrphanedFilesJob.cs             Hangfire hourly
 │   │   └── PurgeDeletedFilesJob.cs              Hangfire 03:30 daily
-│   └── Features/v1/                             8 features
-└── Modules.Files.Contracts/                     ~50 LoC, plus IFileAccessPolicy
+│   └── Features/v1/                             10 features
+└── Modules.Files.Contracts/                     ~250 LoC, incl. IFileAccessPolicy
 ```
 
 ## The lifecycle
@@ -55,7 +61,7 @@ src/Modules/Files/
                     finalize
 PendingUpload ────────────────────► Available
        │
-       │ scan = Quarantined
+       │ scan = Infected
        └──────────────────────────► Quarantined
 ```
 
@@ -64,32 +70,43 @@ Upload-deadline expiry transitions `PendingUpload` to hard-deleted via the orpha
 ```csharp
 // src/Modules/Files/Modules.Files/Domain/FileAsset.cs
 
-public sealed class FileAsset : AggregateRoot, ISoftDeletable
+public sealed class FileAsset : AggregateRoot<Guid>, ISoftDeletable
 {
     public FileAssetStatus Status { get; private set; }       // PendingUpload | Available | Quarantined
-    public DateTime UploadDeadline { get; private set; }
+    public DateTimeOffset? UploadDeadline { get; private set; }
 
     public static FileAsset CreatePending(
-        Guid tenantId,
+        Guid id,
         string ownerType,
         Guid? ownerId,
-        string fileName,
+        string originalFileName,
+        string sanitizedFileName,
         string contentType,
-        long sizeBytes,
-        FileVisibility visibility,
-        TimeSpan uploadTtl) { /* ... */ }
+        long declaredSizeBytes,
+        string storageKey,
+        Visibility visibility,
+        string createdByUserId,
+        DateTimeOffset uploadDeadline) { /* ... */ }
 
-    public void MarkAvailable(long actualSize)
+    public void MarkAvailable(long actualSize, ScanStatus scanResult)
     {
-        EnsureStatus(FileAssetStatus.PendingUpload);
-        Status = FileAssetStatus.Available;
-        ActualSize = actualSize;
-        RaiseDomainEvent(new FileFinalizedDomainEvent(Id, OwnerType, OwnerId));
+        // throws 409 unless Status == PendingUpload
+        SizeBytes = actualSize;
+        ScanStatus = scanResult;
+        Status = scanResult == ScanStatus.Infected
+            ? FileAssetStatus.Quarantined
+            : FileAssetStatus.Available;
+        UploadDeadline = null;
+
+        AddDomainEvent(DomainEvent.Create((id, ts) =>
+            new FileFinalizedDomainEvent(Id, OwnerType, OwnerId, Status, id, ts)));
     }
 
-    public void MarkQuarantined(string reason) { /* ... */ }
+    public void ChangeVisibility(Visibility next) { /* 409 unless Available */ }
 }
 ```
+
+Finalize HEADs the uploaded object, rejects uploads larger than the declared size (plus a 1 % slack), runs the scanner, and records the bytes against the tenant's storage quota.
 
 ## Access policies
 
@@ -100,13 +117,19 @@ public sealed class FileAsset : AggregateRoot, ISoftDeletable
 public interface IFileAccessPolicy
 {
     string OwnerType { get; }
-    ValueTask<bool> CanUploadAsync(Guid? ownerId, ICurrentUser user, CancellationToken ct);
-    ValueTask<bool> CanReadAsync(FileAsset file, ICurrentUser user, CancellationToken ct);
-    ValueTask<bool> CanDeleteAsync(FileAsset file, ICurrentUser user, CancellationToken ct);
+    Task<bool> CanAttachAsync(Guid? ownerId, string currentUserId, CancellationToken cancellationToken);
+    Task<bool> CanReadAsync(FileAccessContext context, string currentUserId, CancellationToken cancellationToken);
+    Task<bool> CanDeleteAsync(FileAccessContext context, string currentUserId, CancellationToken cancellationToken);
+
+    // defaults to the CanDelete rule; override to forbid visibility flips entirely
+    Task<bool> CanChangeVisibilityAsync(FileAccessContext context, string currentUserId, CancellationToken cancellationToken)
+        => CanDeleteAsync(context, currentUserId, cancellationToken);
 }
 ```
 
-Catalog's `ProductFileAccessPolicy` checks that the caller has `Catalog.Products.Update` and that the product exists. Chat's `ChatChannelFileAccessPolicy` checks that the caller is a member of the channel.
+Policies receive a `FileAccessContext` record (file id, owner type/id, uploader, visibility) and a primitive `currentUserId` rather than a `ClaimsPrincipal`, so the contract stays free of ASP.NET Core types. Tenant scoping is enforced by `BaseDbContext`, not delegated to policies.
+
+Catalog's `ProductFileAccessPolicy` allows any authenticated user to attach (the durable gate is the product-update permission when the image is attached to the product), open read (product images are public), and uploader-only delete. Chat's `ChatChannelFileAccessPolicy` requires channel membership to attach and read; delete is uploader-only.
 
 `FileAccessPolicyRegistry` looks up the right policy by `OwnerType`. Missing policy → request rejected. This is a deliberate fail-closed default.
 
@@ -115,28 +138,34 @@ Catalog's `ProductFileAccessPolicy` checks that the caller has `Catalog.Products
 | Type | Purpose |
 |---|---|
 | `RequestUploadUrlCommand(ownerType, ownerId?, fileName, contentType, sizeBytes, visibility, category)` | Mints a presigned PUT URL and a pending `FileAsset` |
-| `FinalizeUploadCommand(fileId, actualSize)` | Flips to Available; raises domain event |
+| `FinalizeUploadCommand(fileAssetId)` | HEADs the object, scans, flips to Available/Quarantined |
+| `ChangeFileVisibilityCommand(fileAssetId, visibility)` | Flip Public ↔ Private (policy-gated) |
 | `DeleteFileCommand(fileId)` | Soft delete |
 | `RestoreFileCommand(fileId)` | Undelete |
 | `GetFileMetadataQuery(fileId)` | Single file's metadata |
 | `GetFileDownloadUrlQuery(fileId)` | Mints a presigned GET URL |
 | `ListMyFilesQuery(paging)` | Paginated caller-scoped list |
+| `ListSharedFilesQuery(paging)` | Public tenant-wide files (MyFiles / User owner types) |
 | `ListTrashedFilesQuery(paging)` | Paginated trash |
 
-The `PresignedUploadResponse` returned by `RequestUploadUrl` includes the URL, the headers the client must send with the PUT, and the file id. The download response is just URL + content-disposition.
+The `PresignedUploadResponse` returned by `RequestUploadUrl` carries `FileAssetId`, `UploadUrl`, the `RequiredHeaders` the client must send with the PUT, and `ExpiresAt`. The download response is a presigned GET URL.
 
 ## Endpoints
 
-| Verb | Route | What it does |
-|---|---|---|
-| POST | `/api/v1/files/upload-url` | Mint presigned PUT URL (idempotent) |
-| POST | `/api/v1/files/{id}/finalize` | Flip to Available, trigger scan |
-| GET | `/api/v1/files/{id}` | File metadata (not content) |
-| GET | `/api/v1/files/{id}/url` | Mint presigned GET URL |
-| DELETE | `/api/v1/files/{id}` | Soft delete |
-| POST | `/api/v1/files/{id}/restore` | Restore from trash |
-| GET | `/api/v1/files/mine` | Paginated caller-scoped list |
-| GET | `/api/v1/files/trash` | Paginated trash |
+| Verb | Route | Permission | What it does |
+|---|---|---|---|
+| POST | `/api/v1/files/upload-url` | `Files.Upload` | Mint presigned PUT URL |
+| POST | `/api/v1/files/{id}/finalize` | — (policy) | Flip to Available, trigger scan |
+| GET | `/api/v1/files/{id}` | — (policy) | File metadata (not content) |
+| GET | `/api/v1/files/{id}/url` | — (policy) | Mint presigned GET URL |
+| PATCH | `/api/v1/files/{id}/visibility` | `Files.Upload` | Flip Public ↔ Private |
+| DELETE | `/api/v1/files/{id}` | `Files.DeleteOwn` | Soft delete |
+| POST | `/api/v1/files/{id}/restore` | `Files.Restore` | Restore from trash |
+| GET | `/api/v1/files/mine` | `Files.Upload` | Paginated caller-scoped list |
+| GET | `/api/v1/files/shared` | `Files.Upload` | Public tenant-wide files |
+| GET | `/api/v1/files/trash` | `Files.ViewTrash` | Paginated trash |
+
+Endpoints marked "— (policy)" require authentication only; the per-OwnerType `IFileAccessPolicy` makes the call.
 
 ## Configuration
 
@@ -149,13 +178,15 @@ The `PresignedUploadResponse` returned by `RequestUploadUrl` includes the URL, t
     "OrphanRetentionMinutes": 60,
     "SoftDeleteRetentionDays": 30,
     "Categories": {
-      "Image":    { "Extensions": ["png","jpg","jpeg","webp","gif","svg"], "MaxBytes": 10485760 },
-      "Document": { "Extensions": ["pdf","docx","xlsx","txt","md"],         "MaxBytes": 26214400 },
-      "Archive":  { "Extensions": ["zip","tar.gz","tgz"],                    "MaxBytes": 52428800 }
+      "Image":    { "AllowedExtensions": [".jpg",".jpeg",".png",".webp",".gif",".ico"],  "MaxBytes": 10485760 },
+      "Document": { "AllowedExtensions": [".pdf",".docx",".xlsx",".pptx",".txt",".csv"], "MaxBytes": 26214400 },
+      "Archive":  { "AllowedExtensions": [".zip"],                                       "MaxBytes": 52428800 }
     }
   }
 }
 ```
+
+The section binds to `FilesOptions` (`Modules.Files/FilesOptions.cs`); category names are matched case-insensitively.
 
 The S3 / MinIO target is configured in the [Storage building block](/docs/building-blocks/storage/) — the Files module is the policy + lifecycle layer on top.
 
@@ -164,19 +195,20 @@ The S3 / MinIO target is configured in the [Storage building block](/docs/buildi
 ### Add a policy for a new owner type
 
 ```csharp
-public sealed class ContractDocumentAccessPolicy(IContractDbContext db) : IFileAccessPolicy
+public sealed class ContractDocumentAccessPolicy(ContractsDbContext db) : IFileAccessPolicy
 {
     public string OwnerType => "Contract";
 
-    public async ValueTask<bool> CanUploadAsync(Guid? ownerId, ICurrentUser user, CancellationToken ct)
+    public async Task<bool> CanAttachAsync(Guid? ownerId, string currentUserId, CancellationToken cancellationToken)
     {
         if (ownerId is null) return false;
-        var contract = await db.Contracts.FindAsync([ownerId], ct).ConfigureAwait(false);
-        return contract is not null && contract.OwnerUserId == user.GetUserId();
+        var contract = await db.Contracts.FindAsync([ownerId.Value], cancellationToken).ConfigureAwait(false);
+        return contract is not null
+            && string.Equals(contract.OwnerUserId, currentUserId, StringComparison.Ordinal);
     }
 
-    public ValueTask<bool> CanReadAsync(FileAsset file, ICurrentUser user, CancellationToken ct) { /* ... */ }
-    public ValueTask<bool> CanDeleteAsync(FileAsset file, ICurrentUser user, CancellationToken ct) { /* ... */ }
+    public Task<bool> CanReadAsync(FileAccessContext context, string currentUserId, CancellationToken cancellationToken) { /* ... */ }
+    public Task<bool> CanDeleteAsync(FileAccessContext context, string currentUserId, CancellationToken cancellationToken) { /* ... */ }
 }
 
 // register in your module's ConfigureServices
@@ -185,7 +217,7 @@ services.AddScoped<IFileAccessPolicy, ContractDocumentAccessPolicy>();
 
 ### Plug a virus scanner
 
-Implement `IFileScanner.ScanAsync(stream, ct)` and register your implementation in DI to replace `NoOpFileScanner`. `FinalizeUploadCommandHandler` calls the scanner during finalize; quarantined files transition to `Quarantined` instead of `Available`.
+Implement `IFileScanner.ScanAsync(storageKey, ct)` (return `ScanStatus.Clean` or `Infected`) and replace the `NoOpFileScanner` registration in DI. `FinalizeUploadCommandHandler` calls the scanner during finalize; an `Infected` result transitions the file to `Quarantined` instead of `Available`.
 
 ### Listen for file finalization in another module
 
@@ -193,15 +225,15 @@ Implement `IFileScanner.ScanAsync(stream, ct)` and register your implementation 
 public sealed class FileFinalizedNotifyHandler(/* ... */)
     : IIntegrationEventHandler<FileFinalizedIntegrationEvent>
 {
-    public async ValueTask HandleAsync(FileFinalizedIntegrationEvent evt, CancellationToken ct)
+    public async Task HandleAsync(FileFinalizedIntegrationEvent evt, CancellationToken ct = default)
     {
         if (evt.OwnerType != "Product") return;
-        // attach the file to the product domain
+        // react to the upload completing — index it, notify someone, etc.
     }
 }
 ```
 
-The Catalog module uses this exact pattern to associate product images.
+No module ships a consumer today — Catalog and Chat attach files by passing the `fileAssetId` + public URL through their own commands (`AddProductImageCommand`, `SendMessageCommand` attachments). The event is the seam for anything that should *react* to an upload completing.
 
 ## Tests
 
@@ -210,7 +242,7 @@ The Catalog module uses this exact pattern to associate product images.
   - `DefaultUploaderOnlyPolicyTests` — policy enforcement
   - `FileAccessPolicyRegistryTests` — registry lookup
   - `StorageKeyBuilderTests` — tenant + category path generation
-- Integration tests at `src/Tests/Integration.Tests/Tests/Files/` cover the full presigned URL round-trip against Testcontainers MinIO.
+- Integration tests at `src/Tests/Integration.Tests/Tests/Files/` (ten files) cover the presigned round-trip (`RequestAndFinalizeUploadTests`, `StorageFlowTests`), upload validation, finalize edge cases, visibility + sharing, soft delete + restore, the purge jobs, and tenant isolation against Testcontainers MinIO.
 
 ## Related
 

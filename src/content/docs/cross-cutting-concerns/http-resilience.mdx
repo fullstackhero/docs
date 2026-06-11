@@ -1,133 +1,118 @@
 ---
 title: HTTP resilience
-lastUpdated: 2026-05-19
-description: Polly v8 via Microsoft.Extensions.Http.Resilience — retry, circuit breaker, timeout, hedging — applied to every named HttpClient in the kit.
+lastUpdated: 2026-06-11
+description: Polly v8 via Microsoft.Extensions.Http.Resilience — retry, circuit breaker, timeouts — opt-in per HttpClient with the kit's AddHeroResilience extension.
 sidebar:
   label: HTTP resilience
   order: 10
 pageType: concept
 seo:
   title: 'HTTP resilience in .NET 10 — Polly v8 retry, circuit'
-  description: 'How fullstackhero wires Microsoft.Extensions.Http.Resilience (Polly v8) to every named HttpClient — retry on transient failures, circuit breaker…'
+  description: 'How fullstackhero wires Microsoft.Extensions.Http.Resilience (Polly v8) onto outbound HttpClients — retry on transient failures, circuit breaker…'
   keywords: 'http resilience .net 10, polly v8 dotnet, microsoft.extensions.http.resilience, httpclient retry circuit breaker, hedging strategy'
 ---
 
-`Microsoft.Extensions.Http.Resilience` (Polly v8 under the hood) is wired into every named `HttpClient` the kit ships. The default pipeline adds **retry with exponential backoff** on transient failures (5xx, 408, 429), a **circuit breaker** to fail fast when a downstream is consistently broken, an **attempt timeout** to prevent hung requests from holding threadpool slots, and an optional **hedging** strategy for read-only calls where latency variance matters more than load.
+`Microsoft.Extensions.Http.Resilience` (Polly v8 under the hood) backs the kit's outbound HTTP calls. The Web block ships an `AddHeroResilience` extension that attaches the standard resilience pipeline — **retry with backoff** on transient failures, a **circuit breaker** to fail fast when a downstream is consistently broken, and **total + per-attempt timeouts** to prevent hung requests from holding threadpool slots — to any `IHttpClientBuilder`, configured from one appsettings section.
 
 <Callout type="tip" title="Don't write your own retry loop">
-You shouldn't see `for (var i = 0; i < 3; i++) { try { ... } catch { ... } }` anywhere in the kit. If you're tempted, the issue is that the HttpClient isn't named (so it didn't get the resilience pipeline) — register it via `services.AddHttpClient("YourClient")` and the pipeline attaches automatically.
+You shouldn't see `for (var i = 0; i < 3; i++) { try { ... } catch { ... } }` anywhere in the kit. Register a named client and chain `.AddHeroResilience(builder.Configuration)` — the pipeline does retry, breaking, and timeouts for you, with config-tunable knobs.
 </Callout>
+
+## How it's wired
+
+Resilience is **opt-in per client**, not global. The Webhooks module is the shipped example:
+
+```csharp
+// WebhooksModule.ConfigureServices
+builder.Services.AddHttpClient("Webhooks")
+    .AddHeroResilience(builder.Configuration);
+```
+
+`AddHeroResilience` reads the `HttpResilienceOptions` section and calls `AddStandardResilienceHandler` with those values. When you add your own outbound integration, do the same — name the client, chain the extension.
 
 ## What the standard pipeline does
 
-`AddHeroPlatform` calls `AddStandardResilienceHandler` on every named client. That adds the following pipeline:
-
 ```
-[Outer]      Total request timeout (e.g. 30s)
+[Outer]      Total request timeout (30s default)
   ↓
-[Retry]      Up to 3 attempts on transient errors with exponential backoff + jitter
+[Retry]      Up to 3 attempts on transient errors with backoff
   ↓
-[Breaker]    Circuit breaker — opens after N consecutive failures, half-opens after cooldown
+[Breaker]    Circuit breaker — opens at 50% failure ratio, 5s break
   ↓
-[Attempt]    Per-attempt timeout (e.g. 10s)
+[Attempt]    Per-attempt timeout (10s default)
   ↓
   HttpClient.SendAsync
 ```
 
-Each strategy is configurable individually; the defaults are tuned for the typical "internal API to internal API" call shape.
+## Configuration
 
-## Named clients in the kit
+```jsonc
+{
+  "HttpResilienceOptions": {
+    "Enabled": true,                          // default — false skips the handler entirely
+    "MaxRetryAttempts": 3,
+    "MedianFirstRetryDelay": "00:00:01",      // first retry delay; backoff grows from here
+    "TotalTimeout": "00:00:30",               // whole request incl. retries
+    "AttemptTimeout": "00:00:10",             // each individual attempt
+    "CircuitBreakerBreakDuration": "00:00:05",
+    "CircuitBreakerFailureRatio": 0.5,
+    "CircuitBreakerMinimumThroughput": 10
+  }
+}
+```
 
-The kit ships these named clients out of the box:
-
-| Name | Where | Used by |
-|---|---|---|
-| `Webhooks` | `WebhooksModule.ConfigureServices` | Outbound webhook deliveries |
-| `Default` | Implicit via `IHttpClientFactory` | Anywhere `IHttpClientFactory.CreateClient()` is called without a name |
-
-The Webhooks module is the most visible consumer — `WebhookDispatchJob` POSTs payloads via the `Webhooks` client. The pipeline's retry strategy is what gives webhook delivery its "retry transient failures, give up on permanent ones" behaviour.
+These are the code defaults — the shipped `appsettings.json` doesn't carry the section, so you only add it when tuning. One section configures every client that opted in via `AddHeroResilience`; for genuinely different upstreams (a slow third-party API), register that client with its own `AddStandardResilienceHandler(opts => ...)` lambda instead.
 
 ## How resilience integrates with `[AutomaticRetry]`
 
-Hangfire's `[AutomaticRetry(Attempts = 4, DelaysInSeconds = ...)]` and the HTTP resilience pipeline are **two separate retry layers**. The kit uses both, deliberately:
+Hangfire's `[AutomaticRetry]` and the HTTP resilience pipeline are **two separate retry layers**. The kit uses both, deliberately:
 
-- **HTTP-layer retry** handles transient network issues (5xx, timeouts) within a single attempt — fast, in-process, no job queue churn.
-- **Job-layer retry** handles longer-term outages — minutes-to-hours-scale backoff while the Hangfire job stays in the queue.
+- **HTTP-layer retry** handles transient network blips (5xx, timeouts) within a single job attempt — fast, in-process, no job queue churn.
+- **Job-layer retry** handles longer outages — minutes-to-hours-scale backoff while the Hangfire job stays in the queue.
 
-For the Webhooks module:
-
-- 1 HTTP-layer retry runs the configured Polly pipeline (small backoff in seconds).
-- If that exhausts, the Hangfire job fails → `[AutomaticRetry]` kicks in with 30 s / 2 m / 10 m / 1 h delays.
-
-Together, a single webhook delivery has up to 5 attempts spread over ~1 h 12 min.
-
-## Tuning the pipeline
-
-The defaults are sensible. When you need to deviate, configure per-named-client:
-
-```csharp
-services.AddHttpClient("SlowExternalApi", client =>
-{
-    client.BaseAddress = new Uri("https://slow.example.com/");
-    client.Timeout = TimeSpan.FromMinutes(2);
-})
-.AddStandardResilienceHandler(opts =>
-{
-    opts.AttemptTimeout.Timeout = TimeSpan.FromSeconds(45);
-    opts.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(3);
-    opts.Retry.MaxRetryAttempts = 5;
-    opts.Retry.BackoffType = DelayBackoffType.Exponential;
-    opts.Retry.UseJitter = true;
-});
-```
-
-Don't override globally — the standard defaults are right for the typical case. Customise per-client where the upstream demands it.
+For the Webhooks module: each delivery attempt runs through the Polly pipeline (up to 3 in-process retries, seconds apart). If the attempt still fails, the Hangfire job fails and `[AutomaticRetry(Attempts = 4, DelaysInSeconds = [30, 120, 600, 3600])]` re-runs it — up to 5 job-level attempts spread over ~1 h 12 min.
 
 ## When NOT to retry
 
-The resilience pipeline retries on **transient** failures only:
+The standard resilience handler retries on **transient** failures only:
 
 - HTTP 408 Request Timeout
-- HTTP 429 Too Many Requests (with `Retry-After` respected)
-- HTTP 500, 502, 503, 504
-- Connection / DNS / socket exceptions
+- HTTP 429 Too Many Requests
+- HTTP 500+ server errors
+- Connection / timeout exceptions (`HttpRequestException`, attempt timeouts)
 
-It does **not** retry on:
-
-- HTTP 400, 401, 403, 404 — permanent client errors; retrying won't change anything.
-- HTTP 405, 406, 409 — semantic conflicts; retrying won't help.
-
-For specific 4xx codes that **should** be treated as transient (rare — e.g. some APIs return 423 Locked on transient contention), configure `opts.Retry.ShouldHandle` with a custom predicate.
+It does **not** retry permanent client errors — 400, 401, 403, 404, 405, 409 — because retrying won't change the answer. For specific 4xx codes that *should* be treated as transient (rare — e.g. an API that returns 423 Locked on transient contention), configure `ShouldHandle` with a custom predicate on a per-client `AddStandardResilienceHandler` registration.
 
 ## Circuit breaker
 
-The breaker opens when too many consecutive failures land in a short window. While open, requests fail fast with `BrokenCircuitException` instead of waiting for the timeout. After a cooldown, the breaker half-opens — one trial request decides whether to close (resume normal traffic) or stay open (downstream still broken).
+The breaker opens when the failure ratio crosses `CircuitBreakerFailureRatio` (50%) over at least `CircuitBreakerMinimumThroughput` (10) requests. While open, requests fail fast with `BrokenCircuitException` instead of waiting for the timeout. After `CircuitBreakerBreakDuration` (5 s), the breaker half-opens — a trial request decides whether to close (resume normal traffic) or stay open (downstream still broken).
 
 This is what stops a flaky downstream from cascading into your threadpool. Watch breaker open / close events in your traces; opens that don't half-close mean the downstream is genuinely down and needs human attention.
 
 ## Hedging (for read-only calls)
 
-Hedging fires N parallel requests; the first response wins, the rest are cancelled. Trades load for latency. Don't enable globally — it doubles the downstream's load — but for specific high-percentile-sensitive reads it can be worth it:
+The kit doesn't ship a hedging pipeline, but `Microsoft.Extensions.Http.Resilience` includes one if you need it. Hedging fires parallel requests; the first response wins, the rest are cancelled. Trades load for latency:
 
 ```csharp
-.AddStandardHedgingHandler(opts =>
-{
-    opts.Hedging.MaxHedgedAttempts = 2;          // up to 2 parallel requests
-    opts.Hedging.Delay = TimeSpan.FromMilliseconds(200);  // wait 200ms before firing the hedge
-});
+services.AddHttpClient("LatencySensitiveReads")
+    .AddStandardHedgingHandler(opts =>
+    {
+        opts.Hedging.MaxHedgedAttempts = 2;                   // up to 2 parallel requests
+        opts.Hedging.Delay = TimeSpan.FromMilliseconds(200);  // wait 200ms before firing the hedge
+    });
 ```
 
-Use it for paid third-party APIs only when their tail latency genuinely matters and they can absorb 2× the call volume.
+Don't enable it globally — it multiplies the downstream's load. Reserve it for high-percentile-sensitive reads against upstreams that can absorb the extra volume.
 
 ## Gotchas
 
-- **`HttpClient.Timeout` is overridden by the pipeline's `TotalRequestTimeout`.** Configure timeouts on the pipeline, not on the client.
-- **Retry + non-idempotent requests = duplicate creates.** If you POST `/api/v1/orders` and retry on 502, you might create two orders. Combine with [Idempotency-Key](/docs/cross-cutting-concerns/idempotency/) on every retried POST.
-- **Polly's exceptions wrap downstream exceptions.** When catching, look at `InnerException` to get the actual transport failure.
-- **OpenTelemetry sees each attempt as its own span.** A request that succeeds on the third try shows three spans in the trace, with two `error=true` parents. This is correct; ignore the noise in dashboards.
+- **Configure timeouts on the pipeline, not the client.** The pipeline's `TotalTimeout` is the effective bound; a mismatched `HttpClient.Timeout` just adds a second, confusing limit.
+- **Retry + non-idempotent requests = duplicate creates.** If you POST and retry on 502, you might create two resources. Combine with [Idempotency-Key](/docs/cross-cutting-concerns/idempotency/) on every retried POST.
+- **Look at `InnerException`.** Polly's timeout/breaker exceptions wrap the underlying transport failure.
+- **OpenTelemetry sees each attempt as its own HTTP client span.** A request that succeeds on the third try shows three spans in the trace. This is correct; ignore the noise in dashboards.
 
 ## Related
 
 - [Idempotency](/docs/cross-cutting-concerns/idempotency/) — required when retrying non-idempotent operations.
-- [Webhooks module](/docs/modules/webhooks/) — the most visible consumer.
+- [Webhooks module](/docs/modules/webhooks/) — the shipped consumer.
 - [Background jobs](/docs/cross-cutting-concerns/background-jobs/) — Hangfire `[AutomaticRetry]` complements HTTP-layer retry.

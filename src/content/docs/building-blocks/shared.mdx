@@ -1,6 +1,6 @@
 ---
 title: Shared building block
-lastUpdated: 2026-05-19
+lastUpdated: 2026-06-11
 description: Multi-tenancy types, permission registry, claim/role/action/resource constants, audit attributes, and shared DTOs used by every module.
 sidebar:
   label: Shared
@@ -22,28 +22,28 @@ New permission? Add it to `PermissionConstants`. New claim type? Add it to `Clai
 
 ### Multitenancy
 
-- **`AppTenantInfo`** — extends Finbuckle's `TenantInfo` + implements `IAppTenantInfo`. Carries `Id`, `Identifier`, `Name`, `ConnectionString`, `AdminEmail`, `IsActive`, `ValidUpto`, `Plan`, and `QuotaLimits` (a `Dictionary<QuotaResource, long>` of per-tenant overrides). Methods: `AddValidity(months)`, `SetValidity(DateTime)`, `Activate()`, `Deactivate()`.
+- **`AppTenantInfo`** — extends Finbuckle's `TenantInfo` + implements `IAppTenantInfo`. Carries `Id`, `Identifier`, `Name`, `ConnectionString`, `AdminEmail`, `IsActive`, `ValidUpto`, `Issuer`, `Plan`, and `QuotaLimits` (a `Dictionary<QuotaResource, long>` of per-tenant overrides). Methods: `AddValidity(months)`, `SetValidity(DateTime)` (**forward-only** — backdating throws), `Activate()` / `Deactivate()` (both throw for the root tenant). New tenants get a 1-month demo validity by default.
 - **`IAppTenantInfo`** — contract for tenant info; the kit references the interface where it can, allowing custom subclasses if you ever need them.
-- **`MultitenancyConstants`** — well-known tenant identifiers (`Root`).
-- **`ITenantInitialPasswordBuffer`** — singleton interface for buffering tenant admin passwords during async provisioning. Implementation lives in the Multitenancy module.
+- **`MultitenancyConstants`** — well-known values: the `Root` tenant (`Id = "root"`, name, admin email), the `tenant` resolution identifier, and the tenant schema name.
+- **`ITenantInitialPasswordBuffer`** — singleton interface for buffering the operator-supplied tenant admin password between the create-tenant handler and the background seed step. Implementation lives in the Multitenancy module.
 
 ### Identity + permissions
 
-- **`PermissionConstants`** — the central registry. Static `Register(IEnumerable<FshPermission>)` is called by each module during `ConfigureServices`. Properties: `All`, `Root`, `Admin`, `Basic`.
-- **`FshPermission(description, action, resource, isBasic?, isRoot?)`** — immutable record. Computed `Name` property is the canonical permission string (e.g. `Permissions.Users.Create`).
-- **`PermissionConstants.RequiredPermissionPolicyName`** — the policy name `.RequirePermission()` registers under.
-- **`SystemPermissions.All`** — platform permissions registered at startup before any module.
-- **`RoleConstants`** — well-known role names (`Admin`, `Basic`, …).
-- **`ClaimConstants`** — JWT claim type names.
-- **`CustomClaims`** — kit-specific claim names beyond the standard set.
-- **`ResourceConstants`** — resource names (`Users`, `Roles`, `Products`, …).
-- **`ActionConstants`** — CRUD action names (`Create`, `Read`, `Update`, `Delete`).
+- **`PermissionConstants`** — the central registry. Static `Register(IEnumerable<FshPermission>)` is called by each module during `ConfigureServices` (duplicates by `Name` are skipped). Properties: `All`, `Root` (where `IsRoot`), `Admin` (everything non-root), `Basic` (where `IsBasic`).
+- **`FshPermission(Description, Action, Resource, IsBasic = false, IsRoot = false)`** — immutable record. Computed `Name` is the canonical permission string: `Permissions.{Resource}.{Action}` (e.g. `Permissions.Users.Create`).
+- **`PermissionConstants.RequiredPermissionPolicyName`** — the name of the authorization policy that evaluates `.RequirePermission()` metadata. The Identity module registers the policy **and sets it as both `DefaultPolicy` and `FallbackPolicy`** — that double assignment matters (see gotchas).
+- **`SystemPermissions.All`** — platform permissions registered by `AddHeroPlatform` before any module runs.
+- **`RoleConstants`** — well-known role names (`Admin`, `Basic`) plus `DefaultRoles` / `IsDefault(role)`.
+- **`ClaimConstants`** — claim type names (`tenant`, `fullName`, `permission`, `image_url`, `ipAddress`, `exp`, and the impersonation actor claims `act_sub` / `act_tenant`).
+- **`CustomClaims`** — legacy alias set covering the same core claim names.
+- **`ResourceConstants`** — framework resource names (`Tenants`, `Users`, `Roles`, `UserRoles`, `RoleClaims`, `AuditTrails`, `Dashboard`, `Hangfire`). Modules define their own resource strings in their contracts (e.g. `Catalog.Products`).
+- **`ActionConstants`** — action names (`View`, `Search`, `Create`, `Update`, `Delete`, `Export`, `Generate`, `Clean`, `UpgradeSubscription`).
 
 ### Claims + authorization
 
-- **`ClaimsPrincipalExtensions`** — extracts `UserId`, `TenantId`, `Email`, roles, claims from a `ClaimsPrincipal`. Used in middleware and handlers.
-- **`RequiredPermissionAttribute`** — attribute alternative to the fluent `.RequirePermission(...)`.
-- **`EndpointExtensions.RequirePermission(handler, permission)`** — the canonical fluent helper applied to minimal-API endpoints.
+- **`ClaimsPrincipalExtensions`** — extracts user id, tenant, email, etc. from a `ClaimsPrincipal`. Used in middleware and handlers.
+- **`RequiredPermissionAttribute`** — implements **`IRequiredPermissionMetadata`** (a `HashSet<string> RequiredPermissions`). This interface is what the authorization handler keys off — it must exist exactly once, in `FSH.Framework.Shared.Identity.Authorization`.
+- **`EndpointExtensions.RequirePermission(permission, params additionalPermissions)`** — the canonical fluent helper for minimal-API endpoints; it attaches a `RequiredPermissionAttribute` as endpoint metadata. Permissions are plain strings (modules expose them as `const string`s in their contracts).
 
 ### Persistence shared
 
@@ -52,41 +52,46 @@ New permission? Add it to `PermissionConstants`. New claim type? Add it to `Clai
 
 ### Auditing markers
 
-- **`AuditAttributes`** — `[Auditable]`, `[AuditChange]`, `[NoAudit]`, `[AuditMask]` and friends. The Auditing module's interceptor reads these to decide what to capture.
-- **`HttpContextItemKeys`** — well-known keys for stashing audit data on `HttpContext.Items` (correlation id, trace id, captured bodies).
+- **`AuditAttributes`** — `[AuditIgnore]` (exclude a property from audit diffs/payloads) and `[AuditSensitive(hash, redact)]` (mask or hash the value when serialized). The Auditing module reads these when capturing changes.
+- **`HttpContextItemKeys`** — well-known `HttpContext.Items` keys building-block middleware uses to signal the audit pipeline without depending on it. Currently: `QuotaRejected` (set by the quota middleware on a 429).
 
 ### Storage + quota DTOs
 
-- **`FileType`** — enum (`Image`, `Document`, `Archive`, …).
-- **`QuotaResource`** — enum (`StorageBytes`, `Users`, `Requests`, …). New quota dimensions get added here.
+- **`FileUploadRequest`**, **`PresignedUploadUrl`**, **`StoredObjectMetadata`** — the storage transfer types shared between the Storage block and the Files module.
+- **`QuotaResource`** — enum (`ApiCalls`, `StorageBytes`, `Users`, `ActiveFeatureFlags`). New quota dimensions get added here.
 
 ## How modules consume Shared
 
-A typical module registers its permission set at startup:
+A typical module declares string constants for endpoint wiring plus an `FshPermission` list for the registry — this is Catalog's real shape:
 
 ```csharp
-// Modules.Identity.Contracts/Authorization/IdentityPermissions.cs
-public static class IdentityPermissions
+// Modules.Catalog.Contracts/Authorization/CatalogPermissions.cs
+public static class CatalogPermissions
 {
-    public static class Users
+    public static class Products
     {
-        public static readonly FshPermission Create = new("Create user",  "Create", "Users");
-        public static readonly FshPermission View   = new("View users",   "Read",   "Users");
-        public static readonly FshPermission Update = new("Update user",  "Update", "Users");
-        public static readonly FshPermission Delete = new("Delete user",  "Delete", "Users");
+        public const string Resource = "Catalog.Products";
+        public const string View   = $"Permissions.{Resource}.View";
+        public const string Create = $"Permissions.{Resource}.Create";
+        // ...
     }
-    public static IReadOnlyList<FshPermission> All { get; } = /* aggregate everything */;
+
+    public static IReadOnlyList<FshPermission> All { get; } =
+    [
+        new("View Products", ActionConstants.View, Products.Resource, IsBasic: true),
+        // ...
+    ];
 }
 
-// IdentityModule.ConfigureServices
-PermissionConstants.Register(IdentityPermissions.Users.All);
+// CatalogModule.ConfigureServices
+PermissionConstants.Register(CatalogPermissions.All);
 ```
 
-Endpoints reference them via the fluent helper:
+Endpoints reference the string constants via the fluent helper:
 
 ```csharp
-endpoints.MapPost("/users", handler)
-         .RequirePermission(IdentityPermissions.Users.Create);
+endpoints.MapPost("/products", handler)
+         .RequirePermission(CatalogPermissions.Products.Create);
 ```
 
 ## How to extend
@@ -106,16 +111,19 @@ Extend `QuotaResource` with the new value, expose a gauge provider (see [Quota](
 ## Gotchas
 
 - **`PermissionConstants.Register` dedupes by `Name`.** Calling it twice with the same permission is a no-op. There is no way to **remove** a permission — once registered, it stays for the process lifetime.
+- **`IRequiredPermissionMetadata` must never be duplicated.** The authorization handler discovers permissions via this interface; a copy-pasted duplicate in another namespace means endpoint metadata implements the *wrong* interface and **every** `.RequirePermission()` gate silently stops enforcing.
+- **The permission policy must stay both DefaultPolicy AND FallbackPolicy.** A group-level `.RequireAuthorization()` attaches the *default* policy, which suppresses the fallback — if the default were only "authenticated", `.RequirePermission()` would silently fail open (this was a real bug, fixed in PR #1290). The Identity module assigns the `RequiredPermission` policy to both; don't undo that.
+- **`AppTenantInfo.SetValidity` is forward-only.** It throws "Subscription cannot be backdated" — for initial/explicit/backdated sets, assign `ValidUpto` directly.
 - **`AppTenantInfo.Plan` is nullable.** When null, plan resolution falls back to `QuotaOptions:DefaultPlan` (`free` by default). Set this explicitly on every tenant unless you want the default.
 - **`AppTenantInfo.QuotaLimits` is a per-tenant override.** If a resource is present in the dict, it wins over the plan's limit. Don't sprinkle overrides; reserve them for negotiated contracts.
-- **`ClaimConstants` and `ActionConstants` are strings.** No compile-time safety on typos in endpoint attribute strings. Use IDE autocomplete + don't write magic strings in handlers; reference the constants.
+- **Permissions are strings.** No compile-time safety on typos. Reference the module's constants — never write `"Permissions.X.Y"` literals in handlers or endpoints.
 
 ## Critical files
 
 - `src/BuildingBlocks/Shared/Multitenancy/AppTenantInfo.cs`
-- `src/BuildingBlocks/Shared/Identity/PermissionConstants.cs`
-- `src/BuildingBlocks/Shared/Identity/FshPermission.cs`
+- `src/BuildingBlocks/Shared/Identity/PermissionConstants.cs` (also home of the `FshPermission` record)
 - `src/BuildingBlocks/Shared/Identity/SystemPermissions.cs`
+- `src/BuildingBlocks/Shared/Identity/Authorization/RequiredPermissionAttribute.cs` (and `IRequiredPermissionMetadata`)
 - `src/BuildingBlocks/Shared/Auditing/AuditAttributes.cs`
 
 ## Related

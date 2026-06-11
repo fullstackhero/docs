@@ -1,7 +1,7 @@
 ---
 title: Two-factor authentication (TOTP)
-lastUpdated: 2026-05-19
-description: Opt-in TOTP enrolment for any user — QR code, verify, disable, with TOTP-required token issuance once enrolled.
+lastUpdated: 2026-06-11
+description: Opt-in TOTP enrolment for any user — shared secret + otpauth URI, verify, password-confirmed disable, with TOTP-required token issuance once enrolled.
 sidebar:
   label: Two-factor (TOTP)
   order: 4
@@ -12,10 +12,10 @@ seo:
   keywords: 'totp dotnet, asp.net core 2fa, two factor authentication .net 10, authenticator app .net, qr code totp enrol'
 ---
 
-Two-factor TOTP is opt-in per user in fullstackhero. Once enrolled, the user must provide a six-digit TOTP code from their authenticator app (Google Authenticator, Authy, 1Password, Bitwarden, etc.) on every login. Three endpoints handle the lifecycle: enrol (gets a QR code + secret), verify (activates the enrolment), disable (turns it off).
+Two-factor TOTP is opt-in per user in fullstackhero. Once enrolled, the user must provide a six-digit TOTP code from their authenticator app (Google Authenticator, Authy, 1Password, Bitwarden, etc.) on every login. Three endpoints handle the lifecycle: enrol (returns the shared secret + otpauth URI), verify (activates the enrolment), disable (turns it off, after confirming the password).
 
 <Callout type="tip" title="Optional today, recommended for admin roles tomorrow">
-The kit doesn't force 2FA. A reasonable production posture is to make TOTP **mandatory** for admin roles (SuperAdmin, billing-admin, anyone with destructive permissions) and **opt-in** for end users. Wire the "require 2FA" check into the role check during login.
+The kit doesn't force 2FA. A reasonable production posture is to make TOTP **mandatory** for admin roles (Admin, billing-admin, anyone with destructive permissions) and **opt-in** for end users. Wire the "require 2FA" check into the role check during login.
 </Callout>
 
 ## The flow
@@ -24,86 +24,89 @@ The kit doesn't force 2FA. A reasonable production posture is to make TOTP **man
 1. User: POST /api/v1/identity/2fa/enroll
    ↓
 2. Identity module:
-   - Generates a TOTP shared secret
-   - Generates a QR-code data-URI containing the otpauth URL
-   - Returns { secretKey, qrCodeDataUri }
+   - Generates (or rotates) the user's authenticator shared secret
+   - Builds the otpauth:// URI (issuer "FullStackHero")
+   - Returns { sharedKey, authenticatorUri }
    ↓
-3. User: opens authenticator app, scans QR, app starts generating 6-digit codes
+3. Client renders authenticatorUri as a QR code; user scans it,
+   app starts generating 6-digit codes
    ↓
 4. User: POST /api/v1/identity/2fa/verify { code }
-   - If the code matches the secret's current TOTP window, 2FA is activated
+   - If the code matches the current TOTP window, 2FA is activated
    - User.TwoFactorEnabled = true persists
    ↓
-5. From now on, POST /tokens/generate requires
+5. From now on, POST /token/issue requires
      { email, password, twoFactorCode } (the third field is required iff enrolled)
+   - Missing code → 401 "two_factor_required"
+   - Wrong code  → 401 "two_factor_invalid"
    ↓
-6. To turn off: DELETE /api/v1/identity/2fa
-   - Requires re-authentication (password) for safety
+6. To turn off: POST /api/v1/identity/2fa/disable { currentPassword }
+   - Requires the current password, so a stolen access token alone
+     can't downgrade account security; also rotates the secret
 ```
 
 ## Endpoints
 
+All under `/api/v1/identity`, all requiring an authenticated caller — TOTP is a per-user setting.
+
 | Verb | Route | What |
 |---|---|---|
-| POST | `/api/v1/identity/2fa/enroll` | Generate secret + QR; return for client to display |
-| POST | `/api/v1/identity/2fa/verify` | Verify the first TOTP code; activate |
-| DELETE | `/api/v1/identity/2fa` | Disable 2FA (requires re-auth) |
+| POST | `/2fa/enroll` | Generate (or rotate) the secret; return `sharedKey` + `authenticatorUri` for the client to render as a QR |
+| POST | `/2fa/verify` | Verify the first TOTP code; activate 2FA |
+| POST | `/2fa/disable` | Disable 2FA after confirming the current password; rotates the secret |
 
-All three require the authenticated user — TOTP is a per-user setting, so callers must already be logged in.
+Calling enroll again before verifying **rotates the secret** — a stale code from a prior incomplete enrolment can't silently succeed. The verify endpoint strips spaces from the code, so "123 456" works.
 
 ## What the kit does NOT ship
 
 - **SMS / email 2FA**. Only TOTP. SMS is widely-acknowledged-insecure (SIM-swap attacks); email mostly defeats the second-factor purpose since it shares the same compromised channel as password recovery.
 - **Backup / recovery codes**. The kit doesn't generate one-time backup codes. If a user loses their authenticator device, support has to reset 2FA manually (disable, then re-enrol). For production with non-technical users, this is the biggest gap to fill — implement 8-10 single-use recovery codes generated at enrolment time, hashed-and-stored, displayed to the user once.
-- **WebAuthn / passkeys.** The `AspNetUserPasskeys` table exists from ASP.NET Identity but there's no end-to-end passkey UX in v10. Roadmap.
+- **WebAuthn / passkeys.** No passkey support in v10. Roadmap.
 
 ## TOTP integration
 
-The kit uses ASP.NET Identity's built-in TOTP support through `UserManager<FshUser>.GenerateTwoFactorTokenAsync(user, "Authenticator")` and `VerifyTwoFactorTokenAsync(...)`. The shared secret is stored as a token on the user record; you never write to it directly.
+The kit uses ASP.NET Identity's built-in authenticator support — the shared secret is managed by `UserManager` token providers; you never write to it directly.
 
 ```csharp
 // EnrollTwoFactorCommandHandler (simplified)
-public async ValueTask<TwoFactorEnrollmentResponse> Handle(EnrollTwoFactorCommand cmd, CancellationToken ct)
+public async ValueTask<TwoFactorEnrollmentResponse> Handle(EnrollTwoFactorCommand command, CancellationToken ct)
 {
-    var user = await _users.GetByIdAsync(_current.GetUserId(), ct).ConfigureAwait(false);
+    var user = await _userManager.FindByIdAsync(_currentUser.GetUserId().ToString())
+        ?? throw new NotFoundException("user not found");
 
-    // Reset and regenerate the authenticator key (idempotent)
-    await _users.ResetAuthenticatorKeyAsync(user).ConfigureAwait(false);
-    var secret = await _users.GetAuthenticatorKeyAsync(user).ConfigureAwait(false);
-    var otpauthUrl = BuildOtpAuthUrl(issuer: "fullstackhero", account: user.Email, secret);
-    var qr = QrCodeGenerator.GenerateDataUri(otpauthUrl);
+    // Always reset so calling enroll twice rotates the secret
+    await _userManager.ResetAuthenticatorKeyAsync(user);
+    var sharedKey = await _userManager.GetAuthenticatorKeyAsync(user);
 
-    return new TwoFactorEnrollmentResponse(secret, qr);
+    var authenticatorUri = $"otpauth://totp/FullStackHero:{user.Email}" +
+                           $"?secret={sharedKey}&issuer=FullStackHero&digits=6";
+
+    return new TwoFactorEnrollmentResponse(sharedKey, authenticatorUri);
 }
 ```
 
-The `otpauth://` URL is the RFC 6238 standard format that every authenticator app understands.
+The `otpauth://` URI is the RFC 6238 standard format that every authenticator app understands. The client (not the server) renders it as a QR code; the raw `sharedKey` is returned too, for users who can't scan.
 
 ## Validating during login
 
+During `token/issue`, after the password check passes:
+
 ```csharp
-// GenerateTokenCommandHandler (simplified — full check is in Identity module)
-public async ValueTask<TokenResponse> Handle(GenerateTokenCommand cmd, CancellationToken ct)
+// IdentityService (simplified)
+if (user.TwoFactorEnabled)
 {
-    var user = await _users.FindByEmailAsync(cmd.Email);
-    if (user is null) throw new UnauthorizedException("Invalid credentials.");
+    if (string.IsNullOrWhiteSpace(twoFactorCode))
+        throw new CustomException("two_factor_required: ...", null, HttpStatusCode.Unauthorized);
 
-    if (!await _users.CheckPasswordAsync(user, cmd.Password))
-        throw new UnauthorizedException("Invalid credentials.");
+    var valid = await _userManager.VerifyTwoFactorTokenAsync(
+        user, _userManager.Options.Tokens.AuthenticatorTokenProvider, twoFactorCode);
 
-    if (await _users.GetTwoFactorEnabledAsync(user))
-    {
-        if (string.IsNullOrWhiteSpace(cmd.TwoFactorCode))
-            throw new UnauthorizedException("Two-factor code required.");
-        if (!await _users.VerifyTwoFactorTokenAsync(user, "Authenticator", cmd.TwoFactorCode))
-            throw new UnauthorizedException("Invalid two-factor code.");
-    }
-
-    return await _tokens.IssueAsync(user, ct).ConfigureAwait(false);
+    if (!valid)
+        throw new UnauthorizedException("two_factor_invalid: ...");
 }
 ```
 
-The TOTP check stacks on top of the lockout policy (failed 2FA attempts count toward lockout) and the rate-limit `auth` policy.
+The error prefixes (`two_factor_required` / `two_factor_invalid`) are stable strings the React clients key off to show the code-entry step. The whole login — including 2FA attempts — sits behind the rate-limit `auth` policy, which is the throttle on TOTP brute-forcing. Failed TOTP codes do **not** increment the password-lockout counter; only failed passwords do.
 
 ## Operational considerations
 
@@ -119,7 +122,7 @@ The TOTP check stacks on top of the lockout policy (failed 2FA attempts count to
   ```
 
   This isn't shipping in v10 but it's a ~200 LoC addition you'd add in your fork.
-- **Audit every 2FA event.** Enrol, verify, disable — `Audit.ForSecurity(SecurityAction.TwoFactorEnrolled / TwoFactorDisabled)`. Spikes of disable events from one account are a red flag (account takeover trying to remove the second factor).
+- **Watch disable events.** A spike of 2FA disables on one account is a red flag (account takeover trying to remove the second factor). The disable endpoint requires the password precisely to raise that bar — alert on it anyway.
 
 ## Related
 

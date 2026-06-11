@@ -1,71 +1,79 @@
 ---
 title: Operator impersonation
-lastUpdated: 2026-05-19
-description: Time-bound, cross-tenant impersonation with a server-side revocation list, full audit trail, and an IGlobalEntity persistence model.
+lastUpdated: 2026-06-11
+description: Time-bound, cross-tenant impersonation with a server-side revocation check on every request, full audit trail, and an IGlobalEntity persistence model.
 sidebar:
   label: Impersonation
   order: 3
 pageType: concept
 seo:
   title: 'Operator impersonation in .NET 10 — cross-tenant grants'
-  description: 'How fullstackhero supports operator impersonation — SuperAdmin start/end of impersonation grants, cross-tenant via IGlobalEntity, server-side revocation…'
+  description: 'How fullstackhero supports operator impersonation — permission-gated start/end of impersonation grants, cross-tenant via IGlobalEntity, server-side revocation…'
   keywords: '.net impersonation grant, asp.net core operator impersonation, cross-tenant impersonation, audit impersonation trail, jti revocation list'
 ---
 
-Operator impersonation lets a SuperAdmin temporarily act as another user to debug a problem they're seeing, validate a fix, or recover an account. The kit ships a complete impersonation flow: time-bound grant, cross-tenant support via `IGlobalEntity`, server-side revocation list, and an audit trail of every start / end / revoke event with full context.
+Operator impersonation lets a platform operator temporarily act as another user to debug a problem they're seeing, validate a fix, or recover an account. The kit ships a complete impersonation flow: time-bound grant, cross-tenant support via `IGlobalEntity`, a server-side revocation check on every request, and an audit trail of every start / end / revoke event with full context.
 
 <Callout type="warning" title="Power, with friction">
-Impersonation is the most powerful action in the kit. Every grant is audited (actor, target, tenant, reason, IP, user agent), every issued token's `jti` lives in a server-side revocation list, and grants are time-bound (default 30 minutes). Treat the audit trail as a compliance artefact — don't disable it, don't shorten the retention.
+Impersonation is the most powerful action in the kit. Every grant is audited (actor, target, tenant, reason, IP, user agent), every issued token's `jti` is checked against the grant table on every request, and grants are time-bound (capped at 60 minutes). Treat the audit trail as a compliance artefact — don't disable it, don't shorten the retention.
 </Callout>
 
 ## The flow
 
 ```
-1. SuperAdmin: POST /api/v1/identity/impersonation/start
-       Body: { impersonatedUserId, durationMinutes, reason, clientId }
+1. Operator: POST /api/v1/identity/impersonation/start
+       Body: { targetUserId, targetTenantId, reason, durationMinutes? }
    ↓
 2. Identity module:
-   - Validates caller is in the "SuperAdmin" role
-   - Creates ImpersonationGrant row (IGlobalEntity — cross-tenant queryable)
-   - Mints a new access token whose `jti` is the grant id
-   - Audits SecurityAction.ImpersonationStarted with full context
+   - Checks the Permissions.Users.Impersonate permission
+   - Cross-tenant targets allowed only for root-tenant actors;
+     tenant admins can impersonate within their own tenant
+   - Rejects self-impersonation and nested impersonation
+   - Builds the target user's claims, mints an access-only token
+     with a fresh jti + act_sub / act_tenant actor claims
+   - Persists an ImpersonationGrant row (IGlobalEntity) keyed by that jti
+   - Audits ImpersonationStarted with full context
    ↓
-3. SuperAdmin uses the impersonation token like any other access token
-   - Every request validates the `jti` against the grant table
-   - If the grant has ended / been revoked / expired, the token is rejected
+3. Operator uses the impersonation token like any other access token
+   - On every request, the JWT validation hook sees act_sub and checks
+     the grant by jti (HybridCache-primed — no DB hit on the hot path)
+   - If the grant has been ended / revoked / expired, the request fails 401
    ↓
-4. SuperAdmin: POST /api/v1/identity/impersonation/end
-   (or token expires; or admin revokes via DELETE /impersonation/grants/{id})
-   ↓
-5. ImpersonationGrant.EndedAtUtc set; audit row appended.
-   Token is dead.
+4. Operator: POST /api/v1/identity/impersonation/end
+   → grant marked ended; returns a fresh access + refresh pair
+     for the ORIGINAL actor (seamless swap back)
+   (or the token expires; or another operator revokes via
+    POST /impersonation/grants/{id}/revoke)
 ```
 
 ## What ships
 
-- **`ImpersonationGrant` aggregate** in `Modules.Identity/Domain/ImpersonationGrant.cs` — implements `IGlobalEntity` so it queries across tenants.
-- **Time-bound grants** — caller specifies `durationMinutes` at start (typically 10 / 15 / 30 minutes; configurable).
-- **Server-side revocation** — every token validation reads `jti` and checks the grant table; ended/revoked/expired grants reject the token immediately.
-- **Cross-tenant** — actor's tenant and impersonated user's tenant can differ; both are recorded.
+- **`ImpersonationGrant` aggregate** in `Modules.Identity/Domain/ImpersonationGrant.cs` — implements `IGlobalEntity`, opting out of the tenant query filter because a cross-tenant grant doesn't belong to a single tenant. Tenant access is re-restricted explicitly in the query layer via `ActorTenantId` / `ImpersonatedTenantId` filters.
+- **Time-bound grants** — caller may pass `durationMinutes` (clamped server-side to 1–60); omitted, the token gets the standard `JwtOptions:AccessTokenMinutes` lifetime.
+- **Server-side revocation** — the JWT bearer `OnTokenValidated` hook looks up the grant by `jti` for any token carrying the `act_sub` claim; ended/revoked grants reject the token immediately. Normal (non-impersonation) tokens skip the check entirely — zero cost.
+- **Cross-tenant** — actor's tenant and impersonated user's tenant can differ (root-tenant actors only); both are recorded.
 - **Audit context** — IP address, user agent, client id, reason all captured.
-- **Four endpoints** — `start`, `end`, `grants` (list), `grants/{id}` (revoke).
+- **No refresh token** — impersonation tokens are access-only. When they expire, the operator starts a new grant.
 
 ## The grant record
 
 ```csharp
-public sealed class ImpersonationGrant : BaseEntity, IGlobalEntity
+public class ImpersonationGrant : IGlobalEntity
 {
-    public Guid Jti { get; private set; }                    // JWT id; revocation key
-    public Guid ActorUserId { get; private set; }
-    public Guid ActorTenantId { get; private set; }
-    public Guid ImpersonatedUserId { get; private set; }
-    public Guid? ImpersonatedTenantId { get; private set; }  // null for cross-tenant root case
-    public string? Reason { get; private set; }
+    public Guid Id { get; private set; }
+    public string Jti { get; private set; }                 // JWT id; revocation key
+    public string ActorUserId { get; private set; }
+    public string? ActorUserName { get; private set; }
+    public string ActorTenantId { get; private set; }
+    public string ImpersonatedUserId { get; private set; }
+    public string? ImpersonatedUserName { get; private set; }
+    public string ImpersonatedTenantId { get; private set; }
+    public string Reason { get; private set; }
     public DateTime StartedAtUtc { get; private set; }
     public DateTime ExpiresAtUtc { get; private set; }
-    public DateTime? EndedAtUtc { get; private set; }
-    public DateTime? RevokedAtUtc { get; private set; }
-    public Guid? RevokedByUserId { get; private set; }
+    public DateTime? EndedAtUtc { get; private set; }       // operator clicked End
+    public DateTime? RevokedAtUtc { get; private set; }     // explicit revoke (kill switch)
+    public string? RevokedByUserId { get; private set; }
     public string? RevokedByUserName { get; private set; }
     public string? RevokeReason { get; private set; }
     public string? ClientId { get; private set; }
@@ -77,51 +85,53 @@ public sealed class ImpersonationGrant : BaseEntity, IGlobalEntity
 }
 ```
 
-The kit's token validation checks `IsTerminal` and `ExpiresAtUtc > DateTime.UtcNow` for every impersonation token. A grant in any terminal state rejects all of its tokens immediately.
+A grant in any terminal state rejects all of its tokens on the next request; natural expiry is handled by the JWT's own lifetime validation.
 
 ## Endpoints
 
-| Verb | Route | What |
-|---|---|---|
-| POST | `/api/v1/identity/impersonation/start` | Start a grant; returns the impersonation access token |
-| POST | `/api/v1/identity/impersonation/end` | End the active grant |
-| GET | `/api/v1/identity/impersonation/grants` | List grants (paginated, filterable) |
-| DELETE | `/api/v1/identity/impersonation/grants/{id}` | Revoke a grant by id (kill switch) |
+All under `/api/v1/identity`:
 
-All four require the `Identity.Impersonation.*` permissions, which should only be granted to a small admin role.
+| Verb | Route | Gate | What |
+|---|---|---|---|
+| POST | `/impersonation/start` | `Permissions.Users.Impersonate` | Start a grant; returns the impersonation access token |
+| POST | `/impersonation/end` | authenticated impersonation session | End the grant; returns fresh tokens for the original actor |
+| GET | `/impersonation/grants` | `Permissions.Impersonation.View` | List grants (paginated, filterable) |
+| POST | `/impersonation/grants/{id}/revoke` | `Permissions.Impersonation.Revoke` | Revoke a grant by id (kill switch) |
 
-## Cross-tenant root-operator override
+`end` is deliberately gated only by authentication: the caller holds the **impersonated user's** permissions, which may not include any admin permission — but anyone holding an impersonation token must always be able to end it.
 
-A SuperAdmin (whose JWT carries `tenant=root`) can impersonate a user in any tenant. The flow needs two cooperating pieces:
+## Cross-tenant mechanics
 
-1. **The impersonation grant** is `IGlobalEntity` so it can be queried regardless of the caller's current tenant context.
-2. **A post-auth middleware** in the Multitenancy module re-resolves the tenant from the impersonation grant's `ImpersonatedTenantId` before requests reach the handler.
+An operator whose JWT carries `tenant=root` can impersonate a user in any tenant; tenant-scoped admins can only impersonate within their own tenant. Two cooperating pieces make the cross-tenant case work:
 
-This is why Finbuckle's claim-strategy in the strategy chain is effectively a no-op for normal traffic — it's there for the impersonation case, where post-auth middleware re-resolves with claims (see [multitenancy deep-dive](/docs/architecture/multitenancy-deep-dive/)).
+1. **The grant is `IGlobalEntity`**, so it can be created and queried regardless of the caller's current tenant context.
+2. **Claims are built for the target tenant** — the impersonation token's `tenant` claim is the *impersonated* user's tenant, so every downstream tenant-scoped query runs in the target tenant's context, while `act_sub` / `act_tenant` (RFC 8693-style actor claims) preserve who is really acting.
 
 ## Audit trail
-
-Every state transition writes a security audit:
 
 | Action | When |
 |---|---|
 | `ImpersonationStarted` | `start` succeeds |
-| `ImpersonationEnded` | `end` succeeds, or token expires |
-| `ImpersonationRevoked` | `grants/{id}` DELETE succeeds |
+| `ImpersonationEnded` | `end` succeeds, or an operator revokes the grant (the revoke writes `ImpersonationEnded` with the revoke context) |
 
-Each row carries the actor user / tenant, the impersonated user / tenant, the IP, user agent, client id, and the reason. Query via `/api/v1/audits/security?action=Impersonation*` for the full timeline.
+Each row carries the actor user / tenant, the impersonated user / tenant, the IP, user agent, client id, and the reason. Natural token expiry doesn't write an audit row — the start row's `ExpiresAtUtc` already bounds the session. Query `/api/v1/audits/security` (filterable by action) for the full timeline.
+
+## Revocation mid-session
+
+Revoking a grant takes effect on the impersonator's **next request** — the token-validation hook fails it with 401. The tenant dashboard handles this gracefully: a 401 while the installed token carries the `act_sub` claim routes to a full-screen "Impersonation ended" page that clears the dead token and offers the way back to sign-in, instead of stranding the operator on a half-loaded screen.
 
 ## What impersonation isn't
 
-- **It's not "log in as another user".** The impersonation token is distinct from the impersonated user's own tokens. The original user can still log in independently with their password.
-- **It doesn't bypass permissions.** The impersonation token carries the **impersonated user's** permission set — not the actor's. If the impersonated user can't access an endpoint, neither can the impersonating actor.
-- **It doesn't extend across token refresh.** Impersonation tokens are issued without a refresh token. When they expire, the SuperAdmin starts a new grant.
+- **It's not "log in as another user".** The impersonation token is distinct from the impersonated user's own tokens. The original user can still log in independently with their password, and their sessions are untouched.
+- **It doesn't bypass permissions.** The impersonation token carries the **impersonated user's** identity — permission checks resolve the impersonated user's roles, not the actor's. If the impersonated user can't access an endpoint, neither can the impersonating operator.
+- **It doesn't extend across token refresh.** Impersonation tokens are issued without a refresh token. When they expire, the operator starts a new grant.
+- **It doesn't nest.** Starting an impersonation from an impersonation session is rejected — end the current one first.
 
 ## Operational tips
 
-- **Set a low default duration.** 30 minutes is plenty for most debug sessions; longer durations mean a forgotten-to-end grant lingers longer.
+- **Keep durations short.** The server caps at 60 minutes; most debug sessions need far less. Shorter grants mean a forgotten-to-end session lingers less.
 - **Require a `reason`** on every start. Mandatory free text means there's a paper trail of why each impersonation happened.
-- **Alert on impersonation events.** A single SuperAdmin impersonating dozens of users in an hour is either a real incident response or a security incident. Either way you want to know.
+- **Alert on impersonation events.** A single operator impersonating dozens of users in an hour is either a real incident response or a security incident. Either way you want to know.
 - **Train your team.** "Don't impersonate just to look around" is a real cultural norm. Impersonation is an investigation tool, not a casual UX-debugging shortcut.
 
 ## Related

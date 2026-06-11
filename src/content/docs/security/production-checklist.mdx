@@ -1,6 +1,6 @@
 ---
 title: Production security checklist
-lastUpdated: 2026-05-19
+lastUpdated: 2026-06-11
 description: Ten configuration items you must check before shipping fullstackhero to production. Skip none.
 sidebar:
   label: Production checklist
@@ -18,33 +18,31 @@ The kit ships with secure defaults wherever possible. Some things, by their natu
 Print it. Stick it on the wall. Run through every item before flipping DNS to production traffic. None of them take more than 5 minutes; missing any one of them is the kind of incident that ends up in post-mortems.
 </Callout>
 
-## 1. Rotate `Jwt:SigningKey` from the dev default
+## 1. Set `JwtOptions:SigningKey` from a secrets manager
 
-The dev default is short, well-known, and committed to git. Any attacker can forge tokens against your host until you rotate.
-
-Generate a fresh 32-byte key:
+The repo's dev-only key lives in `appsettings.Development.json`; base and production config leave the key **empty**, and startup validation refuses to boot with an empty key, a key shorter than 32 characters, or the sample `replace-with-…` placeholder. So the failure mode isn't "silently forgeable tokens" — it's "won't start until you set one". Set a real one:
 
 ```bash
 openssl rand -base64 32
 ```
 
-Set via secrets manager / environment variable:
+Inject via secrets manager / environment variable:
 
 ```bash
-JWT__SIGNINGKEY=...
+JWTOPTIONS__SIGNINGKEY=...
 ```
 
-Never check the production key into git. See [data protection](/docs/security/data-protection/) for the secrets-management patterns.
+Never check the production key into git, and never reuse the dev key. See [data protection](/docs/security/data-protection/) for the secrets-management patterns.
 
 ## 2. Configure password policy to your compliance needs
 
 The kit defaults:
 
-- 12-character minimum
+- 10-character minimum with digit + uppercase + lowercase required (`IdentityOptions` in `IdentityModule`)
 - 5-password history (prevent reuse)
 - 90-day expiry with 14-day warning
 
-Adjust for your industry. Healthcare (HIPAA) and finance (PCI-DSS) tend to require longer histories and shorter expiries. Consumer products can be looser (12 chars + no expiry, with strong 2FA).
+Adjust for your industry. Healthcare (HIPAA) and finance (PCI-DSS) tend to require longer histories and shorter expiries. Consumer products can be looser (longer minimum + no expiry, with strong 2FA).
 
 ```jsonc
 {
@@ -57,9 +55,9 @@ Adjust for your industry. Healthcare (HIPAA) and finance (PCI-DSS) tend to requi
 }
 ```
 
-## 3. Whitelist CORS origins
+## 3. Allowlist CORS origins
 
-Replace `CorsOptions:AllowAll = true` with an explicit allowlist. Use `SetIsOriginAllowed(_ => true) + AllowCredentials()` is **dev only**. See [CORS & security headers](/docs/security/cors-and-headers/).
+`CorsOptions:AllowAll = true` (and the `SetIsOriginAllowed(_ => true)` policy it enables) is **dev only**. Production needs the explicit lists — and note that `appsettings.Production.json` ships `AllowedOrigins` empty, which means **no CORS middleware mounts at all** until you fill it in; your front-ends on other origins will be blocked by the browser. See [CORS & security headers](/docs/security/cors-and-headers/).
 
 ```jsonc
 {
@@ -69,50 +67,54 @@ Replace `CorsOptions:AllowAll = true` with an explicit allowlist. Use `SetIsOrig
       "https://app.example.com",
       "https://admin.example.com"
     ],
-    "AllowCredentials": true
+    "AllowedHeaders": [ "content-type", "authorization" ],
+    "AllowedMethods": [ "GET", "POST", "PUT", "DELETE" ]
   }
 }
 ```
 
-## 4. Configure security headers
+## 4. Review the security headers
 
-At minimum:
-
-- **Content-Security-Policy** restricting `script-src` / `connect-src` / `frame-ancestors` to expected origins
-- **HSTS** (`max-age=63072000; includeSubDomains`)
-- **X-Frame-Options: DENY** (or `frame-ancestors 'none'` in CSP)
-- **X-Content-Type-Options: nosniff**
-- **Referrer-Policy: strict-origin-when-cross-origin**
-
-The kit ships defaults; tune `SecurityHeadersOptions:ContentSecurityPolicy` for your UI's actual dependencies. Test with browser dev tools open.
-
-## 5. Set rate-limit values
-
-The `auth` policy defaults to **10 requests per minute per IP**. Adjust to your traffic profile:
-
-- High-volume consumer app: relax to **30 / min** so legitimate users on shared NAT don't hit limits.
-- Internal admin app: tighten to **5 / min** — abuse on this surface is more harmful than legitimate retries.
+The kit emits CSP, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, and HSTS (on HTTPS responses) by default — verify they survive your reverse proxy, and tune the knobs:
 
 ```jsonc
 {
-  "RateLimitOptions": {
-    "AuthPolicy": {
-      "PermitLimit": 10,
-      "Window": "00:01:00"
-    }
+  "SecurityHeadersOptions": {
+    "Enabled": true,
+    "ExcludedPaths": [ "/scalar", "/openapi" ],
+    "AllowInlineStyles": true,
+    "ScriptSources": [],        // add your analytics/widget origins here
+    "StyleSources": []
   }
 }
 ```
 
-Also consider adding a global API-wide rate limit (separate policy) for protection against bot traffic.
+If your production posture disables the API docs UI (item 7), you can drop the `ExcludedPaths` entries too. Test with browser dev tools open — CSP violations log to the console.
+
+## 5. Turn rate limiting on and tune the values
+
+`RateLimitingOptions:Enabled` is `false` in the base config (so local dev never trips it) and `true` in `appsettings.Production.json` — **verify your deployed config actually enables it**. The `auth` policy defaults to **10 requests per minute** per user-or-IP; the global chained limiters cover tenant (1000/min), user (200/min), and IP (300/min):
+
+```jsonc
+{
+  "RateLimitingOptions": {
+    "Enabled": true,
+    "Auth":   { "PermitLimit": 10,  "WindowSeconds": 60, "QueueLimit": 0 },
+    "Tenant": { "PermitLimit": 1000, "WindowSeconds": 60, "QueueLimit": 0 },
+    "User":   { "PermitLimit": 200, "WindowSeconds": 60, "QueueLimit": 0 },
+    "Ip":     { "PermitLimit": 300, "WindowSeconds": 60, "QueueLimit": 0 }
+  }
+}
+```
+
+Adjust `Auth` to your traffic profile: relax for high-volume consumer apps on shared NAT, tighten for internal admin surfaces.
 
 ## 6. HTTPS everywhere
 
 `UseHttpsRedirection` is on by default. Verify:
 
 - Reverse proxy / load balancer terminates TLS with a valid certificate.
-- `X-Forwarded-Proto: https` forwards to the kit so the redirect middleware doesn't double-redirect.
-- HSTS header is on (`Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`).
+- `X-Forwarded-Proto: https` forwards to the kit so the redirect middleware doesn't double-redirect — and so the HSTS header (emitted only on HTTPS requests) actually fires.
 - HTTP/2 or HTTP/3 enabled at the LB for performance.
 
 If you're behind Cloudflare / a CDN, also enable "Always Use HTTPS" + "HSTS" at the CDN.
@@ -121,39 +123,38 @@ If you're behind Cloudflare / a CDN, also enable "Always Use HTTPS" + "HSTS" at 
 
 In production, decide:
 
-- **`/scalar/v1`** (the OpenAPI browser) — usually fine to expose, but consider whether revealing your API surface to the world is what you want. Lock behind a permission or remove via `o.EnableOpenApi = false` for a hosted-only-internally posture.
-- **`/health`** + **`/health/ready`** — expose to your platform's probes; firewall externally.
-- **`/openapi/v1.json`** — same as `/scalar/v1`.
+- **`/scalar`** (the OpenAPI browser) and **`/openapi/v1.json`** — `appsettings.Production.json` ships with `OpenApiOptions:Enabled = false`, which removes both. If you re-enable them, consider whether revealing your API surface to the world is what you want. Note these paths also bypass the security-headers middleware and authorization (so the docs UI works) — another reason to keep them off in production.
+- **`/health`** — expose to your platform's probes; firewall externally.
 - **OpenTelemetry collector endpoints** — these are inbound to your collector, not the kit, but verify they're not Internet-exposed.
 
 ## 8. Lock down the Hangfire dashboard
 
-`/hangfire` is gated by basic auth via `HangfireOptions:UserName` / `Password`. Verify:
+The jobs dashboard (default route **`/jobs`**, configurable via `HangfireOptions:Route`) is gated by basic auth. Startup validation enforces a username of 3+ chars and a password of 12+ chars — empty values won't boot. Verify:
 
 - Username is **not** `admin` (rename to something less guessable).
-- Password is **long** (16+ random chars) and **not** the dev default.
-- Behind HTTPS.
-- IP-whitelist at the reverse proxy (Cloudflare WAF rule, Nginx `allow`/`deny`, etc.) — only your admin office IPs.
+- Password is **long** (16+ random chars) and **not** the dev value from `appsettings.Development.json`.
+- Behind HTTPS (basic auth is plaintext otherwise).
+- IP-allowlist at the reverse proxy (Cloudflare WAF rule, Nginx `allow`/`deny`, etc.) — only your ops IPs.
 
 ```jsonc
 {
   "HangfireOptions": {
     "UserName": "ops-team",
     "Password": "set-via-secrets-manager",
-    "Route": "/hangfire"
+    "Route": "/jobs"
   }
 }
 ```
 
 ## 9. Configure Data Protection key persistence
 
-Set `CachingOptions:Redis`. Without it, each instance maintains its own Data Protection key ring locally, and email-confirmation links, password reset links, and antiforgery tokens stop working across rolling deploys.
+Set `CachingOptions:Redis`. Without it, each instance maintains its own Data Protection key ring locally, and email-confirmation links, password reset links, and webhook signing secrets stop working across rolling deploys.
 
 See [data protection](/docs/security/data-protection/).
 
 ## 10. Enable audit retention
 
-The kit's `AuditRetentionJob` is **opt-in**. Without it, the audit table grows forever. Configure:
+The kit's `AuditRetentionJob` is **opt-in** (`Enabled` defaults to false). Without it, the audit table grows forever. Configure:
 
 ```jsonc
 {
@@ -177,11 +178,11 @@ Adjust retention windows per your compliance regime. Most teams want **security 
 
 These aren't blockers, but the sooner the better:
 
-- **Make 2FA mandatory for SuperAdmin / admin roles.** A leaked admin password compromises everything; require TOTP.
-- **Add monitoring + alerts** on auth-failure spikes, permission-deny spikes, impersonation events, and 5xx error rates.
+- **Make 2FA mandatory for admin roles.** A leaked admin password compromises everything; require TOTP.
+- **Add monitoring + alerts** on auth-failure spikes, impersonation events, and 5xx error rates.
 - **Run a vulnerability scan** of the deployed image (Snyk, Trivy, Dependabot) to catch transitive CVEs early.
 - **Set up backup + restore tests** for Postgres + MinIO. Backups you haven't tested restoring are not backups.
-- **Document an incident-response runbook** — who's on-call, where the alerts go, how to invalidate every session, how to rotate the JWT signing key in an emergency.
+- **Document an incident-response runbook** — who's on-call, where the alerts go, how to revoke every session (admin revoke-all is built in), how to rotate the JWT signing key in an emergency.
 
 ## Related
 

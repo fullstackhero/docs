@@ -1,6 +1,6 @@
 ---
 title: Error handling
-lastUpdated: 2026-05-19
+lastUpdated: 2026-06-11
 description: Global exception handler converts CustomException / NotFoundException / ForbiddenException / UnauthorizedException into RFC 9457 ProblemDetails responses.
 sidebar:
   label: Error handling
@@ -20,16 +20,33 @@ The kit's idiom is throw-from-domain. Aggregates throw `CustomException` / `NotF
 
 ## The exception hierarchy
 
-Four exception types ship in the `Core` building block:
+Four exception types ship in the `Core` building block (`FSH.Framework.Core.Exceptions`). `NotFoundException`, `ForbiddenException`, and `UnauthorizedException` all derive from `CustomException`, which carries an `HttpStatusCode` and an optional `ErrorMessages` list:
 
 | Type | HTTP Status | Use when |
 |---|---|---|
-| `CustomException(message, HttpStatusCode)` | Caller-specified | Generic domain failure; pick the status |
+| `CustomException(message, errors?, HttpStatusCode)` | Caller-specified (500 default) | Generic domain failure; pick the status |
 | `NotFoundException(message)` | 404 | Resource missing |
 | `ForbiddenException(message)` | 403 | Authenticated but not authorised |
 | `UnauthorizedException(message)` | 401 | Not authenticated |
 
-Plus `ValidationException` from FluentValidation (returned as 400 with the field errors as a `ProblemDetails`).
+Plus `ValidationException` from FluentValidation (returned as 400 with the field errors).
+
+## How the handler decides the response
+
+`GlobalExceptionHandler` (in the Web block) is registered via `services.AddExceptionHandler<GlobalExceptionHandler>()` and implements `IExceptionHandler.TryHandleAsync(...)`. The type-switch:
+
+| Exception | Status | Notes |
+|---|---|---|
+| `FluentValidation.ValidationException` | 400 | Per-field `errors` map in the response |
+| `CustomException` (incl. subclasses) | `e.StatusCode` | `title` = exception type name, `detail` = message, `errors` = `ErrorMessages` when present |
+| `UnauthorizedAccessException` | 401 | BCL fallback |
+| `KeyNotFoundException` | 404 | BCL fallback |
+| `BadHttpRequestException` | Its own `StatusCode` (usually 400) | Malformed request — missing required header/param, unreadable or oversized body |
+| Anything else | 500 | Generic "An unexpected error occurred" — no internals leaked |
+
+The `BadHttpRequestException` mapping matters more than it looks: a request to an anonymous endpoint that omits a required parameter (like the `tenant` header binding) throws it, and before this mapping existed the client saw a misleading 500 instead of a 400 (issue #1245).
+
+Every response also carries `traceId` (the OpenTelemetry trace id, falling back to `HttpContext.TraceIdentifier`) and `correlationId` (the `X-Correlation-ID` request header when present) as ProblemDetails extensions.
 
 ## The response shape
 
@@ -38,12 +55,12 @@ HTTP/1.1 409 Conflict
 Content-Type: application/problem+json
 
 {
-  "type": "https://fullstackhero.net/errors/conflict",
-  "title": "Cannot resolve a closed ticket.",
+  "title": "CustomException",
   "status": 409,
   "detail": "Cannot resolve a closed ticket.",
   "instance": "/api/v1/tickets/3d2c.../resolve",
-  "traceId": "00-4a7d8e1f2c..."
+  "traceId": "4a7d8e1f2c...",
+  "correlationId": "..."
 }
 ```
 
@@ -54,28 +71,21 @@ HTTP/1.1 400 Bad Request
 Content-Type: application/problem+json
 
 {
-  "type": "https://fullstackhero.net/errors/validation",
-  "title": "One or more validation errors occurred.",
+  "type": "https://tools.ietf.org/html/rfc7231#section-6.5.1",
+  "title": "Validation error",
   "status": 400,
+  "detail": "One or more validation errors occurred.",
+  "instance": "/api/v1/identity/users/register",
   "errors": {
     "Email":    ["Email is not a valid address.", "Email is already in use."],
     "Password": ["Password must be at least 12 characters."]
   },
-  "instance": "/api/v1/identity/users/register",
-  "traceId": "00-4a7d8e1f2c..."
+  "traceId": "4a7d8e1f2c...",
+  "correlationId": "..."
 }
 ```
 
 The `traceId` matches the OpenTelemetry trace id, so client-side error logs cross-reference cleanly with server traces.
-
-## How the handler decides the response
-
-`GlobalExceptionHandler` is registered via `services.AddExceptionHandler<GlobalExceptionHandler>()`. It implements `IExceptionHandler.TryHandleAsync(...)`. On exception:
-
-1. **Type-switch on the exception** — `NotFoundException` → 404, `ForbiddenException` → 403, `UnauthorizedException` → 401, `ValidationException` → 400 (with field errors), `CustomException` → caller-specified, fallthrough → 500.
-2. **Build a `ProblemDetails`** with `type`, `title`, `status`, `detail`, `instance`, `traceId`.
-3. **Optionally enrich** with `errors` (validation), `stackTrace` (development only), etc.
-4. **Write the response** as `application/problem+json` and return `true`.
 
 ## Throwing from the domain
 
@@ -86,7 +96,7 @@ The pattern is "the aggregate enforces the invariant; the handler catches the ex
 public void Resolve(string? resolutionNote)
 {
     if (Status == TicketStatus.Closed)
-        throw new CustomException("Cannot resolve a closed ticket.", HttpStatusCode.Conflict);
+        throw new CustomException("Cannot resolve a closed ticket.", null, HttpStatusCode.Conflict);
     Status = TicketStatus.Resolved;
     // ...
 }
@@ -95,7 +105,7 @@ public void Resolve(string? resolutionNote)
 public async ValueTask<Unit> Handle(ResolveTicketCommand cmd, CancellationToken ct)
 {
     var ticket = await _db.Tickets.FindAsync([cmd.TicketId], ct).ConfigureAwait(false)
-              ?? throw new NotFoundException(nameof(Ticket), cmd.TicketId);
+              ?? throw new NotFoundException($"Ticket {cmd.TicketId} not found.");
 
     ticket.Resolve(cmd.ResolutionNote);
     await _db.SaveChangesAsync(ct).ConfigureAwait(false);
@@ -103,11 +113,11 @@ public async ValueTask<Unit> Handle(ResolveTicketCommand cmd, CancellationToken 
 }
 ```
 
-No try/catch in the handler. The global handler maps `CustomException` with Conflict to a 409 ProblemDetails; the `NotFoundException` becomes a 404. The endpoint's caller sees a structured response and the kit's React client renders the right toast / inline error.
+No try/catch in the handler. The global handler maps the Conflict `CustomException` to a 409 ProblemDetails; the `NotFoundException` becomes a 404. The endpoint's caller sees a structured response and the kit's React client renders the right toast / inline error.
 
 ## Validation errors
 
-FluentValidation runs via the `ValidationBehavior` Mediator pipeline before the handler. A failing validator throws `ValidationException`; the global handler converts it into a 400 with per-field errors:
+FluentValidation runs via the `ValidationBehavior` Mediator pipeline before the handler. A failing validator makes the behavior throw `ValidationException`; the global handler converts it into a 400 with per-field errors:
 
 ```csharp
 public sealed class CreateProductCommandValidator : AbstractValidator<CreateProductCommand>
@@ -124,23 +134,21 @@ public sealed class CreateProductCommandValidator : AbstractValidator<CreateProd
 
 The response carries an `errors` map keyed by field name with arrays of message strings. React clients render them inline next to the field.
 
-## Production vs development
+## What never reaches the client
 
-In production, the response includes `type`, `title`, `status`, `detail`, `instance`, `traceId` — no stack traces, no inner exceptions. Clients see what they need to display; everything else stays on the server side (logged + traced).
-
-In development, the handler can optionally include the stack trace via `IncludeDetailsInResponse = true`. Don't ship this flag set in production — never expose stack traces or internal type names to external clients.
+Stack traces and inner exception details are **never** included in the response — there is no "development mode" flag that adds them. The handler pushes the stack trace, title, detail, and status onto the Serilog `LogContext` instead, so the full picture lands in your logs while the client only sees the structured ProblemDetails. Unexpected exceptions (the 500 fallthrough) get a fixed generic message — internal type names and messages stay server-side.
 
 ## Anti-patterns to avoid
 
 - **`catch { return BadRequest(); }` in handlers.** The global handler already does this; wrapping it just hides intent. Throw the right exception type from the domain.
-- **`throw new Exception("...")` from a handler.** Use one of the four typed exceptions. A bare `Exception` falls through to "500 Internal Server Error" with no detail — useless for the client and harder to debug.
+- **`throw new Exception("...")` from a handler.** Use one of the typed exceptions. A bare `Exception` falls through to "500 Internal Server Error" with a generic message — useless for the client and harder to debug.
 - **Returning `IActionResult` / `Results.X(...)` from a handler.** Handlers return DTOs. The endpoint adapts to `IResult` via the endpoint builder. Keeping handlers DTO-only means the same handler is unit-testable without HTTP context.
 
 ## Logging vs responding
 
-The handler writes the HTTP response **and** logs the exception via `ILogger<GlobalExceptionHandler>`. The log message includes the same `traceId` that lands in the response. If a customer reports "I got an error", you ask for the `traceId`, look it up in your log aggregator, and you have the full picture.
+The handler writes the HTTP response **and** logs the exception via `ILogger<GlobalExceptionHandler>` (structured message template — path, status code, title), with the exception detail and stack trace attached through `LogContext` properties. If a customer reports "I got an error", you ask for the `traceId`, look it up in your log aggregator, and you have the full picture.
 
-The OpenTelemetry instrumentation tags the request span with the exception type and message, so you can graph error rates per exception type and alert on spikes.
+The kit's `MediatorTracingBehavior` marks the command/query span as errored and tags it with `exception.type` and `exception.message` before re-throwing, so you can graph error rates per exception type and alert on spikes.
 
 ## Related
 

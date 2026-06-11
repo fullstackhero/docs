@@ -1,6 +1,6 @@
 ---
 title: Webhooks module
-lastUpdated: 2026-06-01
+lastUpdated: 2026-06-11
 description: Tenant-scoped webhook subscriptions, open-generic event fan-out, HMAC-signed delivery with secrets encrypted at rest, permission-gated endpoints, Hangfire dispatch with exponential backoff, and a delivery audit log.
 sidebar:
   label: Webhooks
@@ -12,7 +12,7 @@ seo:
   keywords: '.net webhook delivery, hmac signed webhooks dotnet, hangfire webhook retry, tenant scoped webhooks, open generic event handler'
 ---
 
-The Webhooks module turns every integration event your kit publishes into an outbound HTTP delivery to subscribed tenants. Tenants register a URL + an event list (with `*` wildcard support), the module fans events using an open-generic `IIntegrationEventHandler<>`, signs payloads with HMAC-SHA256, and delivers via Hangfire jobs with exponential-backoff retry and a delivery log for audit. Around **580 lines of code in the runtime project**.
+The Webhooks module turns every integration event your kit publishes into an outbound HTTP delivery to subscribed tenants. Tenants register a URL + an event list (with `*` wildcard support), the module fans events using an open-generic `IIntegrationEventHandler<>`, signs payloads with HMAC-SHA256, and delivers via Hangfire jobs with exponential-backoff retry and a delivery log for audit. Around **1,100 lines of code in the runtime project**.
 
 <Callout type="tip" title="Webhooks-as-a-feature, for free">
 You publish integration events anyway (Chat does, Identity does, Files does). The Webhooks module is the configuration layer that lets *your tenants* opt into those events being delivered to their systems — no per-event wiring on your side.
@@ -36,7 +36,7 @@ You publish integration events anyway (Chat does, Identity does, Files does). Th
 
 ```
 src/Modules/Webhooks/
-├── Modules.Webhooks/                            ~580 LoC
+├── Modules.Webhooks/                            ~1,100 LoC
 │   ├── WebhooksModule.cs                        IModule — order 400
 │   ├── Domain/
 │   │   ├── WebhookSubscription.cs               Tenant-scoped, IsActive flag
@@ -46,7 +46,8 @@ src/Modules/Webhooks/
 │   │   ├── WebhookFanoutHandler<TEvent>.cs      Open-generic event bridge
 │   │   ├── WebhookDispatchJob.cs                Hangfire job, HMAC + retry
 │   │   ├── WebhookDispatcher.cs                 EnqueueAsync into Hangfire
-│   │   ├── WebhookDeliveryService.cs            Persists Delivery rows
+│   │   ├── WebhookDeliveryService.cs            One-shot delivery (test endpoint)
+│   │   ├── WebhookSecretProtector.cs            DataProtection encrypt/decrypt
 │   │   └── WebhookPayloadSigner.cs              HMAC-SHA256 hex
 │   └── Features/v1/                             5 endpoints
 └── Modules.Webhooks.Contracts/                  Commands, queries, DTOs
@@ -59,32 +60,45 @@ The module loads at order `400` — after Files (`350`), before Catalog (`600`).
 The single piece of code that makes the whole module work:
 
 ```csharp
-// src/Modules/Webhooks/Modules.Webhooks/Services/WebhookFanoutHandler.cs
+// src/Modules/Webhooks/Modules.Webhooks/Services/WebhookFanoutHandler.cs (simplified)
 
-public sealed class WebhookFanoutHandler<TEvent>(
-    IWebhookDbContext db,
-    IWebhookDispatcher dispatcher,
-    IMultiTenantContextSetter tenants,
-    IEventSerializer serializer)
-    : IIntegrationEventHandler<TEvent>
+public sealed class WebhookFanoutHandler<TEvent> : IIntegrationEventHandler<TEvent>
     where TEvent : IIntegrationEvent
 {
-    public async ValueTask HandleAsync(TEvent evt, CancellationToken ct)
+    // ctor injects WebhookDbContext, IWebhookDispatcher, IEventSerializer,
+    // IMultiTenantContextAccessor<AppTenantInfo>, ILogger
+
+    public async Task HandleAsync(TEvent @event, CancellationToken ct = default)
     {
-        if (evt.TenantId is null) return;                        // skip platform-wide events
-        tenants.SetTenant(evt.TenantId.Value);                   // restore tenant context
+        if (string.IsNullOrWhiteSpace(@event.TenantId)) return;   // skip platform-wide events
 
-        var subs = await db.Subscriptions
-            .Where(s => s.IsActive)
-            .ToListAsync(ct).ConfigureAwait(false);
+        // Install the tenant context for the subscription read, restore the previous one after.
+        var prev = _tenantContextAccessor.MultiTenantContext;
+        try
+        {
+            var info = new AppTenantInfo(@event.TenantId, @event.TenantId);
+            ((IMultiTenantContextSetter)_tenantContextAccessor).MultiTenantContext =
+                new MultiTenantContext<AppTenantInfo>(info);
 
-        var eventType = typeof(TEvent).Name;
-        var matching = subs.Where(s => s.MatchesEvent(eventType));
-        if (!matching.Any()) return;
+            var eventType = typeof(TEvent).Name;
+            var subscriptions = await _db.Subscriptions
+                .AsNoTracking()
+                .Where(s => s.IsActive)
+                .ToListAsync(ct).ConfigureAwait(false);
 
-        var payload = serializer.Serialize(evt);
-        foreach (var sub in matching)
-            await dispatcher.EnqueueAsync(sub.Id, eventType, payload, ct).ConfigureAwait(false);
+            var matching = subscriptions.Where(s => s.MatchesEvent(eventType)).ToList();
+            if (matching.Count == 0) return;
+
+            var payload = _serializer.Serialize(@event);
+            foreach (var subscription in matching)
+                await _dispatcher
+                    .EnqueueAsync(@event.TenantId, subscription.Id, eventType, payload, ct)
+                    .ConfigureAwait(false);   // one bad enqueue is caught + logged, fan-out continues
+        }
+        finally
+        {
+            ((IMultiTenantContextSetter)_tenantContextAccessor).MultiTenantContext = prev;
+        }
     }
 }
 ```
@@ -98,62 +112,68 @@ services.AddScoped(typeof(IIntegrationEventHandler<>), typeof(WebhookFanoutHandl
 The DI container materializes the handler for every event type the eventing system sees. Zero per-event code.
 
 <Callout type="warning" title="Restore tenant context manually">
-The handler restores `tenants.SetTenant(evt.TenantId.Value)` before querying subscriptions. Without it, the Finbuckle query filter on `WebhookDbContext` filters away every row because the tenant context is null on the background event-bus thread. **This is the easiest thing to forget when adding a new handler.**
+The handler installs the event's tenant into `IMultiTenantContextSetter` before querying subscriptions (and restores the previous context after). Without it, the Finbuckle query filter on `WebhookDbContext` filters away every row because the tenant context is null on the background event-bus thread. **This is the easiest thing to forget when adding a new handler.**
 </Callout>
 
 ## The delivery job
 
 ```csharp
-// src/Modules/Webhooks/Modules.Webhooks/Services/WebhookDispatchJob.cs
+// src/Modules/Webhooks/Modules.Webhooks/Services/WebhookDispatchJob.cs (simplified)
 
-[AutomaticRetry(Attempts = 4, OnAttemptsExceeded = AttemptsExceededAction.Fail,
-                DelaysInSeconds = new[] { 30, 120, 600, 3600 })]
-public sealed class WebhookDispatchJob(IHttpClientFactory http, IWebhookDeliveryService log, IWebhookPayloadSigner signer)
+public sealed class WebhookDispatchJob
 {
-    public async Task RunAsync(Guid subscriptionId, string eventType, string payload, CancellationToken ct)
-    {
-        var sub = await /* fetch */;
-        var client = http.CreateClient("Webhooks");
-        using var req = new HttpRequestMessage(HttpMethod.Post, sub.Url)
-        {
-            Content = new StringContent(payload, Encoding.UTF8, "application/json"),
-        };
-        req.Headers.Add("X-Webhook-Event", eventType);
-        req.Headers.Add("X-Webhook-Delivery-Id", Guid.NewGuid().ToString());
-        var secret = secretProtector.Unprotect(sub.SecretHash);   // decrypt at sign time
-        if (!string.IsNullOrEmpty(secret))
-            req.Headers.Add("X-Webhook-Signature", "sha256=" + signer.Sign(payload, secret));
+    // ctor injects IServiceScopeFactory, IHttpClientFactory, IWebhookSecretProtector, ILogger
 
-        var sw = Stopwatch.StartNew();
-        try
-        {
-            using var resp = await client.SendAsync(req, ct).ConfigureAwait(false);
-            await log.RecordAsync(sub.Id, eventType, payload,
-                (int)resp.StatusCode, success: resp.IsSuccessStatusCode, ct).ConfigureAwait(false);
-            if (!resp.IsSuccessStatusCode && IsPermanent(resp.StatusCode))
-                throw new WebhookPermanentException(resp.StatusCode);   // skip retry
-            resp.EnsureSuccessStatusCode();                              // throw → Hangfire retries
-        }
-        catch (Exception ex) when (ex is not WebhookPermanentException)
-        {
-            await log.RecordAsync(sub.Id, eventType, payload, 0, success: false, ct, ex.Message).ConfigureAwait(false);
-            throw;
-        }
+    // 4 retries after the initial attempt → up to 5 total. Backoff: 30s, 2m, 10m, 1h.
+    [AutomaticRetry(Attempts = 4, DelaysInSeconds = new[] { 30, 120, 600, 3600 },
+                    OnAttemptsExceeded = AttemptsExceededAction.Fail)]
+    public async Task DispatchAsync(
+        Guid subscriptionId, string tenantId, string eventType, string payloadJson,
+        PerformContext? context, CancellationToken ct)
+    {
+        // Fresh scope: set the tenant context FIRST, then resolve WebhookDbContext so its
+        // Finbuckle filter sees a real TenantInfo (same pattern as SqlAuditSink).
+        using var scope = _scopeFactory.CreateScope();
+        /* resolve tenant from store, set IMultiTenantContextSetter, load subscription */
+
+        var attemptNumber = (context?.GetJobParameter<int?>("RetryCount") ?? 0) + 1;
+        var delivery = WebhookDelivery.Create(subscriptionId, eventType, payloadJson, attemptNumber);
+
+        using var content = new StringContent(payloadJson, Encoding.UTF8,
+            new MediaTypeHeaderValue("application/json"));
+        var signingSecret = _secretProtector.Unprotect(subscription.SecretHash);  // decrypt at sign time
+        if (!string.IsNullOrEmpty(signingSecret))
+            content.Headers.Add("X-Webhook-Signature", WebhookPayloadSigner.Sign(payloadJson, signingSecret));
+        content.Headers.Add("X-Webhook-Event", eventType);
+        content.Headers.Add("X-Webhook-Delivery-Id", delivery.Id.ToString());
+
+        var response = await _httpClientFactory.CreateClient("Webhooks")
+            .PostAsync(new Uri(subscription.Url), content, ct).ConfigureAwait(false);
+        delivery.RecordResult((int)response.StatusCode, response.IsSuccessStatusCode, null);
+        /* save delivery row */
+
+        if (response.IsSuccessStatusCode) return;
+        if (IsTransient((int)response.StatusCode))
+            throw new WebhookDeliveryFailedException(/* … */);   // throw → Hangfire retries
+        // Permanent client error (4xx other than 408/429) — log it, give up, no exception.
     }
+
+    private static bool IsTransient(int statusCode) =>
+        statusCode >= 500 || statusCode == 408 || statusCode == 429;
 }
 ```
 
-`IsPermanent` decides between 4xx (give up) and 5xx / 408 / 429 (retry). Each attempt — successful or failed — appends a `WebhookDelivery` row to the log.
+`IsTransient` decides between 5xx / 408 / 429 (throw → retry) and other 4xx (give up quietly). Network errors, DNS failures, and timeouts count as transient too. Each attempt — successful or failed — appends a `WebhookDelivery` row to the log with its own attempt number.
 
 ## Public API
 
 | Type | Purpose |
 |---|---|
 | `CreateWebhookSubscriptionCommand(url, events[], secret?)` | Subscribe (the secret is encrypted before storage) |
-| `DeleteWebhookSubscriptionCommand(subscriptionId)` | Delete the subscription |
-| `TestWebhookSubscriptionCommand(subscriptionId, eventType?)` | Enqueue one-off test delivery |
-| `GetWebhookSubscriptionsQuery(paging)` | List active subscriptions for caller's tenant |
-| `GetWebhookDeliveriesQuery(subscriptionId?, paging)` | Delivery log |
+| `DeleteWebhookSubscriptionCommand(id)` | Delete the subscription |
+| `TestWebhookSubscriptionCommand(id)` | Send a synchronous `webhook.test` delivery (signed if a secret is set) |
+| `GetWebhookSubscriptionsQuery(paging)` | List subscriptions for caller's tenant |
+| `GetWebhookDeliveriesQuery(subscriptionId, paging)` | Delivery log for one subscription |
 
 ## Permissions
 
@@ -186,7 +206,7 @@ Before this release the endpoints were authentication-only — any signed-in use
 |---|---|
 | `Content-Type` | `application/json` |
 | `X-Webhook-Event` | The event type name (e.g. `ProductRepricedIntegrationEvent`) |
-| `X-Webhook-Delivery-Id` | A fresh UUID per attempt for receiver-side idempotency |
+| `X-Webhook-Delivery-Id` | The `WebhookDelivery` row id — fresh per attempt, so receivers can dedupe |
 | `X-Webhook-Signature` | `sha256={hex}` (only if `SecretHash` is set on the subscription) |
 
 Subscribers verify the signature by HMAC-SHA256-hashing the raw request body with the same secret and comparing.

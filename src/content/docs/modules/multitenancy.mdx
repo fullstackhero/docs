@@ -1,6 +1,6 @@
 ---
 title: Multitenancy module
-lastUpdated: 2026-05-19
+lastUpdated: 2026-06-11
 description: Finbuckle-driven tenant resolution (claim, header, query), distributed-cache store, per-tenant connection strings, theme customisation, and an async provisioning state machine.
 sidebar:
   label: Multitenancy
@@ -12,7 +12,7 @@ seo:
   keywords: 'finbuckle multitenant example, multitenant .net template, ef core tenant query filter, distributed cache tenant store, tenant provisioning .net'
 ---
 
-The Multitenancy module makes multi-tenant the default behaviour of the entire kit. It wires Finbuckle.MultiTenant 10 with a three-tier resolution strategy (claim → header → query), caches resolved tenants in a distributed store, supports per-tenant connection strings, ships a resumable provisioning state machine, and exposes a per-tenant theme customisation surface. Around **2,200 lines of code across 49 files**, plus a contracts assembly the rest of the kit references.
+The Multitenancy module makes multi-tenant the default behaviour of the entire kit. It wires Finbuckle.MultiTenant 10 with a three-tier resolution strategy (claim → header → query), caches resolved tenants in a distributed store, supports per-tenant connection strings, ships a resumable provisioning state machine, drives the tenant subscription lifecycle (create with a plan, renew, expire with a grace window), and exposes a per-tenant theme customisation surface. Around **3,200 lines of code across 58 files**, plus a contracts assembly the rest of the kit references.
 
 <Callout type="tip" title="Tenancy isn't a feature, it's a default">
 Once this module is loaded (order 200), every other module's `DbContext` is tenant-aware via the EF Core global query filter. You opt **out** with `IGlobalEntity`, you don't opt in. That's the discipline.
@@ -26,32 +26,37 @@ Once this module is loaded (order 200), every other module's `DbContext` is tena
 - **Per-tenant connection strings** — each `AppTenantInfo` can carry its own DB connection, set on creation.
 - **`IGlobalEntity` opt-out** — entities that need to live across tenants (plans, impersonation grants, outbox messages) mark this interface and skip the tenant filter.
 - **Root-operator header override** — SuperAdmin can scope a single request to another tenant via the `tenant` header for admin operations like cross-tenant user search; runs as post-auth middleware (the Finbuckle strategies see anonymous principals).
-- **Provisioning state machine** — multi-step tenant creation (schema migration → seed → activate). Steps are persisted; failures are resumable via `RetryTenantProvisioning`.
+- **Provisioning state machine** — multi-step tenant creation (Database → Migrations → Seeding → CacheWarm). Steps are persisted; failures are resumable via `RetryTenantProvisioning`.
+- **Tenant lifecycle with plans** — `CreateTenantCommand` takes an optional `PlanKey` (falls back to `Billing:DefaultPlanKey`) and publishes `TenantSubscribedIntegrationEvent`; `RenewTenant` extends `ValidUpto` by the plan term and publishes `TenantRenewedIntegrationEvent` — the Billing module reacts to both with subscriptions + invoices. `AdjustTenantValidity` is the operator override that *may* backdate (the internal `SetValidity` used by renewal is forward-only and throws on backdating).
+- **Active/expiry enforcement as post-auth guards** — Finbuckle happily resolves inactive or expired tenants; two middleware guards (registered in `IModule.ConfigureMiddleware`) reject requests for deactivated tenants and enforce `ValidUpto` with a configurable grace window (`Billing:GraceWindowDays`, default 7). Inside the window, responses carry an `X-Subscription-Grace` header with days left.
+- **Daily expiry scan** — the `tenant-expiry-scan` Hangfire job (02:00 UTC) publishes nearing-expiry / entered-grace / expired events, deduped per tenant per validity window via `TenantExpiryNotice`.
 - **Tenant themes** — full light + dark palettes, brand assets, typography, layout knobs. The frontend reads these to render per-tenant branding.
 
 ## Architecture at a glance
 
 ```
 src/Modules/Multitenancy/
-├── Modules.Multitenancy/                        ~2,200 LoC, 49 files
+├── Modules.Multitenancy/                        ~3,200 LoC, 58 files
 │   ├── MultitenancyModule.cs                    IModule entry — order 200
+│   ├── TenantBillingOptions.cs                  "Billing" config section binding
 │   ├── Domain/
-│   │   ├── TenantTheme.cs                       IHasTenant, IAuditableEntity
-│   │   ├── TenantProvisioning.cs                State machine
-│   │   └── TenantProvisioningStep.cs            Ordered step rows
+│   │   ├── TenantTheme.cs                       Per-tenant theme row
+│   │   └── TenantExpiryNotice.cs                Dedupe record for expiry notifications
 │   ├── Data/
 │   │   └── TenantDbContext.cs                   EFCoreStoreDbContext<AppTenantInfo>
-│   ├── Features/v1/                             11 features
+│   ├── Features/v1/                             13 features
 │   │   ├── CreateTenant/                        Create + kick off provisioning
-│   │   ├── GetTenants/, GetTenantStatus/        Read
-│   │   ├── ChangeTenantActivation/              Activate / deactivate
+│   │   ├── GetTenants/, GetTenantStatus/, GetMyTenantStatus/
+│   │   ├── ChangeTenantActivation/, RenewTenant/, AdjustTenantValidity/
 │   │   ├── GetTenantTheme/, UpdateTenantTheme/, ResetTenantTheme/
-│   │   └── GetTenantProvisioningStatus/, RetryTenantProvisioning/, GetTenantMigrations/
+│   │   └── TenantProvisioning/ (status + retry), GetTenantMigrations/
 │   ├── Provisioning/
+│   │   ├── TenantProvisioning.cs                State machine + ordered step rows
 │   │   ├── TenantProvisioningService.cs         Orchestrates steps, idempotent retries
 │   │   └── TenantProvisioningJob.cs             Hangfire job
-│   └── Services/TenantService.cs, TenantThemeService.cs
-└── Modules.Multitenancy.Contracts/              ~300 LoC commands, queries, DTOs
+│   └── Services/                                TenantService, TenantThemeService,
+│                                                TenantExpiryScanJob, TenantInitialPasswordBuffer
+└── Modules.Multitenancy.Contracts/              Commands, queries, DTOs, integration events
 ```
 
 ## How resolution actually works
@@ -61,18 +66,20 @@ The Finbuckle strategy chain runs on every request, before authentication. The k
 ```csharp
 // MultitenancyModule.cs (simplified)
 builder.Services.AddMultiTenant<AppTenantInfo>()
-    .WithClaimStrategy("tenant")                  // 1. claim — no-op pre-auth
-    .WithHeaderStrategy("tenant")                 // 2. header — primary
-    .WithDelegateStrategy(ResolveTenantFromQuery) // 3. query string fallback
-    .WithDistributedCacheStore(TimeSpan.FromHours(1))
-    .WithEFCoreStore<TenantDbContext, AppTenantInfo>();
+    .WithClaimStrategy(ClaimConstants.Tenant)       // 1. claim — no-op pre-auth
+    .WithHeaderStrategy(MultitenancyConstants.Identifier) // 2. "tenant" header — primary
+    .WithDelegateStrategy(ResolveTenantFromQuery)   // 3. ?tenant= query string fallback
+    .WithDistributedCacheStore(TimeSpan.FromMinutes(60))
+    .WithStore<EFCoreStore<TenantDbContext, AppTenantInfo>>(ServiceLifetime.Scoped);
 ```
 
 <Callout type="warning" title="ClaimStrategy is pre-auth, by design">
 Finbuckle's strategy chain runs before `UseAuthentication`, so the claim strategy sees an anonymous principal on every request — it's effectively a no-op in normal flow. The **header strategy is the real primary resolver**. The claim strategy is there for the cross-tenant impersonation case where a downstream pipeline can re-resolve with claims.
 </Callout>
 
-The **root-operator header override** is what lets a SuperAdmin (whose JWT carries `tenant=root`) scope a single request to another tenant. It runs as post-auth middleware via `IModule.ConfigureMiddleware`, checks that the caller is in the root tenant, reads the `tenant` header on the request, looks up the target, and replaces the `TenantContext` on the `HttpContext`.
+The **root-operator header override** is what lets a SuperAdmin (whose JWT carries `tenant=root`) scope a single request to another tenant. It runs as post-auth middleware via `IModule.ConfigureMiddleware`, checks that the caller is in the root tenant, reads the `tenant` header on the request, looks up the target, and replaces the multi-tenant context on the `HttpContext`.
+
+Two details worth knowing about the cache layer: a tenant resolved from the EF store is written through to the distributed cache on resolution (`OnTenantResolveCompleted`), and every tenant write path (`activation`, `renew`, `adjust-validity`, theme) refreshes the cached entry immediately — otherwise flips would lag up to the 60-minute TTL.
 
 ## Public API
 
@@ -82,10 +89,14 @@ The Contracts assembly exposes the surface the host and admin app talk to.
 
 | Type | Purpose |
 |---|---|
-| `CreateTenantCommand(id, name, connectionString?, adminEmail, adminPassword, issuer?)` | Creates a tenant, fires async provisioning |
+| `CreateTenantCommand(id, name, connectionString?, adminEmail, adminPassword, issuer?, planKey?)` | Creates a tenant, fires async provisioning, publishes `TenantSubscribedIntegrationEvent` |
 | `GetTenantsQuery(paging, search)` | Admin list view |
 | `GetTenantStatusQuery(tenantId)` | Fetch a single tenant's status |
 | `ChangeTenantActivationCommand(tenantId, isActive)` | Toggle active |
+| `RenewTenantCommand(tenantId, planKey?)` | Extend `ValidUpto` by the plan term (forward-only), publishes `TenantRenewedIntegrationEvent` |
+| `AdjustTenantValidityCommand(tenantId, validUpto)` | Operator override — may move the date backward (immediate expiry, corrections) |
+
+`GetMyTenantStatus` has no command type — the endpoint reads the resolved tenant context directly and returns the caller's own status.
 
 ### Provisioning
 
@@ -93,61 +104,76 @@ The Contracts assembly exposes the surface the host and admin app talk to.
 |---|---|
 | `GetTenantProvisioningStatusQuery(tenantId)` | Returns step-level state |
 | `RetryTenantProvisioningCommand(tenantId)` | Resume from the first failed step |
-| `GetTenantMigrationsQuery(tenantId)` | Lists EF migrations applied to this tenant's DB |
+| `GetTenantMigrationsQuery()` | Lists applied/pending EF migrations across tenant databases |
 
 ### Themes
 
+Theme types are scoped to the *caller's* tenant context (no tenant id parameter — operators target a tenant via the root header override):
+
 | Type | Purpose |
 |---|---|
-| `GetTenantThemeQuery(tenantId)` | Read |
-| `UpdateTenantThemeCommand(tenantId, ...)` | Update palette / brand / typography |
-| `ResetTenantThemeCommand(tenantId)` | Restore defaults (root's theme, if set) |
+| `GetTenantThemeQuery()` | Read |
+| `UpdateTenantThemeCommand(theme)` | Update palette / brand / typography |
+| `ResetTenantThemeCommand()` | Restore defaults |
 
 ## Endpoints
 
-| Verb | Route | What it does |
-|---|---|---|
-| POST | `/api/v1/tenants` | Create tenant + provision |
-| GET | `/api/v1/tenants` | List tenants |
-| GET | `/api/v1/tenants/{id}/status` | Get status |
-| PATCH | `/api/v1/tenants/{id}/activation` | Activate / deactivate |
-| GET | `/api/v1/tenants/{id}/provisioning/status` | Step-by-step provisioning state |
-| POST | `/api/v1/tenants/{id}/provisioning/retry` | Resume failed provisioning |
-| GET | `/api/v1/tenants/{id}/theme` | Get theme |
-| PUT | `/api/v1/tenants/{id}/theme` | Update theme |
-| DELETE | `/api/v1/tenants/{id}/theme` | Reset theme |
+All under `/api/v1/tenants`. Permissions are from `MultitenancyPermissions.Tenants` (`Permissions.Tenants.*`).
+
+| Verb | Route | What it does | Permission |
+|---|---|---|---|
+| POST | `/` | Create tenant + provision | `Tenants.Create` |
+| GET | `/` | List tenants | `Tenants.View` |
+| GET | `/{id}/status` | Get status | `Tenants.View` |
+| GET | `/me/status` | Calling tenant's own status (plan, validity, grace) | authenticated |
+| POST | `/{id}/activation` | Activate / deactivate | `Tenants.Update` |
+| POST | `/{id}/renew` | Renew subscription by plan term | `Tenants.UpgradeSubscription` |
+| POST | `/{id}/adjust-validity` | Operator validity override | `Tenants.UpgradeSubscription` |
+| GET | `/{tenantId}/provisioning` | Step-by-step provisioning state | `Tenants.View` |
+| POST | `/{tenantId}/provisioning/retry` | Resume failed provisioning | `Tenants.Update` |
+| GET | `/migrations` | Migration status across tenant DBs | `Tenants.View` |
+| GET | `/theme` | Get current tenant's theme | `Tenants.ViewTheme` |
+| PUT | `/theme` | Update theme | `Tenants.UpdateTheme` |
+| POST | `/theme/reset` | Reset theme | `Tenants.UpdateTheme` |
 
 ## Provisioning state machine
 
-`CreateTenantCommand` returns immediately. The handler writes the `AppTenantInfo` row, writes a `TenantProvisioning` aggregate with a list of steps (apply migrations, run module seeders, mark active), buffers the admin password in `ITenantInitialPasswordBuffer` (singleton), and queues a Hangfire `TenantProvisioningJob`.
+`CreateTenantCommand` returns immediately. The handler writes the `AppTenantInfo` row, writes a `TenantProvisioning` record with four ordered steps — `Database`, `Migrations`, `Seeding`, `CacheWarm` — buffers the admin password in `ITenantInitialPasswordBuffer` (singleton), and queues a Hangfire `TenantProvisioningJob`.
 
 The job picks up the work, walks each step idempotently, and updates the persisted state. If any step throws, the step is marked `Failed`, the overall state is `Failed`, and the buffered admin password is left in place. `RetryTenantProvisioning` resumes from the first failed step.
 
 ```csharp
-public sealed class TenantProvisioning : AggregateRoot, IGlobalEntity
+// src/Modules/Multitenancy/Modules.Multitenancy/Provisioning/TenantProvisioning.cs
+public sealed class TenantProvisioning
 {
-    public TenantProvisioningStatus Status { get; private set; }
-    public IReadOnlyList<TenantProvisioningStep> Steps { get; }
-
-    public void MarkStepCompleted(string stepName) { /* ... */ }
-    public void MarkStepFailed(string stepName, string error) { /* ... */ }
-    public IEnumerable<TenantProvisioningStep> NextStepsFrom(string? stepName) { /* ... */ }
+    public string TenantId { get; private set; }
+    public string CorrelationId { get; private set; }
+    public TenantProvisioningStatus Status { get; private set; }   // Pending | Running | Completed | Failed
+    public string? CurrentStep { get; private set; }
+    public string? Error { get; private set; }
+    public string? JobId { get; private set; }
+    public ICollection<TenantProvisioningStep> Steps { get; private set; }
 }
 ```
 
 ## Configuration
 
-The module reads no `IOptions<T>` directly — its behaviour is wired through Finbuckle setup. Key things to set in appsettings:
+Resolution itself is wired in code through Finbuckle setup; what you configure in appsettings is the store plumbing and the subscription-lifecycle knobs:
 
 ```jsonc
 // appsettings.json
 {
   "DatabaseOptions": {
-    "Provider": "PostgreSQL",
+    "Provider": "POSTGRESQL",
     "ConnectionString": "Host=...;Database=fsh;Username=...;Password=..."
   },
   "CachingOptions": {
     "Redis": "localhost:6379"     // distributed cache for DistributedCacheStore
+  },
+  "Billing": {                    // bound to TenantBillingOptions
+    "DefaultPlanKey": "free",     // plan used when CreateTenant has no PlanKey
+    "GraceWindowDays": 7,         // days past ValidUpto before hard block
+    "ExpiryNotificationLeadDays": 7  // how early the daily scan starts warning
   }
 }
 ```
@@ -182,12 +208,12 @@ var audits = await db.AuditRecords
     .ToListAsync(ct).ConfigureAwait(false);
 ```
 
-The [multitenancy deep-dive](/docs/architecture/multitenancy-deep-dive/) covers when to use `IgnoreQueryFilters` versus `IgnoreNamedQueryFilter("SoftDelete")` for soft-delete-aware cross-tenant queries.
+The [multitenancy deep-dive](/docs/architecture/multitenancy-deep-dive/) covers when to use `IgnoreQueryFilters()` (drops every filter) versus `IgnoreQueryFilters([QueryFilters.SoftDelete])` (drops only the named soft-delete filter) for soft-delete-aware cross-tenant queries.
 
 ## Tests
 
-- Unit tests at `src/Tests/Multitenancy.Tests/` (13 files).
-- Integration tests at `src/Tests/Integration.Tests/Tests/Multitenancy/` cover tenant isolation (no leaks), provisioning status, header override, and seed-data flows.
+- Unit tests at `src/Tests/Multitenancy.Tests/` (9 test files).
+- Integration tests at `src/Tests/Integration.Tests/Tests/Multitenancy/` (17 files) cover tenant isolation (no leaks), provisioning status + failure/retry, header override, activation, renewal, validity adjustment, expiry enforcement + the expiry scan job, themes, and seed-data flows.
 
 ## Related
 

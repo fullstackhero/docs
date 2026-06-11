@@ -1,34 +1,34 @@
 ---
 title: Health checks
-lastUpdated: 2026-05-19
-description: Liveness + readiness endpoints — database, Valkey, MinIO, tenant migrations — for Kubernetes / Docker Compose / load balancer probes.
+lastUpdated: 2026-06-11
+description: Liveness + readiness endpoints — per-module database checks, Valkey, Hangfire, tenant migrations — for Kubernetes / Docker Compose / load balancer probes.
 sidebar:
   label: Health checks
   order: 7
 pageType: concept
 seo:
-  title: 'Health checks in .NET 10 — Postgres + Redis + MinIO'
-  description: 'How fullstackhero exposes /health and /health/ready endpoints with database (per-DbContext), Redis, MinIO, and tenant-migration health checks ready for…'
+  title: 'Health checks in .NET 10 — Postgres + Redis + Hangfire'
+  description: 'How fullstackhero exposes /health/live and /health/ready endpoints with per-module database checks, Redis, Hangfire, and a tenant-migration health check ready for…'
   keywords: 'asp.net core health checks, kubernetes liveness readiness probe, health endpoint .net 10, redis health check, postgres health check'
 ---
 
-Two health endpoints ship out of the box: `GET /health` for overall liveness, `GET /health/ready` for readiness. The kit registers checks for every dependency the host needs to function — database connections per registered `DbContext`, Valkey (a Redis-compatible, BSD-licensed Redis fork) when caching or jobs are enabled, MinIO when storage is configured, and a per-tenant migration check that reports whether every tenant DB is on the latest schema.
+Two health endpoints ship out of the box: `GET /health/live` for liveness, `GET /health/ready` for readiness. Both are anonymous and exempt from rate limiting. The kit registers checks for every dependency the host needs to function — one database check per module `DbContext`, Valkey (a Redis-compatible, BSD-licensed Redis fork) when caching is enabled, Hangfire when jobs are enabled, and a per-tenant migration check that reports whether every tenant DB is on the latest schema.
 
 <Callout type="tip" title="Liveness vs readiness">
-Liveness asks "is the process alive?" — restart if it fails. Readiness asks "is the process ready to take traffic?" — stop sending requests if it fails. The kit's `/health` is liveness (just respond), `/health/ready` is readiness (all dependencies green).
+Liveness asks "is the process alive?" — restart if it fails. Readiness asks "is the process ready to take traffic?" — stop sending requests if it fails. The kit's `/health/live` runs **zero** dependency checks (just proves the process responds); `/health/ready` runs **every** registered check.
 </Callout>
 
 ## What's checked
 
 | Check | Source | When registered |
 |---|---|---|
-| Per-DbContext | `Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore` | Always — one per `DbContext` |
-| Valkey | Kit's `RedisHealthCheck` | When `CachingOptions:Redis` is set |
-| Hangfire | Kit's `HangfireHealthCheck` | When `EnableJobs = true` |
-| MinIO / S3 | `S3StorageService.HeadObjectAsync` against the bucket | When storage provider is `s3` |
-| Tenant migrations | Kit's `TenantMigrationsHealthCheck` | When `EnableHeroMultiTenantDatabases` is on |
+| `self` | `AddHeroPlatform` | Always |
+| `db:{module}` (e.g. `db:identity`, `db:catalog`, `db:billing`…) | `AddDbContextCheck<T>` in each module's registration | One per module DbContext |
+| `redis` | Kit's `RedisHealthCheck` | When `EnableCaching = true` **and** `CachingOptions:Redis` is set |
+| `hangfire` | Kit's `HangfireHealthCheck` | When `EnableJobs = true` |
+| `db:tenants-migrations` | Kit's `TenantMigrationsHealthCheck` (Multitenancy module) | Always (with the Multitenancy module) |
 
-`AddHeroPlatform` registers everything based on which options you enabled.
+There is no storage/MinIO health check — blob storage failures surface through the Files module's own error handling, not readiness.
 
 ## How to wire probes
 
@@ -37,7 +37,7 @@ Liveness asks "is the process alive?" — restart if it fails. Readiness asks "i
 ```yaml
 livenessProbe:
   httpGet:
-    path: /health
+    path: /health/live
     port: 8080
   initialDelaySeconds: 30
   periodSeconds: 10
@@ -68,19 +68,15 @@ Point them at `/health/ready` — they'll only route traffic to instances that r
 
 ## Response shape
 
+The kit serializes its own compact shape (not the default ASP.NET Core health JSON):
+
 ```http
-GET /health HTTP/1.1
+GET /health/live HTTP/1.1
 
 HTTP/1.1 200 OK
 Content-Type: application/json
 
-{
-  "status": "Healthy",
-  "totalDuration": "00:00:00.0123456",
-  "entries": {
-    "self": { "status": "Healthy" }
-  }
-}
+{ "status": "Healthy", "results": [] }
 ```
 
 ```http
@@ -91,18 +87,17 @@ Content-Type: application/json
 
 {
   "status": "Healthy",
-  "totalDuration": "00:00:00.0543210",
-  "entries": {
-    "db:identity":    { "status": "Healthy", "duration": "00:00:00.0123456" },
-    "db:catalog":     { "status": "Healthy", "duration": "00:00:00.0234567" },
-    "redis":          { "status": "Healthy", "duration": "00:00:00.0098765" },
-    "minio":          { "status": "Healthy", "duration": "00:00:00.0234567" },
-    "tenant-migrations": { "status": "Healthy", "data": { "lagging": 0 } }
-  }
+  "results": [
+    { "name": "self",                  "status": "Healthy", "description": null, "durationMs": 0.01 },
+    { "name": "db:identity",           "status": "Healthy", "description": null, "durationMs": 12.3 },
+    { "name": "db:catalog",            "status": "Healthy", "description": null, "durationMs": 8.7 },
+    { "name": "redis",                 "status": "Healthy", "description": null, "durationMs": 1.9 },
+    { "name": "db:tenants-migrations", "status": "Healthy", "description": "All tenants are at the head migration.", "durationMs": 41.0, "details": { /* per-tenant data */ } }
+  ]
 }
 ```
 
-When a check fails, the corresponding entry reports `Unhealthy` and the overall response is HTTP 503.
+When any check fails, the overall response is HTTP 503 — with the **same body shape**, so operators can see exactly which check failed while probe consumers key off the status code alone.
 
 ## Adding your own check
 
@@ -131,36 +126,30 @@ public sealed class CustomerApiHealthCheck(HttpClient http) : IHealthCheck
 services.AddHealthChecks().AddCheck<CustomerApiHealthCheck>("customer-api");
 ```
 
-## Tagging checks for different endpoints
-
-Health checks support tag-based filtering. The kit uses two tags: `live` (for liveness — minimal checks) and `ready` (for readiness — everything). Register your custom check with the right tag:
-
-```csharp
-services.AddHealthChecks().AddCheck<MyCheck>("my-check", tags: new[] { "ready" });
-```
-
-`UseHeroPlatform` maps `/health` to `live`-tagged checks and `/health/ready` to `ready`-tagged checks.
+Every check registered with `AddHealthChecks()` automatically participates in `/health/ready` — liveness runs no checks, so there's nothing to tag or filter. Keep slow checks (cross-region pings, third-party APIs) out of the registry or make them cheap; readiness latency is probe latency.
 
 ## Tenant migrations check
 
-`TenantMigrationsHealthCheck` is unusual — it queries every tenant's database and reports how many are behind the latest migration. Output:
+`TenantMigrationsHealthCheck` is unusual — it iterates every tenant, sets that tenant's Finbuckle context, and asks EF Core for pending migrations. Per-tenant detail lands in the check's `data`:
 
 ```json
 {
-  "tenant-migrations": {
-    "status": "Healthy",
-    "data": { "total": 42, "lagging": 0 }
+  "name": "db:tenants-migrations",
+  "status": "Unhealthy",
+  "description": "Tenant schema is not at head — pending migrations for tenant(s): acme. Run FSH.Starter.DbMigrator to apply pending migrations.",
+  "details": {
+    "acme": { "name": "Acme", "isActive": true, "hasPendingMigrations": true, "pendingMigrations": ["20260601_AddX"] }
   }
 }
 ```
 
-If `lagging > 0`, the check is `Degraded` (not `Unhealthy` — degraded keeps the host serving requests for healthy tenants while you investigate). Add an alert on `tenant-migrations.data.lagging > 0` so deployments that miss a tenant don't drift unnoticed.
+A tenant with pending migrations (or one whose probe throws) makes the check `Unhealthy`, which makes `/health/ready` return 503 — Kubernetes keeps the pod out of rotation until the standalone `FSH.Starter.DbMigrator` catches the schema up. That's deliberate: the DB is never migrated at API startup, so a pod running newer code against an older schema must not take traffic.
 
 ## What health checks don't tell you
 
-- **Per-endpoint health** — `/health` reports infrastructure state, not "is this specific endpoint working." Use synthetic monitoring (probing real endpoints with known payloads) for that.
+- **Per-endpoint health** — `/health/ready` reports infrastructure state, not "is this specific endpoint working." Use synthetic monitoring (probing real endpoints with known payloads) for that.
 - **Latency** — health is binary; latency is a spectrum. Use the OpenTelemetry HTTP server metrics for latency SLOs.
-- **Tenant-specific outages** — one tenant's DB failing won't fail the overall health if other tenants' DBs are fine. Add a custom check that aggregates per-tenant connectivity if your SLA covers per-tenant availability.
+- **Partial tenant outages** — the migrations check covers schema drift, but a single tenant's connectivity problem in a tenant-per-database setup needs its own aggregation if your SLA covers per-tenant availability.
 
 ## Related
 

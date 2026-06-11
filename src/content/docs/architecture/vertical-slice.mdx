@@ -1,6 +1,6 @@
 ---
 title: Vertical Slice Architecture
-lastUpdated: 2026-05-19
+lastUpdated: 2026-06-11
 description: How each module is structured inside — one feature, one folder, one PR; endpoint + command + handler + validator + tests living together.
 sidebar:
   label: Vertical Slice
@@ -12,7 +12,7 @@ seo:
   keywords: 'vertical slice architecture .net, vsa pattern dotnet, mediator handler endpoint pattern, feature folder asp.net core'
 ---
 
-Inside every fullstackhero module, **Vertical Slice Architecture** (VSA) determines the shape. A feature — registering a user, changing a product price, sending a chat message — lives in one folder with the endpoint, the command, the handler, the validator, and the tests. No layered round-trip. No Domain → Application → Infrastructure → API hops. One feature, one folder, one PR.
+Inside every fullstackhero module, **Vertical Slice Architecture** (VSA) determines the shape. A feature — registering a user, changing a product price, sending a chat message — lives in one feature folder: the endpoint, the handler, and the validator together, with the command and response mirrored in the module's `.Contracts` project. No layered round-trip. No Domain → Application → Infrastructure → API hops. One feature, one folder, one PR.
 
 <Callout type="tip" title="The question to ask: 'what changes when this feature changes?'">
 In Vertical Slice the answer is "one folder, maybe two files." In a layered architecture the answer is "one DTO, one application service, one domain method, one infrastructure repository, one controller method, and probably four interface declarations to wire them." VSA optimises for the change you actually make.
@@ -20,20 +20,22 @@ In Vertical Slice the answer is "one folder, maybe two files." In a layered arch
 
 ## The slice shape
 
-A typical feature folder under `Modules.Identity/Features/v1/Users/RegisterUser/` looks like this:
+A slice is split across the module's two projects. `RegisterUser` looks like this:
 
 ```
-RegisterUser/
-├── RegisterUserCommand.cs           ← Contracts (record + ICommand<TResponse>)
-├── RegisterUserResponse.cs          ← Contracts (record returned by the handler)
-├── RegisterUserEndpoint.cs          ← Runtime (minimal API mapping)
-├── RegisterUserCommandHandler.cs    ← Runtime (Mediator handler)
-└── RegisterUserCommandValidator.cs  ← Runtime (FluentValidation)
+Modules.Identity.Contracts/v1/Users/RegisterUser/
+├── RegisterUserCommand.cs           ← public surface (ICommand<TResponse>)
+└── RegisterUserResponse.cs          ← public surface (returned by the handler)
+
+Modules.Identity/Features/v1/Users/RegisterUser/
+├── RegisterUserEndpoint.cs          ← minimal API mapping
+├── RegisterUserCommandHandler.cs    ← Mediator handler
+└── RegisterUserCommandValidator.cs  ← FluentValidation
 ```
 
-The command + response are in `Modules.Identity.Contracts/v1/Users/RegisterUser/` because they're the public surface anyone (including other modules) reads. The endpoint, handler, and validator are in the runtime project because they're private to the module.
+The command + response live in Contracts because they're the public surface anyone (including other modules) reads. The endpoint, handler, and validator live in the runtime project because they're private to the module.
 
-Tests for the slice live in `Tests/Identity.Tests/Features/v1/Users/RegisterUser/` mirroring the source path. Architecture tests enforce the mirroring so the folder shape stays consistent.
+Tests for the slice live in the module's test project (e.g. `src/Tests/Identity.Tests/Handlers/RegisterUserCommandHandlerTests.cs`), and `src/Tests/Architecture.Tests/` enforces the structural rules — handlers paired with validators, Contracts free of EF/FluentValidation, versioned features not reaching into newer versions.
 
 ## A complete slice
 
@@ -41,45 +43,59 @@ The cleanest way to learn VSA is to read one slice end-to-end. Here's `RegisterU
 
 ```csharp
 // Modules.Identity.Contracts/v1/Users/RegisterUser/RegisterUserCommand.cs
-public sealed record RegisterUserCommand(
-    string FirstName,
-    string LastName,
-    string Email,
-    string UserName,
-    string Password,
-    string ConfirmPassword,
-    string? PhoneNumber = null,
-    string? Origin = null)
-    : ICommand<RegisterUserResponse>;
+public class RegisterUserCommand : ICommand<RegisterUserResponse>
+{
+    public string FirstName { get; set; } = default!;
+    public string LastName { get; set; } = default!;
+    public string Email { get; set; } = default!;
+    public string UserName { get; set; } = default!;
+    public string Password { get; set; } = default!;
+    public string ConfirmPassword { get; set; } = default!;
+    public string? PhoneNumber { get; set; }
 
-public sealed record RegisterUserResponse(Guid UserId, string Email);
+    [JsonIgnore]
+    public string? Origin { get; set; }   // set by the endpoint, not the client
+}
+
+// Modules.Identity.Contracts/v1/Users/RegisterUser/RegisterUserResponse.cs
+public record RegisterUserResponse(string UserId);
 ```
 
 ```csharp
 // Modules.Identity/Features/v1/Users/RegisterUser/RegisterUserCommandValidator.cs
 public sealed class RegisterUserCommandValidator : AbstractValidator<RegisterUserCommand>
 {
-    public RegisterUserCommandValidator(IUserService users)
+    public RegisterUserCommandValidator()
     {
-        RuleFor(x => x.FirstName).NotEmpty().MaximumLength(75);
-        RuleFor(x => x.LastName ).NotEmpty().MaximumLength(75);
-        RuleFor(x => x.Email).NotEmpty().EmailAddress()
-            .MustAsync(async (email, ct) => !await users.ExistsAsync(email, ct).ConfigureAwait(false))
-            .WithMessage("Email is already in use.");
-        RuleFor(x => x.Password).NotEmpty().MinimumLength(12);
+        RuleFor(x => x.FirstName).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.LastName).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.Email).NotEmpty().EmailAddress();
+        RuleFor(x => x.UserName).NotEmpty().MinimumLength(3).MaximumLength(50);
+        RuleFor(x => x.Password).NotEmpty().MinimumLength(6);
         RuleFor(x => x.ConfirmPassword).NotEmpty()
-            .Equal(x => x.Password).WithMessage("Passwords don't match.");
+            .Equal(x => x.Password).WithMessage("Passwords do not match.");
     }
 }
 ```
 
 ```csharp
 // Modules.Identity/Features/v1/Users/RegisterUser/RegisterUserCommandHandler.cs
-public sealed class RegisterUserCommandHandler(IUserRegistrationService registration)
-    : ICommandHandler<RegisterUserCommand, RegisterUserResponse>
+public sealed class RegisterUserCommandHandler : ICommandHandler<RegisterUserCommand, RegisterUserResponse>
 {
-    public ValueTask<RegisterUserResponse> Handle(RegisterUserCommand cmd, CancellationToken ct)
-        => registration.RegisterAsync(cmd, ct).ConfigureAwait(false);
+    private readonly IUserService _userService;
+
+    public RegisterUserCommandHandler(IUserService userService) => _userService = userService;
+
+    public async ValueTask<RegisterUserResponse> Handle(RegisterUserCommand command, CancellationToken cancellationToken)
+    {
+        string userId = await _userService.RegisterAsync(
+            command.FirstName, command.LastName, command.Email, command.UserName,
+            command.Password, command.ConfirmPassword,
+            command.PhoneNumber ?? string.Empty, command.Origin ?? string.Empty,
+            cancellationToken).ConfigureAwait(false);
+
+        return new RegisterUserResponse(userId);
+    }
 }
 ```
 
@@ -88,17 +104,23 @@ public sealed class RegisterUserCommandHandler(IUserRegistrationService registra
 public static class RegisterUserEndpoint
 {
     internal static RouteHandlerBuilder MapRegisterUserEndpoint(this IEndpointRouteBuilder endpoints)
-        => endpoints.MapPost("/users/register",
-                (RegisterUserCommand command, IMediator mediator, CancellationToken ct)
-                    => mediator.Send(command, ct))
-            .WithName("RegisterUser")
-            .WithSummary("Register a new user")
-            .RequirePermission(IdentityPermissions.Users.Create)
-            .WithIdempotency();   // Idempotency-Key header support
+    {
+        return endpoints.MapPost("/register", async (RegisterUserCommand command,
+            HttpContext context, IMediator mediator, CancellationToken cancellationToken) =>
+        {
+            command.Origin = $"{context.Request.Scheme}://{context.Request.Host.Value}{context.Request.PathBase.Value}";
+            var result = await mediator.Send(command, cancellationToken);
+            return TypedResults.Created($"/api/v1/identity/users/{result.UserId}", result);
+        })
+        .WithName("RegisterUser")
+        .WithSummary("Register user")
+        .RequirePermission(IdentityPermissions.Users.Create)
+        .WithIdempotency();   // Idempotency-Key header support
+    }
 }
 ```
 
-That's the entire feature. Five small files. One folder. One PR.
+That's the entire feature. Five small files. One slice. One PR.
 
 ## Conventions
 
@@ -107,9 +129,9 @@ The kit enforces a small set of conventions through code review and architecture
 - **Handlers are `public sealed`.** Mediator's source generator requires concrete types; `sealed` is the default modifier so nothing inherits handlers.
 - **Handlers return `ValueTask<T>`.** Allocation-friendly for the synchronous fast path.
 - **Every `await` uses `.ConfigureAwait(false)`.** This is library code; never capture the synchronization context.
-- **Commands and queries are `record`s.** Immutable, value-equal, source-gen-friendly.
+- **Commands and queries are `record`s or `sealed` classes.** Enforced by an architecture test (`Commands_And_Queries_Should_Be_Records_Or_Sealed`). Prefer records; reach for a class when the endpoint needs to enrich the command (like `RegisterUserCommand.Origin` above).
 - **Endpoints are static extension methods on `IEndpointRouteBuilder`.** No controllers. No `[ApiController]`. Just minimal APIs.
-- **One endpoint per slice.** A slice represents one feature; one feature has one HTTP entrypoint. The "Update Product Price" feature has `PATCH /products/{id}/price`; "Update Product" has `PUT /products/{id}` — separate slices because they raise different domain events.
+- **One endpoint per slice.** A slice represents one feature; one feature has one HTTP entrypoint. `ChangeProductPrice` has `PATCH /products/{productId:guid}/price`; `UpdateProduct` has `PUT /products/{productId:guid}` — separate slices because they're separate operations with separate events.
 - **Validators live next to handlers.** The module loader auto-registers FluentValidation validators from each module's assembly.
 - **Permissions live in `Contracts/Authorization/`.** Endpoints reference them via `.RequirePermission(...)`. Permission constants are registered once during module startup.
 
@@ -145,4 +167,4 @@ For most slices, command and query handlers look almost the same — they take a
 - [Modular monolith](/docs/architecture/modular-monolith/) — the outer structure that contains the slices.
 - [Modules overview](/docs/modules/) — every module is structured this way.
 - [Catalog module](/docs/modules/catalog/) — the most slice-dense module; read its `Features/v1/` for examples.
-- [Dependency injection](/docs/architecture/) — how the module loader wires slice handlers.
+- [Dependency injection](/docs/architecture/dependency-injection/) — how the module loader wires slice handlers.

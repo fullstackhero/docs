@@ -1,7 +1,7 @@
 ---
 title: Tenant dashboard
-lastUpdated: 2026-05-19
-description: The end-user-facing React + Vite app at clients/dashboard — catalog, chat, files, tickets, profile, plus per-tenant theming and real-time SignalR + SSE feeds.
+lastUpdated: 2026-06-11
+description: The end-user-facing React + Vite app at clients/dashboard — catalog, chat, files, tickets, invoices, identity admin, plus real-time SignalR + SSE feeds.
 sidebar:
   label: Tenant dashboard
   order: 2
@@ -12,62 +12,74 @@ seo:
   keywords: 'react tenant dashboard, fullstackhero dashboard app, signalr realtime react, react chat ui, tenant theming react'
 ---
 
-`clients/dashboard` is what your tenants' users see when they log in. Catalog browsing, realtime chat, file uploads, ticket filing, profile management — all themed by the tenant's brand (colours, logo, typography pulled from the Multitenancy module). It's the surface your customers spend most of their time in, so it's the one to invest UX care in first.
+`clients/dashboard` is what your tenants' users see when they log in. Catalog browsing, realtime chat, file uploads, ticket filing, invoices and subscription, tenant-scoped identity administration, profile management. It's the surface your customers spend most of their time in, so it's the one to invest UX care in first.
 
 <Screenshot src="/screenshots/dashboard/overview.png"
             alt="Tenant dashboard overview"
-            caption="The dashboard after sign-in — tenant-themed chrome (logo + palette), main work area, notifications bell." />
+            caption="The dashboard after sign-in — sidebar nav, live overview, notifications bell, command palette." />
 
 ## Tech stack
 
-Same shape as the [admin console](/docs/frontend/admin/) — React 19 + Vite 7 + TypeScript 5.7 + TanStack Query + React Router + Tailwind + Radix + Lucide. Two additions:
+Same shape as the [admin console](/docs/frontend/admin/) — React 19 + Vite 7 + TypeScript + TanStack Query v5 + React Router 7 + Tailwind 4 + Radix + Lucide. Differences worth knowing:
 
 | | Used for |
 |---|---|
 | `clients/dashboard/src/realtime/` | SignalR subscriptions (chat, notifications, presence) |
-| `clients/dashboard/src/sse/` | Server-Sent Events feeds (live audit, build-status, etc.) |
+| `clients/dashboard/src/sse/` | Server-Sent Events — the live activity feed on Overview + Activity |
+| `cmdk` | Command palette (Ctrl/Cmd-K) |
+| `@tanstack/react-virtual` | Virtualised long lists (chat message history) |
 
-The dashboard subscribes to **more** realtime than admin — chat is a continuous-conversation surface, so SignalR is on the hot path.
+The dashboard does **not** use react-hook-form or zod — those are admin-only; dashboard forms are plain controlled components. It subscribes to **more** realtime than admin — chat is a continuous-conversation surface, so SignalR is on the hot path.
+
+Like the admin app, the dashboard auto-signs-out idle sessions — **20 minutes** idle plus a **60-second** warning, configured per-deploy in `/config.json`.
 
 ## Page inventory
 
 ```
 clients/dashboard/src/pages/
-├── auth/         Login, signup, 2FA, forgot/reset password
-├── catalog/      Product browsing, search, detail, image gallery
-├── chat/         Channels, DMs, threads, mentions, reactions, pinning
-├── files/        Upload, list, share, trash, restore
-├── identity/     Profile, sessions, 2FA setup, password change
-├── settings/     Theme preview, notification preferences
-├── system/       Health, audit (limited to caller's events)
-└── tickets/      File ticket, list, detail, comments
+├── overview.tsx       Landing page — stats + live activity
+├── activity.tsx       Full-page SSE activity feed
+├── auth/              Forgot/reset password, email confirmation (+ login.tsx)
+├── catalog/           Products, brands, categories, product detail
+├── chat/              Channels, DMs, threads, mentions, reactions, pinning, search
+├── files/             My files — presigned upload, list, download, delete
+├── identity/          Tenant-scoped admin: users, roles, groups (+ detail pages)
+├── invoices.tsx       Invoice list + invoice-detail.tsx
+├── subscription.tsx   Current plan + billing status
+├── settings/          Profile, security (2FA), appearance, notifications, API keys
+├── system/            Sessions, trash (recycle bin) — plus health + audits routes
+├── tickets/           File ticket, list, detail, comments
+├── impersonation-ended.tsx   Graceful landing when an operator grant ends
+└── tenant-deactivated.tsx    Terminal page when the tenant is deactivated mid-session
 ```
 
-Plus shared chrome (sidebar, top bar, notification bell) in `clients/dashboard/src/components/`.
+Plus shared chrome (sidebar, top bar, notification bell, command palette) in `clients/dashboard/src/components/`. Routes are lazy-loaded per page (`clients/dashboard/src/routes.tsx`).
 
-## Per-tenant theming
+A few notes:
 
-When a tenant signs in, the dashboard fetches the tenant's `TenantTheme` from `GET /api/v1/tenants/{id}/theme` and applies the palette + brand + typography via CSS custom properties. The result: a single React build, one app, but every tenant gets their own brand.
+- **Settings → API keys** is an honest "coming soon" placeholder, not a hidden 404.
+- **System → Trash** is the cross-module recycle bin (products, brands, categories, tickets, files). Its tabs — and the nav entry itself — are permission-gated client-side to mirror the server's restore/view-trash permissions, so users never click into a guaranteed 403.
+- The dashboard has no per-route `RouteGuard` like admin; auth is enforced by `ProtectedRoute`, and permission checks gate navigation entries + in-page actions.
 
-<Screenshot src="/screenshots/dashboard/themed-tenants.png"
-            alt="Three tenants of the dashboard showing different themes"
-            caption="Same React build, three tenants — palette + logo + typography all swap based on which tenant is signed in." />
+## Appearance + theming
 
-Full details: [theming](/docs/frontend/theming/).
+The dashboard's appearance system is **per-user**: light/dark/system mode, an accent colour (presets or a custom hue), font, density, and reduced motion — all stored in localStorage and applied via CSS custom properties (Settings → Appearance). The neutral chassis is deliberately untinted so the accent does the branding work.
+
+Per-**tenant** branding lives server-side as the Multitenancy module's `TenantTheme` (palette, brand assets, typography, layout) with a permission-gated editor in the admin console. Full details: [theming](/docs/frontend/theming/).
 
 ## Chat — the realtime showcase
 
 `clients/dashboard/src/pages/chat/` is the densest page in either frontend. Slack-style channels with:
 
-- Three channel kinds — Channel (named), Direct Message (1:1), Group DM (3+).
-- Message threads with reply count badges.
+- Three channel kinds — `Channel` (named), `DirectMessage` (1:1), `GroupMessage` (3+).
+- Message threads with reply count badges (replies hang off a `parentMessageId`).
 - Emoji reactions (toggle on/off, one row per emoji + count).
 - Pinned messages with a dedicated panel.
-- `@mention` autocomplete via `mention-picker.tsx` (queries `/users` API as you type).
-- Typing indicators throttled to 3 seconds.
-- Cursor-paginated message history with infinite scroll.
+- `@mention` autocomplete via `mention-picker.tsx` (queries the tenant's users as you type).
+- Typing indicators — the hub throttles per channel + user (~3 s); the client auto-clears stale markers.
+- Cursor-paginated message history with virtualised infinite scroll.
 - Real-time updates via SignalR — new messages, edits, deletes, reactions, channel reads.
-- Full-text search across messages.
+- Message search via `/api/v1/chat/search`.
 
 <Screenshot src="/screenshots/dashboard/chat-channel.png"
             alt="Chat channel view with message list, composer, and member list"
@@ -79,55 +91,42 @@ Full details: [theming](/docs/frontend/theming/).
 
 <Screenshot src="/screenshots/dashboard/chat-mention-picker.png"
             alt="Mention picker dropdown showing user avatars"
-            caption="Type @ to open the picker — fuzzy search against the tenant's users, debounced to 250ms." />
+            caption="Type @ to open the picker — search against the tenant's users." />
 
-The chat page is the canonical example of how to build realtime UI against `AppHub`:
+The chat page is the canonical example of how to build realtime UI against the kit's hub. Components don't touch the `HubConnection` directly — they subscribe through the realtime context:
 
 ```tsx
-// clients/dashboard/src/pages/chat/chat-page.tsx (simplified)
-const realtime = useRealtime();
+// Simplified — see clients/dashboard/src/pages/chat/ for the real thing
+useRealtimeEvent<MessageDto>("ChatMessageCreated", (msg) => {
+  queryClient.setQueryData(/* append to the channel's message cache */);
+});
 
-useEffect(() => {
-  if (!realtime.connection) return;
-
-  const onMessage = (msg) => queryClient.setQueryData(...);
-  const onEdit    = (msg) => queryClient.setQueryData(...);
-  const onDelete  = (id)  => queryClient.setQueryData(...);
-
-  realtime.connection.on('ChatMessageCreated', onMessage);
-  realtime.connection.on('ChatMessageEdited',  onEdit);
-  realtime.connection.on('ChatMessageDeleted', onDelete);
-
-  return () => {
-    realtime.connection.off('ChatMessageCreated', onMessage);
-    realtime.connection.off('ChatMessageEdited',  onEdit);
-    realtime.connection.off('ChatMessageDeleted', onDelete);
-  };
-}, [realtime.connection, queryClient]);
+// Hub methods (e.g. typing notifications) go through invoke():
+const { invoke } = useRealtime();
+void invoke("Typing", channelId);
 ```
 
-`useRealtime()` returns the shared `HubConnection` from `realtime-context.tsx`. One connection, many subscriptions.
+`useRealtimeEvent(event, handler)` and `useRealtime()` come from `realtime-context.tsx`, which owns one shared connection. One connection, many subscriptions.
 
-## Catalog — search + product detail
+## Catalog — products, brands, categories
 
-A product browsing surface that renders the Catalog module's data. Search, filter by brand + category, product detail with image gallery.
+A product management surface over the Catalog module: paginated product list with search, brand + category list pages, and a product detail page with image gallery and an edit dialog.
 
 <Screenshot src="/screenshots/dashboard/catalog-search.png"
             alt="Catalog search results page"
-            caption="Paginated search with brand + category filters; click a product to open the detail page." />
+            caption="Paginated search with filters; click a product to open the detail page." />
 
 <Screenshot src="/screenshots/dashboard/catalog-product-detail.png"
             alt="Product detail page with image gallery"
-            caption="Multi-image gallery with thumbnail strip; stock indicator + price; admin-only edit affordance for users with Catalog.Products.Update." />
+            caption="Multi-image gallery with thumbnail strip; stock indicator + price; edit dialog for users who hold the update permission (enforced server-side)." />
 
 ## Files — presigned upload flow
 
-`clients/dashboard/src/pages/files/` implements the kit's two-step upload:
+`clients/dashboard/src/pages/files/` (with the orchestration in `src/hooks/use-file-upload.ts`) implements the kit's three-step presigned upload:
 
-1. Browser calls `POST /api/v1/files/upload-url` with metadata (file name, size, content type, category, owner type).
-2. Backend returns a presigned PUT URL.
-3. Browser uploads bytes directly to MinIO / S3 via the presigned URL — no proxy through the API.
-4. Browser calls `POST /api/v1/files/{id}/finalize` to flip the file from `PendingUpload` to `Available`.
+1. Browser calls `POST /api/v1/files/upload-url` with metadata (file name, size, content type, category) — the server mints a presigned PUT URL and reserves a `FileAsset` row.
+2. Browser uploads bytes directly to MinIO / S3 via the presigned URL — no proxy through the API — with real upload progress.
+3. Browser calls `POST /api/v1/files/{id}/finalize` — the server verifies the object and flips the file from `PendingUpload` to `Available`.
 
 <Screenshot src="/screenshots/dashboard/files-upload.png"
             alt="File upload with drag-and-drop area"
@@ -135,7 +134,7 @@ A product browsing surface that renders the Catalog module's data. Search, filte
 
 <Screenshot src="/screenshots/dashboard/files-list.png"
             alt="File list with download + delete actions"
-            caption="Caller's files only (tenant-scoped). Download via presigned GET URL; delete moves to trash with a 30-day retention." />
+            caption="Caller's files only (tenant-scoped). Download via presigned GET URL; delete moves to the recycle bin with a 30-day retention (configurable, purged by a daily job)." />
 
 ## Tickets — file + track support requests
 
@@ -149,53 +148,55 @@ Filing tickets from the dashboard, with priority + (optional) assignee + comment
             alt="Ticket detail with comments thread"
             caption="Ticket detail with comment composer + thread; immutable comments." />
 
-## Identity — profile + sessions + 2FA
+## Identity — tenant-scoped administration
 
-Self-service for the signed-in user:
+`pages/identity/` is where a tenant's own admins manage **their** users, roles, and groups — list + detail pages for each, including a role permission editor driven by the server's permission catalog (`GET /api/v1/identity/permissions/catalog`), so new module permissions appear automatically.
+
+Self-service for the signed-in user lives under **Settings** instead:
 
 <Screenshot src="/screenshots/dashboard/profile.png"
             alt="User profile page"
-            caption="First/last name, profile image, phone, email-confirmation status." />
-
-<Screenshot src="/screenshots/dashboard/sessions.png"
-            alt="Active sessions list"
-            caption="Every device + browser the user is signed in on; one-click revoke per session, or revoke-all." />
+            caption="Settings → Profile: name, profile image, contact details." />
 
 <Screenshot src="/screenshots/dashboard/two-factor-setup.png"
             alt="Two-factor TOTP setup with QR code"
-            caption="Scan the QR with an authenticator app, then verify with the first generated code." />
+            caption="Settings → Security: scan the QR with an authenticator app, then verify with the first generated code." />
 
-## Settings — preferences + theme preview
+<Screenshot src="/screenshots/dashboard/sessions.png"
+            alt="Active sessions list"
+            caption="System → Sessions: every device + browser the user is signed in on; one-click revoke per session." />
+
+## Settings — profile, security, appearance, notifications
+
+Five tabs: Profile, Security (password + 2FA), Appearance (mode / accent / font / density / reduced motion), Notification preferences, and an API-keys placeholder.
 
 <Screenshot src="/screenshots/dashboard/settings.png"
-            alt="User settings page with theme preview"
-            caption="Preview the tenant theme in light + dark mode; toggle notification preferences per channel." />
+            alt="User settings page with appearance options"
+            caption="Appearance is per-user and persists in localStorage — light/dark/system, accent colour, font, density." />
 
 ## Realtime architecture
 
-`clients/dashboard/src/realtime/realtime-context.tsx` exposes a single shared `HubConnection`:
+Two transports, both mounted inside the authenticated shell (`app-shell.tsx`), so unauthenticated pages never pay for them:
+
+**SignalR** — `clients/dashboard/src/realtime/realtime-context.tsx` owns one shared connection to `/api/v1/realtime/hub`:
 
 ```tsx
-const realtime = useRealtime();
-
-// Subscribe in a component
-useEffect(() => {
-  if (!realtime.connection) return;
-  const handler = (n: NotificationDto) => /* ... */;
-  realtime.connection.on('NotificationCreated', handler);
-  return () => realtime.connection.off('NotificationCreated', handler);
-}, [realtime.connection]);
+// Subscribe in a component — returns/cleans up automatically
+useRealtimeEvent<NotificationDto>("NotificationCreated", (n) => { /* ... */ });
 ```
 
 The context handles:
 
-- Authentication via `accessTokenFactory` from the auth context.
-- Automatic reconnect via `withAutomaticReconnect()`.
-- Connection state changes (connecting, connected, reconnecting, disconnected) surfaced as a state pill.
+- Lazy-loading the SignalR client bundle on first connect.
+- Token-aware rebuilds — login, refresh rotation, and impersonation switches all force a reconnect with the fresh token.
+- Automatic reconnect with backoff + jitter (capped at 60 s), with status (`idle / connecting / connected / reconnecting / error`) surfaced as a state pill.
+- Transport negotiation (WebSockets, then SSE, then long-polling) for proxy-hostile networks.
+
+**SSE** — `clients/dashboard/src/sse/sse-context.tsx` streams the live activity feed. The client first exchanges its JWT for a short-lived stream token (`POST /api/v1/sse/token`), then opens `GET /api/v1/sse/stream?token=...` and parses the `text/event-stream` itself (fetch + ReadableStream, with reconnect/backoff). Overview and the Activity page render the same event buffer.
 
 <Screenshot src="/screenshots/dashboard/realtime-status-pill.png"
             alt="Realtime status pill in the sidebar"
-            caption="The pill turns amber when reconnecting and red when offline." />
+            caption="The pill turns amber when reconnecting and red when the connection errors." />
 
 ## Local development
 
@@ -205,9 +206,11 @@ npm install
 npm run dev               # http://localhost:5174 with HMR
 ```
 
-The dev server proxies API calls to the backend's URL configured in `clients/dashboard/.env`.
+The Vite dev server proxies `/api` (with WebSocket forwarding for SignalR), `/health`, `/openapi`, and `/scalar` to the backend — `https://localhost:7030` by default, overridable with a `VITE_API_BASE_URL` env var (dev proxy target only; runtime config comes from `/config.json`). In dev, Vite serves a `config.json` that points the long-lived SSE/SignalR streams straight at the API instead of through the proxy, so they don't starve the browser's per-host connection budget.
 
-When run via the kit's Aspire AppHost, the dashboard wires automatically — `fsh-starter-api`, `fsh-starter-admin`, `fsh-starter-dashboard` all come up with one command, and service discovery handles the URLs.
+The dashboard's `config.json` also carries a `demoMode` flag that surfaces a demo-account picker on the login page — a runtime flag, so a single build can enable it in staging and omit it in production.
+
+When run via the kit's Aspire AppHost, the dashboard wires automatically — the API, admin, and dashboard all come up with one command.
 
 ## Related
 

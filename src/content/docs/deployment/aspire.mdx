@@ -1,6 +1,6 @@
 ---
 title: Local Orchestration with .NET Aspire
-lastUpdated: 2026-05-24
+lastUpdated: 2026-06-11
 description: What spins up when you run the AppHost, and the decisions behind the local topology — Postgres, Valkey, MinIO, the migrator, the API, and both React apps.
 sidebar:
   label: Local Orchestration (Aspire)
@@ -29,8 +29,8 @@ documents what it starts and **why** it's wired the way it is.
 |---|---|---|---|
 | PostgreSQL | `postgres` | Primary database server; hosts the `fsh-db` database | Persistent (data volume) |
 | pgAdmin | *(sidecar)* | Web UI on **:5050**, auto-discovers every database on the server | Persistent |
-| Valkey | `redis` | Cache + Hangfire store (**Valkey** — a Redis-compatible, BSD-licensed Redis fork; resource name stays `redis`) | Persistent (data volume) |
-| RedisInsight | *(sidecar)* | Key browser auto-connected to the Valkey instance for inspecting cache keys in dev | Persistent |
+| Valkey | `redis` | Distributed cache (HybridCache L2) + SignalR backplane + Data Protection key ring (**Valkey** — a Redis-compatible, BSD-licensed Redis fork; resource name stays `redis`) | Persistent (data volume) |
+| RedisInsight | `redis-insight` | Key browser on **:5540**, pre-connected to the Valkey instance for inspecting cache keys in dev | Persistent |
 | MinIO | `minio` | S3-compatible object storage, **:9000** (API) / **:9001** (console) | Persistent (data volume) |
 | MinIO init | `minio-init` | One-shot: creates the `fsh-uploads` bucket + download policy, then exits | Run-once |
 | DB migrator | `fsh-starter-db-migrator` | One-shot: applies migrations across the tenant catalog + every tenant's module DBs (`apply --seed`, so the root admin exists), then exits | Run-once |
@@ -83,24 +83,36 @@ project you run as an explicit step in production (published as the
 is **never** migrated at API startup — locally or in the cloud. One mechanism,
 two contexts.
 
-### Valkey for cache + Hangfire, with a RedisInsight browser
+### Valkey for caching and realtime, with a RedisInsight browser
 
-The cache/store engine is **Valkey** (a Redis-compatible, BSD-licensed Redis
-fork), pulled as `valkey/valkey:8-alpine`. It speaks the Redis protocol (RESP),
-so the .NET client (`StackExchange.Redis`) and every `CachingOptions:Redis`
-config key are unchanged — and the Aspire resource keeps the name `redis` in
-code. Aspire also auto-wires a **RedisInsight** browser sidecar connected to the
-Valkey instance, so you can inspect cache keys, TTLs, and the SignalR backplane
-in dev with no manual configuration.
+The cache engine is **Valkey** (a Redis-compatible, BSD-licensed Redis fork),
+pulled as `valkey/valkey:9.1.0`. It speaks the Redis protocol (RESP), so the
+.NET client (`StackExchange.Redis`) and every `CachingOptions:Redis` config key
+are unchanged — and the resource keeps the name `redis` in code. It backs the
+HybridCache L2, the SignalR backplane, and the Data Protection key ring
+(Hangfire uses PostgreSQL storage). A **RedisInsight** container rides along,
+pre-registered against the Valkey instance via `RI_REDIS_*` environment
+variables, so you can inspect cache keys and TTLs in dev with no manual setup.
 
-### Redis over plain TCP
+### Valkey is a plain container, on plain TCP
 
-<Callout type="warning" title="Aspire 13.x enables Redis TLS on the primary port">
-Aspire 13.x turns on TLS on Redis's primary port by default, which trips up
-StackExchange.Redis TLS negotiation through the Aspire proxy. The AppHost builds
-the connection string from Redis's **secondary** (plain-TCP) endpoint and the
-API runs with `CachingOptions__EnableSsl = false`. Don't "fix" this back to the
-primary endpoint.
+<Callout type="warning" title="Don't swap this back to AddRedis()">
+Aspire 13.4's `AddRedis()` forces TLS-by-default in run mode (which breaks
+StackExchange.Redis negotiation through the Aspire proxy) and never materializes
+the container. The AppHost therefore adds Valkey via `AddContainer(...)` with a
+plain-TCP endpoint, and the API runs with `CachingOptions__EnableSsl = false`.
+Keep it that way.
+</Callout>
+
+### The Postgres image is unpinned
+
+<Callout type="warning" title="A Postgres major bump can strand your data volume">
+`AddPostgres("postgres")` doesn't pin an image tag — it tracks whatever the
+Aspire hosting package defaults to (PostgreSQL 18 as of Aspire 13.4). When a
+package update jumps a Postgres **major** version, the persistent
+`*-postgres-data` volume written by the older major can't be read and the
+container exits. Recovery for local dev data: remove the volume and relaunch —
+the migrator + seeders rebuild everything.
 </Callout>
 
 ### Frontends target the API's HTTPS endpoint
@@ -128,7 +140,8 @@ and the AppHost omits both React apps entirely.
 | Dashboard app | 5174 |
 | Postgres | 5432 |
 | pgAdmin | 5050 |
-| Valkey | 6379 |
+| Valkey | 6379 (container) |
+| RedisInsight | 5540 |
 | MinIO | 9000 (API) · 9001 (console) |
 
 ## From local to cloud

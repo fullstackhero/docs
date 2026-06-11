@@ -1,6 +1,6 @@
 ---
 title: Data protection
-lastUpdated: 2026-05-19
+lastUpdated: 2026-06-11
 description: Valkey-backed Data Protection key persistence so cookies, antiforgery tokens, and IDataProtector payloads survive rolling deploys across instances.
 sidebar:
   label: Data protection
@@ -24,7 +24,8 @@ ASP.NET Core's Data Protection API encrypts cookies, antiforgery tokens, and any
 
 - **ASP.NET Identity cookie auth** — if you swap JWT for cookies in your fork, those cookies are Data-Protection-encrypted.
 - **Antiforgery tokens** — `[ValidateAntiForgeryToken]` on form posts uses Data Protection.
-- **Token providers** in `UserManager` — email confirmation tokens, password reset tokens, 2FA recovery codes. These are encrypted+signed with Data Protection.
+- **Token providers** in `UserManager` — email confirmation tokens, password reset tokens. These are encrypted+signed with Data Protection.
+- **Webhook signing secrets** — the Webhooks module's `WebhookSecretProtector` encrypts each subscription's HMAC secret at rest (purpose string `FSH.Webhooks.SubscriptionSecret.v1`) and decrypts it only at dispatch time. See [webhook signing](/docs/security/webhook-signing/).
 - **Custom `IDataProtector` consumers** — anything you write that calls `services.GetRequiredService<IDataProtectionProvider>().CreateProtector("MyPurpose").Protect(...)`.
 
 In the kit's default JWT-bearer mode, the most visible payloads are the **email confirmation tokens** + **password reset tokens** sent in emails. If those don't decrypt on the next instance the user lands on, the link is dead.
@@ -32,13 +33,13 @@ In the kit's default JWT-bearer mode, the most visible payloads are the **email 
 ## How it's wired
 
 ```csharp
-// AddHeroCaching (simplified)
+// AddHeroCaching (simplified) — only when CachingOptions:Redis is set
 var redis = ConnectionMultiplexer.Connect(opts.Redis);
 services.AddSingleton<IConnectionMultiplexer>(redis);
 
 services.AddDataProtection()
     .PersistKeysToStackExchangeRedis(redis, "DataProtection-Keys")
-    .SetApplicationName("fullstackhero");
+    .SetApplicationName("FSH.Starter");
 ```
 
 Two important details:
@@ -73,20 +74,20 @@ Everything currently encrypted with the revoked keys becomes unreadable — user
 
 ## Secrets in configuration
 
-Not the same thing as Data Protection, but tightly related. The kit's config-borne secrets — `Jwt:SigningKey`, `MailOptions:Smtp:Password`, `MailOptions:SendGrid:ApiKey`, `Storage:S3:SecretKey`, `HangfireOptions:Password`, `CachingOptions:Redis` (if it contains a password) — must come from a secrets manager, not from `appsettings.json` checked into git.
+Not the same thing as Data Protection, but tightly related. The kit's config-borne secrets — `JwtOptions:SigningKey`, `MailOptions:SMTP:Password`, `MailOptions:SendGrid:ApiKey`, the S3 storage secret key, `HangfireOptions:Password`, `CachingOptions:Redis` (if it contains a password) — must come from a secrets manager, not from `appsettings.json` checked into git.
 
 Local development uses `dotnet user-secrets`:
 
 ```bash
-dotnet user-secrets set "Jwt:SigningKey" "$(openssl rand -base64 32)" --project src/Host/FSH.Starter.Api
+dotnet user-secrets set "JwtOptions:SigningKey" "$(openssl rand -base64 32)" --project src/Host/FSH.Starter.Api
 ```
 
 Production uses environment variables (double underscore for nesting):
 
 ```bash
-JWT__SIGNINGKEY=...
+JWTOPTIONS__SIGNINGKEY=...
 MAILOPTIONS__SENDGRID__APIKEY=...
-STORAGE__S3__SECRETKEY=...
+HANGFIREOPTIONS__PASSWORD=...
 ```
 
 …or your cloud secrets manager (Azure Key Vault provider, AWS Systems Manager Parameter Store, etc.) integrated through `Microsoft.Extensions.Configuration`.

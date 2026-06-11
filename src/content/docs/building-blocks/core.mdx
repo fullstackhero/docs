@@ -1,6 +1,6 @@
 ---
 title: Core building block
-lastUpdated: 2026-05-19
+lastUpdated: 2026-06-11
 description: The foundational types every module composes against — BaseEntity, AggregateRoot, DomainEvent, ICurrentUser, and the CustomException hierarchy.
 sidebar:
   label: Core
@@ -22,17 +22,17 @@ If you're writing a new module, the first file you'll touch is the domain. Every
 
 ### Entity bases
 
-- **`BaseEntity<TId>`** — abstract; carries `Id`, a private `_domainEvents` list, and a protected `AddDomainEvent(IDomainEvent)`. Every persisted entity inherits from this.
-- **`AggregateRoot<TId>`** — extends `BaseEntity<TId>`; a marker for aggregate roots. The kit's `Specification<T>` and audit interceptor key off this distinction.
-- **`IEntity<TId>`** — empty marker interface for "this is a domain entity."
+- **`BaseEntity<TId>`** — abstract; carries `Id` (protected setter), a private domain-event list surfaced as `DomainEvents`, a protected `AddDomainEvent(IDomainEvent)`, and `ClearDomainEvents()`. Every persisted entity inherits from this.
+- **`AggregateRoot<TId>`** — extends `BaseEntity<TId>`; a semantic marker for aggregate roots. It adds no members today — it exists so the type system says "this is a consistency boundary" and gives you a place for aggregate-wide helpers later.
+- **`IEntity<TId>`** — the minimal entity contract: a single `TId Id { get; }`.
 
 ### Cross-cutting interfaces
 
-- **`IHasTenant`** — `Guid? TenantId { get; }`. Persistence's global query filter auto-applies to anything implementing this.
-- **`IAuditableEntity`** — `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`. `AuditableEntitySaveChangesInterceptor` fills them in automatically.
-- **`ISoftDeletable`** — `IsDeleted`, `DeletedOnUtc`, `DeletedBy`. The named query filter `SoftDelete` filters these out by default; opt out with `IgnoreNamedQueryFilter("SoftDelete")`.
+- **`IHasTenant`** — `string TenantId { get; }`. A read-side convenience for entities that expose their tenant id as a real property. Note: tenant isolation itself does **not** key off this interface — `BaseDbContext` marks every entity `IsMultiTenant()` via Finbuckle unless it implements `IGlobalEntity` (see [Persistence](/docs/building-blocks/persistence/)).
+- **`IAuditableEntity`** — `CreatedOnUtc`, `CreatedBy`, `LastModifiedOnUtc`, `LastModifiedBy` (all `DateTimeOffset`-based). `AuditableEntitySaveChangesInterceptor` fills them in automatically.
+- **`ISoftDeletable`** — `IsDeleted`, `DeletedOnUtc`, `DeletedBy`. The named query filter `QueryFilters.SoftDelete` hides deleted rows by default; opt out surgically with `IgnoreQueryFilters([QueryFilters.SoftDelete])` (tenant scoping stays in force).
 - **`IHasDomainEvents`** — implemented by `BaseEntity`; surfaces the domain-event list so the `DomainEventsInterceptor` can dispatch them after SaveChanges.
-- **`IGlobalEntity`** — opt-out of tenant isolation for platform-wide rows (plans, impersonation grants, outbox messages).
+- **`IGlobalEntity`** — opt-out of tenant isolation for platform-wide rows (billing plans, impersonation grants, outbox/inbox messages).
 
 ### Domain events
 
@@ -43,21 +43,23 @@ If you're writing a new module, the first file you'll touch is the domain. Every
 public abstract record DomainEvent(
     Guid EventId,
     DateTimeOffset OccurredOnUtc,
-    Guid? CorrelationId = null,
-    Guid? TenantId = null) : IDomainEvent
+    string? CorrelationId = null,
+    string? TenantId = null) : IDomainEvent
 {
     public static T Create<T>(Func<Guid, DateTimeOffset, T> factory)
+        where T : DomainEvent
         => factory(Guid.NewGuid(), DateTimeOffset.UtcNow);
 }
 ```
 
-Concrete events inherit it:
+Concrete events inherit it (this one is real, from Catalog):
 
 ```csharp
 public sealed record ProductPriceChangedDomainEvent(
     Guid ProductId,
-    Money OldPrice,
-    Money NewPrice,
+    decimal OldPrice,
+    decimal NewPrice,
+    string Currency,
     Guid EventId,
     DateTimeOffset OccurredOnUtc) : DomainEvent(EventId, OccurredOnUtc);
 ```
@@ -66,9 +68,9 @@ public sealed record ProductPriceChangedDomainEvent(
 
 ### Current-user + request context
 
-- **`ICurrentUser`** — the request-time view of the authenticated user: `GetUserId()`, `GetUserEmail()`, `GetTenant()`, `IsAuthenticated()`, `IsInRole(role)`, `GetUserClaims()`.
-- **`ICurrentUserInitializer`** — implemented by the Identity module; populates `ICurrentUser` from the `ClaimsPrincipal`. The kit's `CurrentUserMiddleware` calls this at the end of the request pipeline.
-- **`IRequestContext`** — broader request abstraction beyond user identity.
+- **`ICurrentUser`** — the request-time view of the authenticated user: `Name`, `GetUserId()`, `GetUserEmail()`, `GetTenant()`, `IsAuthenticated()`, `IsInRole(role)`, `GetUserClaims()`.
+- **`ICurrentUserInitializer`** — implemented by the Identity module's `CurrentUserService`; populates `ICurrentUser` from the `ClaimsPrincipal` (`SetCurrentUser`) or a raw id (`SetCurrentUserId`, used by Hangfire's job activator). The kit's `CurrentUserMiddleware` calls `SetCurrentUser` right after authentication, before the endpoint runs.
+- **`IRequestContext`** — request metadata without an ASP.NET Core dependency: `IpAddress`, `UserAgent`, `ClientId` (from the `X-Client-Id` header), `Origin`.
 
 ### Exception hierarchy
 
@@ -76,32 +78,32 @@ The kit's global exception handler (in the Web block) turns these into `ProblemD
 
 | Type | Status | Use when |
 |---|---|---|
-| `CustomException(message, HttpStatusCode)` | configurable | Generic domain failure; pick the status |
+| `CustomException(message, errors, statusCode)` | configurable (default 500) | Generic domain failure; pick the status |
 | `NotFoundException` | 404 | Resource missing |
 | `ForbiddenException` | 403 | Authenticated but not authorised |
 | `UnauthorizedException` | 401 | Not authenticated |
 
-All four are simple records; no message templating, no inner-exception chaining. Domain code throws them; the handler does the HTTP translation.
+All four are plain exception classes. `CustomException` carries an `ErrorMessages` list (validation errors, business-rule details) and a `StatusCode`, and has overloads that accept an inner exception when you're wrapping a lower-level failure. Domain code throws them; the handler does the HTTP translation.
 
 ## How modules consume Core
 
 Every aggregate inherits one of the bases. Every persisted entity opts in or out of the cross-cutting interfaces:
 
 ```csharp
-// Example from Catalog
+// Example from Catalog (no TenantId property needed — Finbuckle adds the
+// tenant column and filter automatically via BaseDbContext)
 public sealed class Product : AggregateRoot<Guid>, ISoftDeletable
 {
-    public Guid? TenantId { get; private set; }  // satisfies IHasTenant via BaseEntity
     public bool IsDeleted { get; private set; }
-    public DateTime? DeletedOnUtc { get; private set; }
+    public DateTimeOffset? DeletedOnUtc { get; private set; }
     public string? DeletedBy { get; private set; }
 
     public void ChangePrice(Money newPrice)
     {
-        var old = Price;
+        decimal oldAmount = Price.Amount;
         Price = newPrice;
-        AddDomainEvent(DomainEvent.Create((id, when) =>
-            new ProductPriceChangedDomainEvent(Id, old, newPrice, id, when)));
+        AddDomainEvent(DomainEvent.Create((id, ts) =>
+            new ProductPriceChangedDomainEvent(Id, oldAmount, newPrice.Amount, newPrice.Currency, id, ts)));
     }
 }
 ```
@@ -134,7 +136,7 @@ Inherit `CustomException`, pass the right status code in the base constructor. D
 
 - **`AddDomainEvent` is `protected`** on `BaseEntity`. Domain events must be raised from inside the aggregate, not from a handler. That's by design: it keeps invariants and event emission co-located.
 - **`DomainEvent.Create<T>(factory)`** is the static helper that fills in `EventId` and `OccurredOnUtc` automatically. Use it; don't construct events manually with `Guid.NewGuid()` scattered through code.
-- **`CustomException` has no inner exception**. If you want to wrap a lower-level failure, catch it, log it, and throw a `CustomException` with a clean message — don't pile inner exceptions into the response.
+- **Inner exceptions never reach the response.** `CustomException` accepts an inner exception for logging/diagnostics, but the global handler only maps the message, `ErrorMessages`, and status code into ProblemDetails — keep the public message clean and let logs carry the cause.
 
 ## Critical files
 

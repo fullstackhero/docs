@@ -1,6 +1,6 @@
 ---
 title: Caching
-lastUpdated: 2026-05-19
+lastUpdated: 2026-06-11
 description: HybridCache (L1 in-memory + L2 Valkey) with OpenTelemetry instrumentation, stampede protection, and tag-based invalidation.
 sidebar:
   label: Caching
@@ -12,7 +12,7 @@ seo:
   keywords: 'hybridcache .net 10, redis cache asp.net core, tag based cache eviction, stampede protection cache, l1 l2 cache pattern'
 ---
 
-`HybridCache` is the .NET 10 framework cache primitive. L1 is in-process memory; L2 is **Valkey** (a Redis-compatible, BSD-licensed Redis fork) — or `DistributedMemoryCache` for dev. The kit wraps it with `ObservableHybridCache` so every call emits OpenTelemetry metrics — hits, misses, duration, payload size.
+`HybridCache` is the .NET 10 framework cache primitive. L1 is in-process memory; L2 is **Valkey** (a Redis-compatible, BSD-licensed Redis fork) — or `DistributedMemoryCache` for dev. The kit wraps it with `ObservableHybridCache` so every call emits OpenTelemetry spans plus metrics — `fsh.cache.hits`, `fsh.cache.misses`, `fsh.cache.invalidations`, and `fsh.cache.factory.duration`.
 
 <Callout type="note" title="The L2 store is Valkey (Redis-compatible)">
 The distributed L2 store is Valkey 8, which speaks the Redis protocol (RESP), so the .NET client (`StackExchange.Redis`) and all `CachingOptions:Redis` config keys are unchanged. In Aspire-based local dev, a **RedisInsight** browser is auto-wired and connected to the Valkey instance so you can inspect keys without any manual config — see [Aspire](/docs/deployment/aspire/).
@@ -63,12 +63,15 @@ await cache.RemoveByTagAsync($"tenant:{tenantId}", ct).ConfigureAwait(false);
 
 This evicts every cache entry tagged with that tenant id across L1 + L2.
 
+The kit's key + tag conventions live in `CacheKeys` (Caching building block): short prefixed keys like `perm:u:{userId}`, `theme:t:{tenantId}`, `idem:t:{tenantId}:{key}`, and well-known tags — `permissions`, `themes`, `idempotency`, plus `CacheKeys.Tags.Tenant(id)` / `CacheKeys.Tags.User(id)` for scoped bulk invalidation. Follow the same shape for your own entries: tenant-scope the key where applicable, and always attach the tenant tag so tenant-wide purges catch your entries too.
+
 ## Configuration
 
 ```jsonc
 {
   "CachingOptions": {
     "Redis": "localhost:6379",
+    "EnableSsl": false,
     "DefaultExpiration": "01:00:00",
     "DefaultLocalCacheExpiration": "00:02:00",
     "MaximumKeyLength": 1024,
@@ -80,6 +83,7 @@ This evicts every cache entry tagged with that tenant id across L1 + L2.
 | Option | Default | Purpose |
 |---|---|---|
 | `Redis` | empty | Connection string; empty falls back to in-memory L2 |
+| `EnableSsl` | null | Overrides the connection string's TLS setting; Aspire 13.x defaults Redis to TLS on the primary port, so set `false` when wiring the plain-TCP endpoint |
 | `DefaultExpiration` | 1 hour | TTL applied to both L1 + L2 |
 | `DefaultLocalCacheExpiration` | 2 minutes | L1-only TTL; bounds cross-node staleness after `RemoveByTag` on peers |
 | `MaximumKeyLength` | 1024 | Keys longer than this are rejected |
@@ -87,20 +91,19 @@ This evicts every cache entry tagged with that tenant id across L1 + L2.
 
 ## Shared multiplexer
 
-`AddHeroCaching` registers a single `IConnectionMultiplexer` and shares it with:
+When `CachingOptions:Redis` is set, `AddHeroCaching` connects once and registers a single shared `IConnectionMultiplexer` used by:
 
-- **Data Protection** key persistence — so cookies survive rolling deploys.
-- **SignalR** Valkey backplane (when realtime is enabled) — so realtime events fan out across instances.
+- The **distributed cache** (`AddStackExchangeRedisCache` via a multiplexer factory).
+- **Data Protection** key persistence (`DataProtection-Keys`, app name `FSH.Starter`) — so auth cookies, reset/confirmation tokens, and antiforgery survive rolling deploys across instances.
 
-One Valkey connection pool per host, not three. Bumping connection pool size affects all three consumers.
+One connection pool per host for those consumers. The SignalR backplane (realtime) reads the same `CachingOptions:Redis` connection string but establishes its own connection.
 
 ## Who uses it in the kit
 
-- **Multitenancy module** uses HybridCache as Finbuckle's `DistributedCacheStore` for resolved tenants (60-minute TTL).
-- **Identity module** caches role-permission lookups via `RolePermissionSyncer` warming the cache at startup.
-- **Chat module** uses it for the 3-second typing-indicator throttle per (channel, user).
+- **Multitenancy module** caches resolved tenants in the distributed cache (Finbuckle's `DistributedCacheStore`, 60-minute TTL) and tenant themes in HybridCache (`TenantThemeService`, with `RemoveByTagAsync` per-tenant invalidation).
+- **Identity module** caches user permission sets in HybridCache (`UserPermissionService`, tag-invalidated; `RolePermissionSyncer` keeps role-permission state in sync at startup) and impersonation-grant revocation markers.
+- **Realtime** uses the distributed cache for the 3-second typing-indicator throttle per (channel, user) in `AppHub`.
 - **Idempotency** uses it to cache request responses by `Idempotency-Key`.
-- **Webhooks module** uses tagged invalidation for tenant subscription updates.
 
 ## Gotchas
 

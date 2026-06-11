@@ -1,6 +1,6 @@
 ---
 title: Frontend architecture
-lastUpdated: 2026-05-19
+lastUpdated: 2026-06-11
 description: Shared patterns across the admin + dashboard apps — folder layout, API client, route guards, realtime context, error handling, ProblemDetails parsing.
 sidebar:
   label: Architecture
@@ -22,147 +22,128 @@ If you're forking only the dashboard (deleting admin), copy admin's audit-log vi
 
 ```
 clients/{app}/
-├── package.json              React 19, Vite 7, TS 5.7, TanStack Query, Radix, etc.
-├── vite.config.ts            Vite + React plugin + proxy config
+├── package.json              React 19, Vite 7, TS 5.x, TanStack Query, Radix, etc.
+├── vite.config.ts            Vite + React + Tailwind plugins + dev proxy config
 ├── tsconfig.json
 ├── index.html                Single-page-app shell
-├── .env.development          VITE_API_BASE_URL etc.
-├── public/                   Static assets
+├── playwright.config.ts      Route-mocked E2E test config (tests/ alongside)
+├── Dockerfile + docker/      Nginx runtime image + config.json template
+├── public/                   Static assets + config.json (runtime config)
 └── src/
-    ├── main.tsx              React.createRoot + providers + <App />
+    ├── main.tsx              Loads /config.json, then createRoot + <App />
     ├── App.tsx               Top-level provider stack + RouterProvider
-    ├── routes.tsx            createBrowserRouter config
-    ├── env.ts                Typed env wrapper
-    ├── api/                  One file per backend module — typed wrappers
-    ├── auth/                 JWT, token store, auth context, route guards
-    ├── components/           Shared components (layout, primitives)
-    ├── lib/                  Shared helpers — apiClient, queryClient, cn, types
-    ├── pages/                One folder per feature area
+    ├── routes.tsx            createBrowserRouter config (lazy routes)
+    ├── env.ts                Runtime config loader + typed accessor
+    ├── api/                  One file per backend module — typed apiFetch wrappers
+    ├── auth/                 JWT, token store, auth context, route guards, inactivity
+    ├── components/           Shared components (layout, primitives, theme)
+    ├── hooks/                Shared hooks (e.g. use-file-upload)
+    ├── lib/                  Shared helpers — api-client, query-client, cn
+    ├── pages/                One folder (or file) per feature area
     ├── realtime/             SignalR context + hooks
     └── styles/               Global CSS + Tailwind base
 ```
 
-Dashboard adds `hooks/` (shared hooks beyond the auth + realtime contexts) and `sse/` (Server-Sent Events).
+The dashboard adds `sse/` (Server-Sent Events context for the activity feed).
 
 ## The provider stack
 
 ```tsx
-// main.tsx
-createRoot(document.getElementById('root')!).render(
+// App.tsx (both apps)
+<ThemeProvider>
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <RealtimeProvider>
-        <ThemeProvider>
-          <Toaster />
-          <RouterProvider router={router} />
-        </ThemeProvider>
-      </RealtimeProvider>
+      {/* admin: <RealtimeProvider> here; dashboard: a command-palette provider */}
+      <RouterProvider router={router} />
+      <Toaster />
     </AuthProvider>
   </QueryClientProvider>
-);
+</ThemeProvider>
 ```
 
 Order matters:
 
-1. `QueryClientProvider` outermost so every child can use TanStack Query.
-2. `AuthProvider` next — every context below depends on the JWT being available.
-3. `RealtimeProvider` reads the access token from `AuthProvider` to open the SignalR connection.
-4. `ThemeProvider` (dashboard only) reads the resolved tenant to apply per-tenant theming.
-5. `Toaster` + the router come last.
+1. Before any of this renders, `main.tsx` top-level-awaits `loadRuntimeConfig()` so `/config.json` is in memory before the first component reads `env.*`.
+2. `ThemeProvider` outermost — light/dark/appearance applies even to the login screen.
+3. `QueryClientProvider` so every child can use TanStack Query.
+4. `AuthProvider` — contexts below depend on the token store + signed-in user.
+5. Admin mounts its `RealtimeProvider` here; the dashboard mounts `RealtimeProvider` + `SseProvider` inside the authenticated `AppShell` instead, so public pages never open (or download) the realtime stack.
+6. The router + `Toaster` come last.
 
 ## The API client
 
-`clients/{app}/src/lib/api-client.ts` is the kit's HTTP wrapper. Two responsibilities:
+`clients/{app}/src/lib/api-client.ts` exports `apiFetch<T>()` — a hand-written wrapper over the browser's `fetch`. No Axios, no generated client; the typed request/response shapes live next to each module's functions in `src/api/`.
 
 ```ts
-// Simplified
-export const apiClient = axios.create({
-  baseURL: env.API_BASE_URL,
-  headers: { 'Content-Type': 'application/json' },
-});
+// Simplified — the real thing is ~160 lines
+export async function apiFetch<T>(path: string, init: RequestInitEx = {}): Promise<T> {
+  const headers = new Headers(init.headers);
+  headers.set("Authorization", `Bearer ${tokenStore.getAccessToken()}`);
+  headers.set("tenant", tokenStore.getTenant() ?? env.defaultTenant);
 
-apiClient.interceptors.request.use((config) => {
-  const token = getAccessToken();
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  let response = await fetch(`${env.apiBase}${path}`, { ...init, headers, signal });
 
-  const tenant = getActiveTenant();
-  if (tenant) config.headers.tenant = tenant;
-
-  return config;
-});
-
-apiClient.interceptors.response.use(
-  (resp) => resp,
-  async (error) => {
-    if (error.response?.status === 401 && !isRefreshing()) {
-      const fresh = await refreshTokens(getRefreshToken());
-      if (fresh) {
-        saveTokens(fresh);
-        return apiClient(error.config);   // retry original request
-      }
-      signOut();
-    }
-    if (error.response?.data?.type) {
-      throw new ProblemDetailsError(error.response.data);   // typed error
-    }
-    throw error;
+  if (response.status === 401 && tokenStore.getRefreshToken()) {
+    await refreshAccessToken();          // single-flight — concurrent 401s share one refresh
+    response = await fetch(/* retry original request with the fresh token */);
   }
-);
+
+  if (!response.ok) {
+    const problem = await parseError(response);   // ProblemDetails body, if JSON
+    throw new ApiRequestError(response.status, problem?.title ?? response.statusText, problem);
+  }
+
+  return response.json() as Promise<T>;
+}
 ```
 
-Two interceptors:
+What it handles for every call:
 
-- **Request**: attach the `Authorization` and `tenant` headers.
-- **Response**: on 401, try refreshing; on `ProblemDetails`, throw a typed error TanStack Query can render.
+- **Auth + tenant headers** from the token store (callers can override `tenant` per request, or pass `skipAuth` for anonymous endpoints like login).
+- **401 → single-flight refresh → retry.** Concurrent 401s share one in-flight refresh promise; if the refresh fails, tokens are cleared and the UI flips to `/login`.
+- **Timeouts** — a 30-second default via `AbortSignal.timeout`, merged with any caller-supplied signal.
+- **Typed errors** — non-2xx responses throw `ApiRequestError`, which carries the HTTP status plus the parsed ProblemDetails payload.
 
-The `ProblemDetailsError` wraps the RFC 9457 response shape, so React components can destructure:
+React components can branch on it:
 
 ```tsx
 const { isError, error } = useQuery(...);
 
-if (isError && error instanceof ProblemDetailsError) {
-  return <Banner type="danger" title={error.title} detail={error.detail} />;
+if (isError && error instanceof ApiRequestError) {
+  return <Banner type="danger" title={error.message} detail={error.problem?.detail} />;
 }
 ```
 
-For validation errors (400 with an `errors` field), the kit's components render inline field errors next to inputs:
+For validation errors (400 with an `errors` field), render the field errors inline:
 
 ```tsx
-const mutation = useMutation({ mutationFn: createProduct });
-
-if (mutation.isError && mutation.error instanceof ProblemDetailsError) {
-  const fieldErrors = mutation.error.errors ?? {};
-  return (
-    <form>
-      <input name="sku" />
-      {fieldErrors.Sku?.map((msg) => <span class="error">{msg}</span>)}
-    </form>
-  );
+if (mutation.isError && mutation.error instanceof ApiRequestError) {
+  const fieldErrors = mutation.error.problem?.errors ?? {};
+  // fieldErrors.Sku?: string[] — render next to the input
 }
 ```
 
 ## TanStack Query conventions
 
-One file per backend module under `src/api/`. Each function returns typed data:
+One file per backend module under `src/api/`, exporting typed functions:
 
 ```ts
-// clients/admin/src/api/users.ts
-export const usersApi = {
-  list: (params: ListUsersParams) =>
-    apiClient.get<Page<UserDto>>('/api/v1/identity/users', { params }).then(r => r.data),
+// clients/admin/src/api/users.ts (simplified excerpt)
+export async function searchUsers(params: SearchUsersParams = {}): Promise<PagedResponse<UserDto>> {
+  const qs = new URLSearchParams(/* ...params... */);
+  return apiFetch<PagedResponse<UserDto>>(`/api/v1/identity/users?${qs}`);
+}
 
-  getById: (id: string) =>
-    apiClient.get<UserDto>(`/api/v1/identity/users/${id}`).then(r => r.data),
+export async function getUser(id: string): Promise<UserDto> {
+  return apiFetch<UserDto>(`/api/v1/identity/users/${id}`);
+}
 
-  create: (body: RegisterUserCommand) =>
-    apiClient.post<UserDto>('/api/v1/identity/users/register', body).then(r => r.data),
-
-  update: (id: string, body: UpdateUserCommand) =>
-    apiClient.put(`/api/v1/identity/users/${id}`, body).then(r => r.data),
-
-  delete: (id: string) =>
-    apiClient.delete(`/api/v1/identity/users/${id}`),
-};
+export async function registerUser(input: RegisterUserInput): Promise<RegisterUserResponse> {
+  return apiFetch(`/api/v1/identity/users/register`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
 ```
 
 Pages consume via React Query:
@@ -170,135 +151,124 @@ Pages consume via React Query:
 ```tsx
 const usersQuery = useQuery({
   queryKey: ['users', { search, page }],
-  queryFn: () => usersApi.list({ search, page }),
+  queryFn: () => searchUsers({ search, page }),
 });
 
 const createMut = useMutation({
-  mutationFn: usersApi.create,
+  mutationFn: registerUser,
   onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
 });
 ```
 
 The `queryKey` is the canonical cache key. The kit uses arrays with one filter object per key entry — TanStack Query handles the hashing.
 
-For mutations that touch multiple resource caches (e.g. deleting a user that affects roles + groups), invalidate them all:
+For mutations that touch multiple resource caches (e.g. deleting a user that affects roles + groups), invalidate them all in `onSuccess`.
 
-```tsx
-const deleteMut = useMutation({
-  mutationFn: usersApi.delete,
-  onSuccess: (_, userId) => {
-    queryClient.invalidateQueries({ queryKey: ['users'] });
-    queryClient.invalidateQueries({ queryKey: ['groups'] });
-    queryClient.invalidateQueries({ queryKey: ['roles', { userId }] });
-  },
-});
-```
+<Callout type="warning" title="Pass per-call data through mutate(arg), not closed-over state">
+TanStack Query reads the mutation options at **execute time**. If `onMutate` (or anything else) `setState`s a value that `mutationFn` closes over, the request can fire with the post-setState value — a race that bites exactly when you batch state updates before mutating. The kit's rule: everything a mutation needs travels as the argument to `mutate(arg)` / `mutationFn(arg)`; component state is never read inside the mutation callbacks.
+</Callout>
 
 ## Route guards
 
-`clients/{app}/src/auth/route-guard.tsx` ships two guards:
+Two layers:
 
 ```tsx
-// Just requires authentication
-<Route element={<ProtectedRoute />}>
-  <Route path="/profile" element={<ProfilePage />} />
-</Route>
+// Both apps: ProtectedRoute wraps the whole authenticated tree.
+// "Are you signed in?" — if not, redirect to /login.
+{
+  element: <ProtectedRoute />,
+  children: [{ element: <AppShell />, children: [/* all app routes */] }],
+}
 
-// Requires authentication + a specific permission
-<Route element={<RouteGuard permission="Identity.Impersonation.Start" />}>
-  <Route path="/impersonation" element={<ImpersonationListPage />} />
-</Route>
-
-// Requires any of several permissions
-<Route element={<RouteGuard permissions={['Audit.Read', 'Security.Read']} />}>
-  <Route path="/audits" element={<AuditsPage />} />
-</Route>
-```
-
-Unauthorised users see a `<ForbiddenView>` with a "go home" link. Unauthenticated users are redirected to `/login` with the original destination preserved in the URL.
-
-## Realtime context
-
-`src/realtime/realtime-context.tsx` (in both apps) exposes one shared `HubConnection`:
-
-```tsx
-export const RealtimeProvider = ({ children }) => {
-  const { accessToken } = useAuth();
-  const [connection, setConnection] = useState<HubConnection | null>(null);
-  const [status, setStatus] = useState<'idle' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected'>('idle');
-
-  useEffect(() => {
-    if (!accessToken) return;
-
-    const conn = new HubConnectionBuilder()
-      .withUrl(`${env.API_BASE_URL}/realtime/hub`,
-               { accessTokenFactory: () => accessToken })
-      .withAutomaticReconnect()
-      .build();
-
-    conn.onreconnecting(() => setStatus('reconnecting'));
-    conn.onreconnected(() => setStatus('connected'));
-    conn.onclose(() => setStatus('disconnected'));
-
-    setStatus('connecting');
-    conn.start().then(() => {
-      setConnection(conn);
-      setStatus('connected');
-    });
-
-    return () => { conn.stop(); };
-  }, [accessToken]);
-
-  return <RealtimeContext.Provider value={{ connection, status }}>{children}</RealtimeContext.Provider>;
-};
-```
-
-One connection per user session; every subscriber attaches via `.on(eventName, handler)` and detaches via `.off(...)`. The dashboard's chat page is the canonical user of this pattern — see the [dashboard page](/docs/frontend/dashboard/#chat--the-realtime-showcase) for the subscription example.
-
-## Error handling
-
-The `ProblemDetailsError` shape (from `clients/{app}/src/lib/api-types.ts`):
-
-```ts
-export class ProblemDetailsError extends Error {
-  type: string;
-  title: string;
-  status: number;
-  detail?: string;
-  instance?: string;
-  traceId?: string;
-  errors?: Record<string, string[]>;   // field validation errors
-
-  constructor(payload: ProblemDetails) { /* ... */ }
+// Admin only: RouteGuard wraps individual route elements.
+// "Do you hold these permissions?" — if not, render <ForbiddenView>.
+{
+  path: "tenants",
+  element: (
+    <RouteGuard perms={[MultitenancyPermissions.Tenants.View]}>
+      <TenantsListPage />
+    </RouteGuard>
+  ),
 }
 ```
 
-Components render this via:
+The guard mirrors the exact permission the server endpoint enforces — the constants in `src/lib/permissions.ts` track the server registries. The dashboard doesn't wrap routes; it gates navigation entries and in-page actions against the fetched permission list instead (e.g. the recycle-bin tabs + nav entry only render for users holding a restore/view-trash permission). Either way the server stays the real enforcement layer; the client gating is UX.
 
-- `<ProblemBanner error={...} />` for page-level errors.
-- `<FieldError name="sku" error={...} />` for inline form errors.
-- A toast for ephemeral errors that don't need persistent UI.
+## Realtime context
 
-Trace ids are surfaced in the banner ("Reference 00-...") so when a user reports an issue, support can search the server logs.
+`src/realtime/realtime-context.tsx` (in both apps) owns one shared SignalR connection to `/api/v1/realtime/hub`. Components never see the raw `HubConnection` — the context exposes a small surface:
 
-## Environment configuration
+```tsx
+type RealtimeContextValue = {
+  status: "idle" | "connecting" | "connected" | "reconnecting" | "error";
+  /** Wire a handler for a server event. Returns an unsubscribe function. */
+  on: <T>(event: string, handler: (payload: T) => void) => () => void;
+  /** Dashboard only: invoke a hub method, e.g. invoke("Typing", channelId). */
+  invoke: (method: string, ...args: unknown[]) => Promise<void>;
+};
+
+// Most components use the convenience hook:
+useRealtimeEvent<NotificationDto>("NotificationCreated", (n) => { /* ... */ });
+```
+
+Implementation details worth knowing:
+
+- The `@microsoft/signalr` package is **dynamically imported** on first connect, so pages without a realtime consumer never download it (~37 KB gzip).
+- The provider subscribes to the token store — login, refresh-token rotation, and impersonation swaps all rebuild the connection with the fresh token.
+- Reconnects use SignalR's automatic-reconnect backoff plus an outer retry loop with jitter, capped at 60 s.
+- Transport is auto-negotiated (WebSockets → SSE → long-polling) for proxy-hostile networks.
+
+One connection per user session; every subscriber attaches via `on(event, handler)` and the returned function detaches it. The dashboard's chat page is the canonical user — see the [dashboard page](/docs/frontend/dashboard/#chat--the-realtime-showcase).
+
+## Error handling
+
+The `ApiRequestError` shape (from `clients/{app}/src/lib/api-client.ts`):
 
 ```ts
-// clients/{app}/src/env.ts
-export const env = {
-  API_BASE_URL: import.meta.env.VITE_API_BASE_URL ?? '/api',
-  SIGNALR_HUB_URL: import.meta.env.VITE_SIGNALR_HUB_URL ?? '/realtime/hub',
-  APP_NAME: import.meta.env.VITE_APP_NAME ?? 'fullstackhero',
+export class ApiRequestError extends Error {
+  readonly status: number;       // HTTP status
+  readonly problem?: ApiError;   // parsed ProblemDetails payload
+}
+
+export type ApiError = {
+  status: number;
+  title?: string;
+  detail?: string;
+  errors?: Record<string, string[]>;   // field validation errors
+  [key: string]: unknown;
 };
 ```
 
-For runtime configuration (i.e. when the same built bundle ships to multiple environments and reads env at boot), the kit's deploy/docker container uses `envsubst` at startup to inject `window.__ENV__` from environment variables and the apps read from there. See [development](/docs/frontend/development/).
+Components render errors via page-level error bands, inline field errors next to inputs, or a toast (sonner) for ephemeral failures that don't need persistent UI.
+
+## Runtime configuration
+
+Neither app bakes environment values into the bundle. Instead, `main.tsx` fetches `/config.json` **before mounting React**:
+
+```ts
+// main.tsx (both apps)
+await loadRuntimeConfig();      // fetch("/config.json") → cached
+createRoot(rootElement).render(<App />);
+
+// anywhere else
+import { env } from "@/env";
+env.apiBase            // "" in production (same-origin), or an absolute URL
+env.defaultTenant      // tenant header fallback, default "root"
+env.inactivityIdleMs   // idle auto-logout timing
+```
+
+In dev, Vite serves `public/config.json`; in production, the Nginx container renders it from environment variables via `envsubst` at startup. Same image, every environment. The admin app additionally carries `dashboardUrl` (for the impersonation handoff); the dashboard carries `demoMode` (login-page demo-account picker). See [development](/docs/frontend/development/).
+
+### Inactivity auto sign-out
+
+Both apps auto-sign-out idle sessions: admin after 10 minutes, dashboard after 20, each with a 60-second warning countdown — all four numbers configurable per deploy in `config.json`. The last-activity timestamp is shared across tabs via the `fsh.lastActivity` localStorage key so activity in any tab keeps the whole session alive.
 
 ## What both apps don't do
 
 - **No Redux / Zustand / global state manager.** TanStack Query is the server state; React's `useState` / `useReducer` is the local state. Avoid pulling in a global store unless you have a genuine cross-page client-state need.
-- **No CSS-in-JS.** Tailwind + small per-component CSS modules. The kit's editorial design language stays consistent through utility classes.
-- **No microfrontends.** Both apps are single-bundle SPAs. Module federation is appealing in slide decks; it's a real maintenance tax in practice.
+- **No CSS-in-JS.** Tailwind utilities + a global stylesheet (plus the odd per-feature CSS file, like chat's). The kit's design language stays consistent through utility classes.
+- **No API client codegen.** The `src/api/` wrappers are written by hand against the OpenAPI doc — fewer moving parts than a generator, and the types only cover what the UI actually uses.
+- **No microfrontends.** Both apps are single-bundle SPAs (with per-route lazy chunks). Module federation is appealing in slide decks; it's a real maintenance tax in practice.
 
 ## Related
 

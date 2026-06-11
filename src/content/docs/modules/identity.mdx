@@ -1,6 +1,6 @@
 ---
 title: Identity module
-lastUpdated: 2026-05-19
+lastUpdated: 2026-06-11
 description: JWT bearer + refresh tokens, ASP.NET Identity with roles + permissions, user groups, operator impersonation, two-factor TOTP, sessions, and password-policy enforcement.
 sidebar:
   label: Identity
@@ -12,7 +12,7 @@ seo:
   keywords: 'asp.net identity .net 10, jwt bearer refresh tokens dotnet, .net permissions authorization, operator impersonation dotnet, 2fa totp asp.net'
 ---
 
-The Identity module is fullstackhero's load-bearing auth layer. It wraps ASP.NET Identity with JWT bearer + refresh, a flat-but-granular permission system enforced via `.RequirePermission()` on endpoints, user groups, operator impersonation with a full audit trail, two-factor TOTP, per-device sessions, password history, and an outbox-backed integration event publisher for things like user registration and password changes. Around **8,800 lines of code across 195 files**, it's the most substantial module in the kit.
+The Identity module is fullstackhero's load-bearing auth layer. It wraps ASP.NET Identity with JWT bearer + refresh, a flat-but-granular permission system enforced via `.RequirePermission()` on endpoints, user groups, operator impersonation with a full audit trail, two-factor TOTP, per-device sessions, password history, and an outbox-backed integration event publisher for things like user registration and password changes. Around **10,400 lines of code across 205 files**, it's the most substantial module in the kit.
 
 <Callout type="tip" title="Read this module first">
 If you're customising auth — adding SSO, replacing JWT with cookie auth, swapping the user store — start here. The kit puts auth on the foundation of ASP.NET Identity, so anything you'd do in a plain ASP.NET app you can do in fullstackhero. Nothing about the rest of the kit assumes a bespoke identity stack.
@@ -20,7 +20,7 @@ If you're customising auth — adding SSO, replacing JWT with cookie auth, swapp
 
 ## What ships in v10
 
-- **JWT bearer + refresh tokens** with a rotating refresh on each `POST /tokens/refresh`.
+- **JWT bearer + refresh tokens** with a rotating refresh on each `POST /token/refresh`.
 - **ASP.NET Identity** on top of `FshUser : IdentityUser` and `FshRole : IdentityRole` — custom password policy, 5-attempt lockout for 15 minutes, custom claims, passkey table.
 - **Permission-based authorization** via a flat registry (`PermissionConstants`) and the `.RequirePermission(...)` fluent helper on endpoints.
 - **User groups** — organise users; groups own roles (`GroupRoles`) and propagate permissions to members.
@@ -28,27 +28,29 @@ If you're customising auth — adding SSO, replacing JWT with cookie auth, swapp
 - **Two-factor TOTP** — enrol with a QR code, verify, disable per user. Optional, not enforced.
 - **Sessions** — per-device records with IP, user-agent, OS, browser, and revocation; cleanup runs as a hosted service.
 - **Password policy** — history (default 5), expiry (default 90 days) with warning window (14 days), enforced via `IPasswordHistoryService` + `IPasswordExpiryService`.
-- **48 endpoints** under `/api/v1/identity/...` covering tokens, users, roles, groups, sessions, impersonation, and 2FA. Rate-limited `auth` policy applied to login, refresh, confirm-email, forgot-password, reset-password, and self-register.
+- **Permission catalog** — `GET /permissions/catalog` returns every permission registered with the host, filtered to the caller's tenant context (root vs admin set). The admin app's role editor is built on it.
+- **51 endpoints** under `/api/v1/identity/...` covering tokens, users, roles, the permission catalog, groups, sessions, impersonation, and 2FA. Rate-limited `auth` policy applied to login, refresh, confirm-email, resend-confirmation-email, forgot-password, reset-password, and self-register.
 - **Outbox-backed integration events** — `UserRegisteredIntegrationEvent` and `TokenGeneratedIntegrationEvent` go out via the Eventing module's outbox dispatcher.
 
 ## Architecture at a glance
 
 ```
 src/Modules/Identity/
-├── Modules.Identity/                            ~8,800 LoC, 195 files
+├── Modules.Identity/                            ~10,400 LoC, 205 files
 │   ├── IdentityModule.cs                        IModule entry — order 100
 │   ├── Domain/
 │   │   ├── FshUser.cs                           IdentityUser + IHasDomainEvents
 │   │   ├── FshRole.cs                           IdentityRole + Description
-│   │   ├── Group.cs                             IAuditable, ISoftDeletable
+│   │   ├── Group.cs, GroupRole.cs, UserGroup.cs Groups + group-owned roles
 │   │   ├── ImpersonationGrant.cs                IGlobalEntity (cross-tenant)
 │   │   ├── UserSession.cs                       IHasDomainEvents
 │   │   └── PasswordHistory.cs
 │   ├── Data/IdentityDbContext.cs                MultiTenantIdentityDbContext
-│   ├── Features/v1/                             48 features in 11 areas
+│   ├── Features/v1/                             51 endpoints in 8 areas
 │   │   ├── Tokens/                              Generate, Refresh
-│   │   ├── Users/                               Register + 14 mgmt features
+│   │   ├── Users/                               Register + 19 more features
 │   │   ├── Roles/                               6 features
+│   │   ├── Permissions/                         Permission catalog
 │   │   ├── Groups/                              8 features
 │   │   ├── Sessions/                            7 features
 │   │   ├── Impersonation/                       4 features
@@ -61,19 +63,19 @@ src/Modules/Identity/
 │       ├── IUserPermissionService               Role/group permission aggregation
 │       ├── ISessionService                      Session CRUD + cleanup
 │       └── IImpersonationGrantService           Grant + revoke
-└── Modules.Identity.Contracts/                  ~1,000 LoC public commands/queries/services
+└── Modules.Identity.Contracts/                  Public commands/queries/services
 ```
 
 The module loads at order `100` — the first module — so every later module can rely on `ICurrentUser`, the JWT pipeline, and the permission registry being already in place.
 
 ## The token pipeline
 
-Login goes through `POST /api/v1/identity/tokens/generate`. The handler validates email/password through `UserManager`, checks 2FA if enrolled, mints an access token + refresh token via `ITokenService`, opens a `UserSession`, and publishes a `TokenGeneratedIntegrationEvent` to the outbox.
+Login goes through `POST /api/v1/identity/token/issue`. The handler validates email/password through `UserManager`, checks 2FA if enrolled, mints an access token + refresh token via `ITokenService`, opens a `UserSession`, and publishes a `TokenGeneratedIntegrationEvent` to the outbox.
 
 ```csharp
-// src/Modules/Identity/Modules.Identity.Contracts/v1/Tokens/TokenGeneration/
+// src/Modules/Identity/Modules.Identity.Contracts/v1/Tokens/
 
-public sealed record GenerateTokenCommand(
+public record GenerateTokenCommand(
     string Email,
     string Password,
     string? TwoFactorCode = null)
@@ -82,15 +84,14 @@ public sealed record GenerateTokenCommand(
 public sealed record TokenResponse(
     string AccessToken,
     string RefreshToken,
-    int ExpiresInSeconds,
-    string TokenType = "Bearer");
+    DateTime RefreshTokenExpiresAt,
+    DateTime AccessTokenExpiresAt);
 
-public sealed record RefreshTokenCommand(
-    string RefreshToken)
+public record RefreshTokenCommand(string? Token, string RefreshToken)
     : ICommand<RefreshTokenCommandResponse>;
 ```
 
-The access token carries the standard claims plus `tenant` (resolved via Finbuckle on the request that issued it) and the user's permission set. Permission enforcement on every other endpoint is just:
+The access token carries the standard claims plus `tenant` (resolved via Finbuckle on the request that issued it) and the user's **roles** (direct + group-derived). Permissions themselves stay server-side — they're resolved from the role set on each authorization check, so a permission change takes effect without re-issuing tokens. Enforcement on an endpoint is just:
 
 ```csharp
 endpoints.MapPost("/users", handler)
@@ -101,104 +102,108 @@ endpoints.MapPost("/users", handler)
 
 ## Public API highlights
 
-48 endpoints means a lot of contracts. Major ones:
+51 endpoints means a lot of contracts. Major ones:
 
 ### Tokens
 
 | Type | Purpose |
 |---|---|
 | `GenerateTokenCommand(email, password, twoFactorCode?)` | Login |
-| `RefreshTokenCommand(refreshToken)` | Rotate the refresh token, mint a new access token |
+| `RefreshTokenCommand(token?, refreshToken)` | Rotate the refresh token, mint a new access token |
 
 ### Users
 
 | Type | Purpose |
 |---|---|
-| `RegisterUserCommand` | Operator-driven user creation; requires `Users.Create` |
-| `SelfRegisterUserCommand` | Anonymous self-registration (rate-limited) |
-| `ConfirmEmailCommand(userId, token)` | Email confirmation step |
+| `RegisterUserCommand` | Operator-driven user creation; also reused by anonymous `/self-register` (rate-limited) |
+| `ConfirmEmailCommand(userId, code, tenant)` | Email confirmation step (link-friendly `GET`) |
 | `ForgotPasswordCommand(email)` → token | Issue reset token |
-| `ResetPasswordCommand(email, token, password)` | Apply reset; respects history |
-| `ChangePasswordCommand(userId, old, new)` | Self-service change |
-| `ToggleUserStatusCommand(userId, isActive)` | Activate / deactivate user |
-| `AssignUserRolesCommand(userId, roleIds[])` | Replace user's role set |
-| `SetProfileImageCommand(userId, imageUrl)` | Profile image |
-| `GetMeQuery()` | Current user with permissions |
+| `ResetPasswordCommand(email, password, token)` | Apply reset; respects history |
+| `ChangePasswordCommand(password, newPassword, confirmNewPassword)` | Self-service change |
+| `ToggleUserStatusCommand(userId, activateUser)` | Activate / deactivate user |
+| `AssignUserRolesCommand(userId, userRoles[])` | Replace user's role set |
+| `SetProfileImageCommand(imageUrl?)` | Profile image (null clears it) |
+| `GetCurrentUserProfileQuery(userId)` | Current user profile |
 
 ### Roles
 
 | Type | Purpose |
 |---|---|
-| `UpsertRoleCommand(name, description)` | Create or rename |
-| `UpdateRolePermissionsCommand(roleId, permissions[])` | Set the role's permission set |
-| `GetRolePermissionsQuery(roleId)` | Fetch current permissions |
+| `UpsertRoleCommand(id, name, description?)` | Create or rename |
+| `UpdatePermissionsCommand` | Set the role's permission set |
+| `GetRoleWithPermissionsQuery(id)` | Fetch a role with its current permissions |
 
 ### Sessions
 
-`GetMySessionsQuery`, `RevokeSessionCommand`, `RevokeAllSessionsCommand`, plus admin variants (`GetTenantSessionsQuery`, `AdminRevokeSessionCommand`) for ops.
+`GetMySessionsQuery`, `RevokeSessionCommand`, `RevokeAllSessionsCommand(exceptSessionId?)`, plus admin variants (`GetTenantSessionsQuery`, `GetUserSessionsQuery`, `AdminRevokeSessionCommand`, `AdminRevokeAllSessionsCommand`) for ops.
 
 ### Impersonation
 
-`StartImpersonationCommand(impersonatedUserId, durationMinutes, reason)` returns an impersonation access token. `EndImpersonationCommand` ends the active grant. `RevokeImpersonationGrantCommand(grantId, reason)` is the kill switch for admins.
+`StartImpersonationCommand(targetUserId, targetTenantId, reason?, durationMinutes?)` returns an impersonation access token (duration capped server-side at 60 minutes). `EndImpersonationCommand` ends the active grant and returns a fresh operator token. `RevokeImpersonationGrantCommand(grantId, reason?)` is the kill switch for admins.
 
 ### Two-Factor
 
-`EnrollTwoFactorCommand` returns a QR code + secret; `VerifyEnrollTwoFactorCommand(code)` activates; `DisableTwoFactorCommand` turns it off.
+`EnrollTwoFactorCommand` returns a QR code + secret; `VerifyEnrollTwoFactorCommand(code)` activates; `DisableTwoFactorCommand(currentPassword)` turns it off.
 
 ## Endpoints
 
-All 48 endpoints are under `/api/v1/identity/`. The rate-limited `auth` policy covers `POST /tokens/generate`, `POST /tokens/refresh`, `POST /users/forgot-password`, `POST /users/reset-password`, `POST /users/confirm-email`, and `POST /users/self-register`. Full table:
+All 51 endpoints are under `/api/v1/identity/`. The rate-limited `auth` policy covers `POST /token/issue`, `POST /token/refresh`, `GET /confirm-email`, `POST /users/{id}/resend-confirmation-email`, `POST /forgot-password`, `POST /reset-password`, and `POST /self-register`. Full table:
 
 | Verb | Route | What it does |
 |---|---|---|
-| POST | `/tokens` | Login |
-| POST | `/tokens/refresh` | Rotate refresh token |
-| GET | `/users/me` | Current user profile |
-| POST | `/users/register` | Operator-driven user creation |
-| POST | `/users/self-register` | Anonymous registration |
-| POST | `/users/forgot-password` | Issue password-reset token |
-| POST | `/users/reset-password` | Reset using token |
-| POST | `/users/confirm-email` | Confirm email address |
-| POST | `/users/{id}/change-password` | Change password |
+| POST | `/token/issue` | Login |
+| POST | `/token/refresh` | Rotate refresh token |
+| GET | `/profile` | Current user profile |
+| PUT | `/profile` | Update own profile |
+| PUT | `/profile/image` | Set / clear profile image |
+| GET | `/permissions` | Current user permissions |
+| GET | `/permissions/catalog` | All registered permissions (catalog) |
+| POST | `/register` | Operator-driven user creation |
+| POST | `/self-register` | Anonymous registration |
+| POST | `/forgot-password` | Issue password-reset token |
+| POST | `/reset-password` | Reset using token |
+| GET | `/confirm-email` | Confirm email (`?userId=&code=&tenant=`) |
+| POST | `/change-password` | Change own password |
 | GET | `/users` | List users |
-| POST | `/users/search` | Search users |
+| GET | `/users/search` | Search users |
 | GET | `/users/{id}` | Get user by id |
-| PUT | `/users/{id}` | Update user |
 | DELETE | `/users/{id}` | Delete user |
-| PATCH | `/users/{id}/status` | Activate / deactivate |
+| PATCH | `/users/{id}` | Activate / deactivate |
+| POST | `/users/{id}/confirm-email` | Admin: confirm a user's email |
+| POST | `/users/{id}/resend-confirmation-email` | Resend confirmation email |
 | POST | `/users/{id}/roles` | Assign roles |
 | GET | `/users/{id}/roles` | List user roles |
-| GET | `/users/{id}/groups` | List user groups |
-| GET | `/users/me/permissions` | Current user permissions |
-| POST | `/users/{id}/profile-image` | Set profile image |
+| GET | `/users/{userId}/groups` | List user groups |
 | GET | `/roles` | List roles |
 | GET | `/roles/{id}` | Get role |
-| POST,PUT | `/roles` | Upsert role |
+| POST | `/roles` | Upsert role (create or update) |
 | DELETE | `/roles/{id}` | Delete role |
-| GET | `/roles/{id}/permissions` | Get role permissions |
-| PUT | `/roles/{id}/permissions` | Update role permissions |
+| GET | `/{id}/permissions` | Get role with permissions |
+| PUT | `/{id}/permissions` | Update role permissions |
 | GET | `/groups` | List groups |
 | GET | `/groups/{id}` | Get group |
 | POST | `/groups` | Create group |
 | PUT | `/groups/{id}` | Update group |
 | DELETE | `/groups/{id}` | Delete group |
-| GET | `/groups/{id}/members` | List members |
-| POST | `/groups/{id}/members` | Add members |
-| DELETE | `/groups/{id}/members/{userId}` | Remove member |
+| GET | `/groups/{groupId}/members` | List members |
+| POST | `/groups/{groupId}/members` | Add members |
+| DELETE | `/groups/{groupId}/members/{userId}` | Remove member |
 | GET | `/sessions/me` | My sessions |
-| DELETE | `/sessions/{id}` | Revoke a session |
-| DELETE | `/sessions/me` | Revoke all my sessions |
-| GET | `/sessions/tenant` | Tenant sessions (admin) |
-| GET | `/sessions/user/{userId}` | User sessions (admin) |
-| DELETE | `/sessions/user/{userId}/{id}` | Admin revoke one session |
-| DELETE | `/sessions/user/{userId}` | Admin revoke all user sessions |
+| DELETE | `/sessions/{sessionId}` | Revoke a session |
+| POST | `/sessions/revoke-all` | Revoke all my sessions (optionally keep one) |
+| GET | `/sessions` | Tenant sessions (admin, paged) |
+| GET | `/users/{userId}/sessions` | User sessions (admin) |
+| DELETE | `/users/{userId}/sessions/{sessionId}` | Admin revoke one session |
+| POST | `/users/{userId}/sessions/revoke-all` | Admin revoke all user sessions |
 | POST | `/impersonation/start` | Start impersonation |
 | POST | `/impersonation/end` | End impersonation |
 | GET | `/impersonation/grants` | List grants |
-| DELETE | `/impersonation/grants/{id}` | Revoke grant |
+| POST | `/impersonation/grants/{id}/revoke` | Revoke grant |
 | POST | `/2fa/enroll` | Enroll 2FA |
 | POST | `/2fa/verify` | Verify enrolment |
-| DELETE | `/2fa` | Disable 2FA |
+| POST | `/2fa/disable` | Disable 2FA (requires current password) |
+
+Yes, the role-permission routes really are `/{id}/permissions` directly under `/api/v1/identity` — there's no `/roles/` segment in them.
 
 ## Configuration
 
@@ -211,17 +216,17 @@ All 48 endpoints are under `/api/v1/identity/`. The rate-limited `auth` policy c
     "PasswordExpiryWarningDays": 14,
     "EnforcePasswordExpiry": true
   },
-  "Jwt": {
-    "Issuer": "fullstackhero",
-    "Audience": "fullstackhero-api",
-    "AccessTokenMinutes": 60,
-    "RefreshTokenDays": 14,
+  "JwtOptions": {
+    "Issuer": "fsh.local",
+    "Audience": "fsh.clients",
+    "AccessTokenMinutes": 45,
+    "RefreshTokenDays": 7,
     "SigningKey": "set via secrets manager or env var"
   }
 }
 ```
 
-Lockout is configured by `IdentityOptions` and defaults to 5 failed attempts → 15-minute lock. The `identity-outbox-dispatcher` Hangfire job runs every minute to dispatch outbox events.
+Lockout is configured by `IdentityOptions` and defaults to 5 failed attempts → 15-minute lock. Outbox events are dispatched by the framework's `OutboxDispatcherHostedService` (on by default) — the module deliberately registers no dispatcher of its own, since a second one would race the same rows.
 
 ## How to extend
 
@@ -231,7 +236,7 @@ Lockout is configured by `IdentityOptions` and defaults to 5 failed attempts →
 2. Add a constant to `IdentityPermissions` in the Contracts assembly.
 3. Register it through `PermissionConstants.Register([...])` during module startup (Identity already does this; mirror the pattern).
 4. Apply it on the endpoint: `.RequirePermission(IdentityPermissions.Users.Export)`.
-5. Seed roles with the permission via `UpdateRolePermissionsCommand` or the role-permission seeder.
+5. Seed roles with the permission via `UpdatePermissionsCommand` (`PUT /{id}/permissions`) or the role-permission seeder.
 
 ### Add a custom claim to the JWT
 
@@ -243,8 +248,8 @@ The `ConfirmEmailCommand` flow is a token exchange. Replace the token-generation
 
 ## Tests
 
-- Unit tests at `src/Tests/Identity.Tests/` (33 test files) cover handlers, password policy, JWT options.
-- Integration tests at `src/Tests/Integration.Tests/Tests/Impersonation/` cover the cross-tenant impersonation flow.
+- Unit tests at `src/Tests/Identity.Tests/` (30 test files) cover handlers, password policy, JWT options.
+- Integration tests at `src/Tests/Integration.Tests/Tests/` — the `Impersonation/`, `Sessions/`, `Users/`, `Roles/`, `Groups/`, `Authentication/`, and `Authorization/` folders all exercise this module end to end.
 
 ## Related
 

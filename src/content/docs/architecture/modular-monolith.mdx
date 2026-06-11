@@ -1,7 +1,7 @@
 ---
 title: Modular monolith
-lastUpdated: 2026-05-19
-description: How fullstackhero composes ten modules into a single deployable process with hard module boundaries enforced by NetArchTest.
+lastUpdated: 2026-06-11
+description: How fullstackhero composes ten modules into a single deployable process with hard module boundaries enforced by architecture tests.
 sidebar:
   label: Modular monolith
   order: 2
@@ -64,22 +64,22 @@ Modules talk to each other **only through `*.Contracts` assemblies**.
 
 The cardinal rule: **runtime modules never reference each other.** If module A needs something from module B, it asks module B's contracts — which is a thin layer of commands, queries, events, and DTOs.
 
-These rules aren't conventions; they're enforced by [NetArchTest](https://github.com/BenMorris/NetArchTest) tests in `src/Tests/Architecture.Tests/`:
+These rules aren't conventions; they're enforced by `src/Tests/Architecture.Tests/`. The boundary test scans every module runtime `.csproj` for forbidden project references:
 
 ```csharp
-// Architecture.Tests/Modules/ModuleBoundaryTests.cs
+// Architecture.Tests/ModuleArchitectureTests.cs (condensed)
 [Fact]
-public void Module_runtime_should_not_reference_another_module_runtime()
+public void Modules_Should_Not_Depend_On_Other_Modules()
 {
-    var result = Types.InAssembly(typeof(IdentityModule).Assembly)
-        .ShouldNot()
-        .HaveDependencyOnAny(otherModuleRuntimeAssemblyNames)
-        .GetResult();
-    result.IsSuccessful.ShouldBeTrue();
+    // for every Modules.*.csproj (excluding *.Contracts), assert no ProjectReference
+    // points at another module's runtime project
+    isSelfReference.ShouldBeTrue(
+        $"Module runtime project '{currentName}' must not reference other module runtime project '{referencedName}'. " +
+        "Only contracts or building block projects are allowed.");
 }
 ```
 
-Break the rule and the build fails.
+A second layer of [NetArchTest](https://github.com/BenMorris/NetArchTest) tests guards the finer rules — Contracts assemblies can't depend on EF Core, FluentValidation, or Hangfire; domain types can't reach into persistence. Break a rule and the test suite fails.
 
 ## How modules talk to each other
 
@@ -87,7 +87,7 @@ Three patterns, all one-way and contract-only:
 
 ### 1. Request a service (rare)
 
-Some contracts expose service interfaces — `ITokenService`, `ICurrentUser`, `IUserService` — that downstream modules can resolve via DI without referencing the runtime. The interface lives in `*.Contracts`; the implementation lives in the runtime; consumers depend only on the contract.
+Some contracts expose service interfaces — `ITokenService`, `IUserService` (in `Modules.Identity.Contracts`) — that downstream modules can resolve via DI without referencing the runtime. The interface lives in `*.Contracts`; the implementation lives in the runtime; consumers depend only on the contract. (`ICurrentUser` works the same way, but lives one level down in `BuildingBlocks/Core`; Identity registers the implementation.)
 
 ### 2. Domain events (in-module)
 
@@ -95,7 +95,7 @@ Domain events are private to the aggregate's module. The `DomainEventsIntercepto
 
 ### 3. Integration events (cross-module)
 
-The canonical pattern. A module publishes an `IIntegrationEvent` via `IEventBus`; the kit's outbox dispatches it asynchronously; any module that implements `IIntegrationEventHandler<TEvent>` receives a copy. Examples in the kit:
+The canonical pattern. A module writes an `IIntegrationEvent` to the **outbox** (`IOutboxStore.AddAsync`, committed with the business write); the kit's outbox dispatcher publishes it asynchronously via `IEventBus`; any module that implements `IIntegrationEventHandler<TEvent>` receives a copy, with inbox-backed idempotency. Examples in the kit:
 
 - **Chat → Notifications**: `MentionedInChannelIntegrationEvent` → inbox row + SignalR push.
 - **Any module → Webhooks**: open-generic `WebhookFanoutHandler<TEvent>` fans every event to subscribed tenants.
@@ -105,7 +105,7 @@ The receiver doesn't know the producer. The producer doesn't know the receivers.
 
 ## Module load order
 
-Modules carry `[FshModule(Order = n)]`. Lower numbers run their `ConfigureServices` and `MapEndpoints` first. The ordering matters for two specific cases:
+Each module runtime carries an assembly-level attribute — `[assembly: FshModule(typeof(IdentityModule), 100)]`. Lower numbers run their `ConfigureServices` and `MapEndpoints` first. The ordering matters for two specific cases:
 
 - **Cross-module integration-event handlers.** Notifications (order `750`) must load before Chat (order `800`) because Notifications registers handlers for Chat's `MentionedInChannelIntegrationEvent`. If Chat loaded first, the handler wouldn't be wired when the first mention event fires.
 - **`ICurrentUser` availability.** Identity (order `100`) loads first so every later module sees the JWT pipeline and `ICurrentUser` registered.
@@ -123,7 +123,7 @@ Modules carry `[FshModule(Order = n)]`. Lower numbers run their `ConfigureServic
 | 750 | Notifications |
 | 800 | Chat |
 
-The `ModuleLoader` (in `BuildingBlocks/Web`) runs each module's `ConfigureServices` in order, then later runs `MapEndpoints` and `ConfigureMiddleware` in order.
+The `ModuleLoader` (in `BuildingBlocks/Web`) runs each module's `ConfigureServices` in order, then later runs `ConfigureMiddleware` and `MapEndpoints` in the same order.
 
 ## When a module needs to scale out
 
