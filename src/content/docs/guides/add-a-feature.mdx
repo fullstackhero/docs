@@ -1,0 +1,282 @@
+---
+title: Add a feature to an existing module
+lastUpdated: 2026-06-11
+description: End-to-end recipe for adding a new command/query slice to an existing module — command, handler, validator, endpoint, wiring, permission, and tests, walked through with a concrete Catalog example.
+sidebar:
+  label: Add a feature
+  order: 1
+pageType: recipe
+seo:
+  title: 'Add a feature to a fullstackhero module — vertical slice recipe'
+  description: 'Step-by-step recipe for adding a backend feature to a fullstackhero .NET module — Contracts command, sealed Mediator handler, FluentValidation validator, minimal API endpoint…'
+  keywords: 'fullstackhero add feature, vertical slice .net recipe, mediator command handler endpoint, fluentvalidation validator convention, modular monolith add endpoint'
+---
+
+Adding a command or query slice to a module that already exists is the single most common task in this codebase. This guide walks it end-to-end with a concrete example — **archiving a product** in the Catalog module — where every code shape mirrors a real slice that ships with the kit (`ChangeProductPrice` in `src/Modules/Catalog`).
+
+By the end you'll have: a command in the Contracts project, a handler + validator + endpoint in the runtime project, a permission gate, and tests. No DI registration, no MediatR-style manual wiring — the module loader and source-generated Mediator discover everything by convention.
+
+<Callout type="tip" title="Let an agent scaffold it">
+If you work with an AI coding tool, the repo ships a step-by-step recipe at `.agents/skills/add-feature/SKILL.md` that scaffolds exactly this slice. Point your agent at it ("use the add-feature skill to add X to the Catalog module") and review the diff against this guide. See [AI-assisted development](/docs/ai-development/).
+</Callout>
+
+## Where the pieces go
+
+A feature is a vertical slice **split across two projects**. The request/response types live in the module's `.Contracts` project — that's the module's only public API, and the only thing other modules may reference. The handler, validator, and endpoint live in the runtime project, grouped in one folder per feature:
+
+```
+src/Modules/Catalog/
+├── Modules.Catalog.Contracts/
+│   ├── v1/Products/ArchiveProductCommand.cs        # the command (public API)
+│   └── Dtos/ProductDto.cs                          # response DTOs, if any
+└── Modules.Catalog/
+    ├── Domain/Product.cs                           # entity behavior lives here
+    └── Features/v1/Products/ArchiveProduct/
+        ├── ArchiveProductCommandHandler.cs         # public sealed, injects the DbContext
+        ├── ArchiveProductCommandValidator.cs       # required — enforced by Architecture.Tests
+        └── ArchiveProductEndpoint.cs               # internal static extension method
+```
+
+Why the split matters: [module boundaries](/docs/architecture/vertical-slice/) are enforced by `Architecture.Tests` — a module referencing another module's runtime project fails the build.
+
+## Step 1 — The command (Contracts project)
+
+Commands and queries are records implementing the `Mediator` interfaces (`using Mediator;` — this is the source-generated [Mediator](https://github.com/martinothamar/Mediator) library, not MediatR).
+
+```csharp
+// Modules.Catalog.Contracts/v1/Products/ArchiveProductCommand.cs
+using Mediator;
+
+namespace FSH.Modules.Catalog.Contracts.v1.Products;
+
+public sealed record ArchiveProductCommand(Guid ProductId) : ICommand<Guid>;
+```
+
+Queries implement `IQuery<TResponse>` instead. Paginated queries implement `IPagedQuery` and return `PagedResponse<T>` from `FSH.Framework.Shared.Persistence`. Response DTOs go in `Contracts/Dtos/`.
+
+## Step 2 — Entity behavior (and a domain event, if it matters)
+
+Business rules belong on the aggregate, not in the handler. `Product` already follows this pattern — `ChangePrice` and `AdjustStock` are methods on the entity that guard invariants and raise domain events. Add `Archive` the same way:
+
+```csharp
+// Modules.Catalog/Domain/Product.cs
+public void Archive()
+{
+    if (!IsActive) return;
+
+    IsActive = false;
+    UpdatedAtUtc = DateTime.UtcNow;
+
+    AddDomainEvent(DomainEvent.Create((id, ts) =>
+        new ProductArchivedDomainEvent(Id, id, ts)));
+}
+```
+
+The event is a record in `Domain/Events/`, mirroring `ProductPriceChangedDomainEvent`:
+
+```csharp
+public sealed record ProductArchivedDomainEvent(
+    Guid ProductId, Guid EventId, DateTimeOffset OccurredOnUtc)
+    : DomainEvent(EventId, OccurredOnUtc);
+```
+
+Domain events are published automatically after `SaveChangesAsync` by the framework's `DomainEventsInterceptor` — any `INotificationHandler` for the event in the same module just works. Skip the event if nothing reacts to the change; it's signal, not ceremony. (Cross-module communication uses integration events via the Outbox instead — different mechanism, see the eventing rules.)
+
+## Step 3 — The handler (runtime project)
+
+There is **no generic `IRepository<T>`** in this kit. Handlers inject the module's DbContext directly. The shape — copied from the real `ChangeProductPriceCommandHandler` — is: `public sealed`, primary constructor, `ValueTask<T>`, `.ConfigureAwait(false)` on every await, guard clause first.
+
+```csharp
+// Features/v1/Products/ArchiveProduct/ArchiveProductCommandHandler.cs
+public sealed class ArchiveProductCommandHandler(CatalogDbContext dbContext)
+    : ICommandHandler<ArchiveProductCommand, Guid>
+{
+    public async ValueTask<Guid> Handle(ArchiveProductCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var product = await dbContext.Products
+            .FirstOrDefaultAsync(p => p.Id == command.ProductId, cancellationToken)
+            .ConfigureAwait(false)
+            ?? throw new NotFoundException($"Product {command.ProductId} not found.");
+
+        product.Archive();
+        await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return product.Id;
+    }
+}
+```
+
+A few things you get for free here:
+
+- **Tenant isolation** — `CatalogDbContext` extends `BaseDbContext`, so the query above is automatically scoped to the current tenant. You never filter by tenant id manually.
+- **Audit stamping** — created/modified fields are stamped by interceptors. Only inject `ICurrentUser` if you need the acting user in business logic.
+- **Error mapping** — throw `NotFoundException` (404), `ForbiddenException` (403), `UnauthorizedException` (401), or `CustomException(msg, errors, statusCode)` from `FSH.Framework.Core.Exceptions`; the global exception handler converts them to RFC 9457 ProblemDetails. Never return error objects from handlers.
+
+The handler needs no registration — Mediator's source generator discovers it as long as the module's assemblies are listed in `Program.cs` (they already are, since the module exists). See [dependency injection](/docs/architecture/dependency-injection/) for how `ModuleLoader` wires the rest.
+
+## Step 4 — The validator (not optional)
+
+Every command handler and every paginated-query handler must have a `{Name}Validator` in the same feature folder. This is enforced by `Architecture.Tests` (`HandlerValidatorPairingTests`) — skip it and the test suite fails.
+
+```csharp
+// Features/v1/Products/ArchiveProduct/ArchiveProductCommandValidator.cs
+public sealed class ArchiveProductCommandValidator : AbstractValidator<ArchiveProductCommand>
+{
+    public ArchiveProductCommandValidator()
+    {
+        RuleFor(x => x.ProductId).NotEmpty();
+    }
+}
+```
+
+FluentValidation validators are auto-registered by the module loader and run in the `ValidationBehavior<,>` Mediator pipeline *before* the handler — a failing rule short-circuits into a 400 ProblemDetails response. The handler can assume the command is shape-valid.
+
+## Step 5 — The endpoint
+
+Endpoints are `internal static` extension methods on `IEndpointRouteBuilder` that delegate to Mediator. Always accept and forward the `CancellationToken` — ASP.NET injects it from the request.
+
+```csharp
+// Features/v1/Products/ArchiveProduct/ArchiveProductEndpoint.cs
+public static class ArchiveProductEndpoint
+{
+    internal static RouteHandlerBuilder MapArchiveProductEndpoint(this IEndpointRouteBuilder endpoints) =>
+        endpoints.MapPost("/products/{productId:guid}/archive",
+                async (Guid productId, IMediator mediator, CancellationToken ct) =>
+                    Results.Ok(await mediator.Send(new ArchiveProductCommand(productId), ct)))
+            .WithName("ArchiveProduct")
+            .WithSummary("Archive a product")
+            .RequirePermission(CatalogPermissions.Products.Update);
+}
+```
+
+When the request has a body *and* a route parameter, merge them the way `ChangeProductPriceEndpoint` does — bind the body, then overwrite the id from the route so the URL wins:
+
+```csharp
+endpoints.MapPatch("/products/{productId:guid}/price",
+    async (Guid productId, ChangeProductPriceCommand body, IMediator mediator, CancellationToken ct) =>
+    {
+        var command = body with { ProductId = productId };
+        return Results.Ok(await mediator.Send(command, ct));
+    })
+```
+
+Add `.WithIdempotency()` on POSTs that must be replay-safe (creates, payment-ish operations). Archiving is naturally idempotent, so it doesn't need it.
+
+### Permissions: reuse or add
+
+Permission constants live in the module's Contracts project — `Modules.Catalog.Contracts/Authorization/CatalogPermissions.cs` — in the format `Permissions.{Resource}.{Action}` (e.g. `Permissions.Catalog.Products.Update`). Archiving is an update-shaped operation, so reusing `Products.Update` is fine.
+
+If the operation deserves its own grant (the kit did exactly this for `AdjustStock`), add two lines to `CatalogPermissions`:
+
+```csharp
+public const string Archive = $"Permissions.{Resource}.Archive";   // in Products
+
+new("Archive Products", "Archive", Products.Resource),             // in the All list
+```
+
+The module already calls `PermissionConstants.Register(CatalogPermissions.All)` in `ConfigureServices`, so the new permission is known to the platform immediately. The Admin role picks it up as a role claim on the next seed run (`dotnet run --project src/Host/FSH.Starter.DbMigrator -- apply --seed`) — existing claims are untouched, missing ones are added.
+
+## Step 6 — Wire it into the module
+
+One line in `CatalogModule.MapEndpoints()`, on the existing versioned group:
+
+```csharp
+// CatalogModule.cs — group is endpoints.MapGroup("api/v{version:apiVersion}/catalog")…
+group.MapArchiveProductEndpoint();
+```
+
+Watch the registration order if your route shares a prefix with a catch-all: literal segments like `/products/trash` must be mapped *before* `/products/{id:guid}` so they win. `/products/{productId:guid}/archive` has no such conflict.
+
+That's the whole wiring. No DI registration, no `Program.cs` changes — those are only needed when adding a whole new *module*.
+
+## Step 7 — Tests
+
+Two layers, both with real examples to copy.
+
+**Unit-test the domain behavior** in `src/Tests/Catalog.Tests/Domain/ProductTests.cs` style — plain xUnit + Shouldly, asserting state and the raised event:
+
+```csharp
+[Fact]
+public void Archive_Should_DeactivateAndRaiseEvent_When_Active()
+{
+    Product product = CreateValidProduct();
+    product.ClearDomainEvents(); // drop the creation event
+
+    product.Archive();
+
+    product.IsActive.ShouldBeFalse();
+    product.DomainEvents.ShouldHaveSingleItem()
+        .ShouldBeOfType<ProductArchivedDomainEvent>();
+}
+```
+
+**Integration-test the endpoint** in `src/Tests/Integration.Tests/Tests/Catalog/` — the harness spins up the real API against Testcontainers (Docker required). Copy the `ProductsEndpointTests` pattern: the shared collection fixture plus `AuthHelper` for an authenticated client.
+
+```csharp
+[Collection(FshCollectionDefinition.Name)]
+public sealed class ProductsEndpointTests(FshWebApplicationFactory factory)
+{
+    private readonly AuthHelper _auth = new(factory);
+
+    [Fact]
+    public async Task ArchiveProduct_Should_DeactivateProduct()
+    {
+        using var client = await _auth.CreateRootAdminClientAsync();
+        var productId = await CreateAsync(client, /* …seed a product… */);
+
+        using var response = await client.PostAsync(
+            $"{TestConstants.CatalogBasePath}/products/{productId}/archive", null);
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var updated = await GetAsync(client, productId);
+        updated.IsActive.ShouldBeFalse();
+    }
+}
+```
+
+Cover the permission gate too — the existing suite asserts that a Basic user gets 403 on mutating endpoints. Full conventions: [writing new tests](/docs/testing/writing-new-tests/).
+
+## Verify
+
+```bash
+dotnet build src/FSH.Starter.slnx     # must be 0 warnings — TreatWarningsAsErrors is on
+dotnet test src/FSH.Starter.slnx      # integration tests require Docker
+```
+
+The build failing on a missing validator or a boundary violation is `Architecture.Tests` doing its job.
+
+## Do I need a migration?
+
+**Not for this feature** — `IsActive` already exists on `Product`. You only need a migration when you change the *schema*: a new entity, a new column, an index, a renamed property. The signal is EF model changes in `Domain/` or `Data/Configurations/`. When you do, migrations live in the dedicated `FSH.Starter.Migrations.PostgreSQL` project and are applied by the DbMigrator, never at API startup — follow [database migrations](/docs/deployment/database-migrations/).
+
+## Checklist
+
+1. Command/query record in `Modules.{X}.Contracts/v1/{Area}/` (`using Mediator;`); DTOs in `Contracts/Dtos/`.
+2. Business rule as a method on the entity; domain event if something reacts to it.
+3. Handler in `Modules.{X}/Features/v1/{Area}/{Feature}/` — `public sealed`, injects the module DbContext, `ValueTask<T>`.
+4. `{Name}Validator` in the same folder.
+5. Endpoint in the same folder — `.WithName`, `.WithSummary`, `.RequirePermission(...)`.
+6. New permission constant + `All` entry, if the action deserves its own grant.
+7. One line in `{X}Module.MapEndpoints()`.
+8. Domain unit test + integration endpoint test (incl. the 403 case).
+9. Build with zero warnings; suite green.
+10. Migration only if the schema changed.
+
+## Golden rules that bite
+
+These are the conventions that fail builds or — worse — fail silently:
+
+- **Handlers must be `public sealed`.** The Mediator source generator and `Architecture.Tests` both check this. An `internal` handler is silently undiscovered: the endpoint compiles, then 500s at runtime.
+- **The validator is mandatory.** Command handlers and paginated-query handlers without a `{Name}Validator` fail `Architecture.Tests`.
+- **Propagate `CancellationToken` everywhere** — endpoint delegate → `mediator.Send` → every EF/IO call. `.ConfigureAwait(false)` on every await in handlers.
+- **Structured logging only.** Message templates (`logger.LogInformation("Archived product {ProductId}", id)`), never string interpolation — analyzers treat it as an error.
+- **Don't reach into another module's runtime project.** If your feature needs another module's data, go through its `.Contracts` interfaces or an integration event.
+
+## Related
+
+- [Architecture: vertical slices](/docs/architecture/vertical-slice/) — why features are shaped this way.
+- [Architecture: dependency injection](/docs/architecture/dependency-injection/) — how modules, handlers, and validators get registered.
+- [Testing: writing new tests](/docs/testing/writing-new-tests/) — unit + integration conventions in depth.
+- [Deployment: database migrations](/docs/deployment/database-migrations/) — when your feature does change the schema.
+- [AI-assisted development](/docs/ai-development/) — the `.agents/skills/add-feature` recipe your coding agent can run.
