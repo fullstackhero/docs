@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-06-11
+lastUpdated: 2026-06-20
 description: The fsh CLI — scaffold projects, check your environment, and stay current.
 sidebar:
   order: 1
@@ -11,22 +11,18 @@ seo:
 
 A NuGet-distributed dotnet tool ([Spectre.Console](https://spectreconsole.net/), source at `src/Tools/CLI`) for scaffolding fullstackhero projects and verifying your environment. Four commands: `new`, `doctor`, `info`, `update`.
 
-<Callout type="warning" title="Prerelease — scaffolding isn't end-to-end yet">
-`FullStackHero.CLI` is on NuGet as a **`10.0.0-rc` prerelease**:
-
 ```bash
-dotnet tool install -g FullStackHero.CLI --prerelease
+dotnet tool install -g FullStackHero.CLI
 ```
 
-`fsh new` scaffolds from the `FullStackHero.NET.StarterKit` template package,
-whose 10.x version isn't published yet — so it can't produce the current kit
-today. Until the stable release, [clone the repo](/docs/getting-started/install/)
-to get the kit. You can also run the CLI straight from a clone:
+`FullStackHero.CLI` is published as stable **10.0.0**. `fsh new` scaffolds from
+the `FullStackHero.NET.StarterKit` template package (also 10.0.0), so the
+install-then-scaffold flow works end-to-end. You can also run the CLI straight
+from a clone of the repo:
 
 ```bash
 dotnet run --project src/Tools/CLI -- doctor
 ```
-</Callout>
 
 ## fsh new
 

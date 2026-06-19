@@ -31,7 +31,7 @@ It's aimed at teams that want to ship features on day one without spending a spr
 - **API docs.** OpenAPI + Scalar UI. Versioned routes via `Asp.Versioning` (`/api/v{version}/{module}`).
 - **Cloud-ready.** `.NET Aspire` AppHost brings up Postgres, Valkey (a Redis-compatible, BSD-licensed Redis fork), MinIO, the migrator, the API, and both React apps locally with one command. Production deploy via Docker Compose included.
 - **Two frontends.** React + Vite admin console and dashboard, both in `clients/`.
-- **CLI + template.** Clone the repo directly today. The `fsh` CLI is on NuGet as a `10.0.0-rc` prerelease; the matching `dotnet new` template hasn't shipped its 10.x version yet, so one-command scaffolding lands with the stable release.
+- **CLI + template.** Scaffold a fresh, fully renamed project in one command with the `fsh` CLI (`FullStackHero.CLI`) or the `dotnet new fsh` template (`FullStackHero.NET.StarterKit`) — both on NuGet as stable 10.0.0. Or clone the repo / use the GitHub template.
 
 ## High-level architecture
 
@@ -171,8 +171,8 @@ The API never mutates data on startup. Demo data (acme/globex tenants, sample ca
 |------------------------|--------------------------------------------------|
 | Clone the repo         | `git clone https://github.com/fullstackhero/dotnet-starter-kit.git` |
 | GitHub Codespaces      | "Use this template" → open in Codespaces        |
-| FSH CLI *(10.0.0-rc prerelease; scaffolding waits on the template)* | `dotnet tool install -g FullStackHero.CLI --prerelease` |
-| `dotnet new` template *(10.x coming with the stable release)* | `dotnet new install FullStackHero.NET.StarterKit && dotnet new fsh -n MyApp` |
+| FSH CLI *(recommended)* | `dotnet tool install -g FullStackHero.CLI && fsh new MyApp` |
+| `dotnet new` template | `dotnet new install FullStackHero.NET.StarterKit && dotnet new fsh -n MyApp` |
 
 ## Where to go next
 

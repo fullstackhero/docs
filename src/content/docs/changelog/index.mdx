@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-06-12
+lastUpdated: 2026-06-20
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -10,6 +10,10 @@ seo:
 ---
 
 Notable changes to the kit, newest first.
+
+## 2026-06-20
+
+- **The `fsh` CLI and `dotnet new` template are now on NuGet as stable `10.0.0`.** The two distribution packages that 10.0.0 had been waiting on have shipped: `FullStackHero.CLI` (install with `dotnet tool install -g FullStackHero.CLI` — no more `--prerelease`) and `FullStackHero.NET.StarterKit` (`dotnet new install FullStackHero.NET.StarterKit`). Because `fsh new` scaffolds *from* that template, the one-command flow is now end-to-end: `dotnet tool install -g FullStackHero.CLI && fsh new MyApp` produces a fully renamed project — unique JWT signing key, generated Docker secrets, `npm install` run, initial commit on `main`. The [Install](/docs/getting-started/install/) and [CLI](/docs/cli/) pages now lead with the CLI as the recommended path; `git clone` and the GitHub template remain available for reading the source or zero-install runs. See the [10.0.0 release](https://github.com/fullstackhero/dotnet-starter-kit/releases/tag/10.0.0).
 
 ## 2026-06-12
 
