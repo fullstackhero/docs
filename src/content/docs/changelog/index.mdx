@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-06-09
+lastUpdated: 2026-06-12
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -10,6 +10,15 @@ seo:
 ---
 
 Notable changes to the kit, newest first.
+
+## 2026-06-12
+
+- **Both apps: every nav surface is now permission-gated.** A tenant user whose role lacked a module's permission could still see and open its nav entry, landing on a guaranteed `403` — e.g. the dashboard Files page rendering a `ForbiddenException` error band for a user without `Files.Upload`. The dashboard sidebar now gates Chat, My Files, Subscription, Invoices, the Catalog pages, and Tickets on the same permission each page's API enforces (joining the already-gated Identity/Audits/Sessions/Trash entries), and the **command palette** — previously a second, fully ungated surface — applies the same gates to its Navigate *and* Create actions. In the admin console, the Webhooks nav entry and routes gained the `Webhooks.View` gate the API has required since the webhook permission hardening, and the Role editor's permission catalog now includes the **Webhooks** group so those permissions can actually be granted. Server-side enforcement is unchanged — this is the UX layer catching up.
+- **Demo seed: the acme Manager role's catalog permissions now actually work (fix).** The seeded claims used permission names that don't exist (`Permissions.Brands.View` instead of the real `Permissions.Catalog.Brands.View`, and likewise for Categories/Products), so the "full catalog" Manager demo user silently had no catalog access at all. The seeder now references the module permission constants directly, so the names can't drift again. Existing databases: re-run the migrator's `seed-demo` verb to add the corrected claims (idempotent), and have demo users sign in again to pick them up.
+
+## 2026-06-11
+
+- **Identity: roles granted through groups now confer their permissions (fix).** A user group can carry role assignments, and the issued JWT already listed those group-derived roles as role claims — but the server-side permission resolver only counted roles assigned to the user *directly*. So a user whose only role came via a group failed every permission-gated endpoint with `403` even though their token showed the role, and their effective-permission list came back empty. The resolver now unions direct and group-derived roles, matching what token issuance and the permission-cache invalidation (which already fired on every group change) always assumed. No action required — the fix takes effect on each user's next permission-cache load.
 
 ## 2026-06-09
 

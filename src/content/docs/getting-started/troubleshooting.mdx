@@ -147,7 +147,7 @@ dotnet run --project src/Host/FSH.Starter.DbMigrator -- apply --seed
 
 ### seed-demo refuses to run
 
-**Symptom:** `[demo-seed] REFUSING to run — ASPNETCORE_ENVIRONMENT is 'Production'. seed-demo is dev-only by design.`
+**Symptom:** `[demo-seed] REFUSING to run — DOTNET_ENVIRONMENT is 'Production'. seed-demo is dev-only by design.`
 
 The demo seeder (acme/globex tenants + demo users) hard-fails outside Development.
 The DbMigrator is a console host, which reads `DOTNET_ENVIRONMENT` — setting
