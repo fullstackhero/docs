@@ -60,7 +60,7 @@ const { class: classList } = Astro.props as Props;
   .animated-ide:hover::after {
     opacity: 1;
   }
-  .dark .animated-ide::after {
+  :global(.dark) .animated-ide::after {
     background: radial-gradient(
       360px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
       color-mix(in oklab, var(--primary-soft) 22%, transparent),

@@ -52,7 +52,7 @@ const total = pages.length;
         <li>
           <a href={href} class="fsh-sec-card group">
             {/* Watermark numeral — pure editorial accent */}
-            <span class="fsh-sec-watermark" aria-hidden="true">{num}</span>
+            <span class="fsh-sec-watermark" aria-hidden="true" data-num={num}></span>
 
             {/* Pagination eyebrow: 01 / 04 — gives context within the section */}
             <div class="relative">
@@ -65,7 +65,7 @@ const total = pages.length;
 
             {/* Title + description */}
             <div class="relative mt-auto pt-8">
-              <h3 class="fsh-sec-title">{page.data.title}</h3>
+              <h2 class="fsh-sec-title">{page.data.title}</h2>
               {page.data.description && (
                 <p class="fsh-sec-desc">{page.data.description}</p>
               )}
@@ -151,6 +151,9 @@ const total = pages.length;
   }
 
   /* Watermark numeral — bottom-right, clipped at the corner */
+  .fsh-sec-watermark::before {
+    content: attr(data-num);
+  }
   .fsh-sec-watermark {
     position: absolute;
     bottom: -0.28em;
@@ -172,7 +175,7 @@ const total = pages.length;
     color: color-mix(in oklab, var(--primary) 11%, transparent);
     transform: scale(1.05);
   }
-  .dark .fsh-sec-card:hover .fsh-sec-watermark {
+  :global(.dark) .fsh-sec-card:hover .fsh-sec-watermark {
     color: color-mix(in oklab, var(--primary-soft) 12%, transparent);
   }
 
@@ -262,7 +265,7 @@ const total = pages.length;
     color: var(--primary);
     transform: translateX(3px);
   }
-  .dark .fsh-sec-card:hover .fsh-sec-arrow {
+  :global(.dark) .fsh-sec-card:hover .fsh-sec-arrow {
     color: var(--primary-soft);
   }
 

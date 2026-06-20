@@ -83,7 +83,7 @@ const cards = sections
           {/* Huge watermark numeral — pure design accent.
               Sits absolutely positioned bottom-right, clipped by the
               card's overflow-hidden. Scales subtly on hover. */}
-          <span class="fsh-cat-watermark" aria-hidden="true">{num}</span>
+          <span class="fsh-cat-watermark" aria-hidden="true" data-num={num}></span>
 
           {/* Icon (alone — the numeral carries the chapter context) */}
           <div class="relative">
@@ -94,7 +94,7 @@ const cards = sections
 
           {/* Title + description */}
           <div class="relative mt-7 flex-1">
-            <h3 class="fsh-cat-title">{card.label}</h3>
+            <h2 class="fsh-cat-title">{card.label}</h2>
             {card.description && (
               <p class="fsh-cat-desc">{card.description}</p>
             )}
@@ -179,6 +179,9 @@ const cards = sections
 
   /* Watermark numeral — Outfit display, very low contrast.
      Sits behind everything; clip-cropped at the corner. */
+  .fsh-cat-watermark::before {
+    content: attr(data-num);
+  }
   .fsh-cat-watermark {
     position: absolute;
     bottom: -0.25em;
@@ -200,7 +203,7 @@ const cards = sections
     color: color-mix(in oklab, var(--primary) 12%, transparent);
     transform: scale(1.06);
   }
-  .dark .fsh-cat-card:hover .fsh-cat-watermark {
+  :global(.dark) .fsh-cat-card:hover .fsh-cat-watermark {
     color: color-mix(in oklab, var(--primary-soft) 12%, transparent);
   }
 
@@ -225,7 +228,7 @@ const cards = sections
     border-color: color-mix(in oklab, var(--primary) 22%, transparent);
     color: var(--primary);
   }
-  .dark .fsh-cat-card:hover .fsh-cat-icon {
+  :global(.dark) .fsh-cat-card:hover .fsh-cat-icon {
     background: color-mix(in oklab, var(--primary-soft) 11%, transparent);
     border-color: color-mix(in oklab, var(--primary-soft) 24%, transparent);
     color: var(--primary-soft);
@@ -295,7 +298,7 @@ const cards = sections
     color: var(--primary);
     transform: translateX(3px);
   }
-  .dark .fsh-cat-card:hover .fsh-cat-arrow {
+  :global(.dark) .fsh-cat-card:hover .fsh-cat-arrow {
     color: var(--primary-soft);
   }
 

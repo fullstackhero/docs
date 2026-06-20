@@ -58,7 +58,7 @@ const Tag = href ? 'a' : 'div';
       0 4px 12px -4px rgb(15 23 42 / 0.06),
       0 12px 28px -10px rgb(15 23 42 / 0.08);
   }
-  .dark .card-elevated {
+  :global(.dark) .card-elevated {
     background: color-mix(in oklab, var(--card) 70%, transparent);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
@@ -81,7 +81,7 @@ const Tag = href ? 'a' : 'div';
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
   }
-  .dark .card-subtle {
+  :global(.dark) .card-subtle {
     background: color-mix(in oklab, var(--subtle) 40%, transparent);
   }
 
@@ -106,7 +106,7 @@ const Tag = href ? 'a' : 'div';
       0 4px 12px -4px color-mix(in oklab, var(--primary) 12%, transparent),
       0 24px 48px -12px color-mix(in oklab, var(--primary) 18%, transparent);
   }
-  .dark .card-elevated.card-interactive:hover {
+  :global(.dark) .card-elevated.card-interactive:hover {
     border-color: color-mix(in oklab, var(--primary-soft) 30%, var(--border));
     box-shadow:
       0 1px 0 rgb(255 255 255 / 0.06) inset,
@@ -118,7 +118,7 @@ const Tag = href ? 'a' : 'div';
     border-color: color-mix(in oklab, var(--primary) 40%, transparent);
     background: color-mix(in oklab, var(--primary) 3%, transparent);
   }
-  .dark .card-outline.card-interactive:hover {
+  :global(.dark) .card-outline.card-interactive:hover {
     border-color: color-mix(in oklab, var(--primary-soft) 40%, transparent);
     background: color-mix(in oklab, var(--primary-soft) 5%, transparent);
   }
@@ -128,7 +128,7 @@ const Tag = href ? 'a' : 'div';
     border-color: color-mix(in oklab, var(--primary) 15%, transparent);
     box-shadow: 0 8px 20px -8px color-mix(in oklab, var(--primary) 15%, transparent);
   }
-  .dark .card-subtle.card-interactive:hover {
+  :global(.dark) .card-subtle.card-interactive:hover {
     background: color-mix(in oklab, var(--card) 60%, transparent);
     border-color: color-mix(in oklab, var(--primary-soft) 25%, transparent);
   }

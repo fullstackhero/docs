@@ -31,12 +31,12 @@ const isRootActive = rootPage ? isActivePath(currentPath, rootPage.href) : false
           : 'border-border bg-card hover:border-border-strong',
       ]}
     >
-      <span class="font-mono text-[10px] tracking-[0.2em] text-muted-foreground/70 tabular-nums">00</span>
+      <span class="font-mono text-[10px] tracking-[0.2em] text-muted-foreground/80 tabular-nums">00</span>
       <span class:list={['flex-1 font-medium tracking-tight', isRootActive ? 'text-primary' : 'text-foreground/90']}>
         {rootPage.title}
       </span>
       <svg
-        class="h-3.5 w-3.5 text-muted-foreground/60 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-foreground"
+        class="h-3.5 w-3.5 text-muted-foreground/80 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-foreground"
         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
       >
@@ -72,7 +72,7 @@ const isRootActive = rootPage ? isActivePath(currentPath, rootPage.href) : false
             <span
               class:list={[
                 'font-mono text-[10px] tracking-[0.2em] tabular-nums transition-colors',
-                isOpen ? 'text-primary' : 'text-muted-foreground/60 group-hover/btn:text-muted-foreground',
+                isOpen ? 'text-primary' : 'text-muted-foreground/80 group-hover/btn:text-muted-foreground',
               ]}
             >
               {num}
@@ -89,7 +89,7 @@ const isRootActive = rootPage ? isActivePath(currentPath, rootPage.href) : false
               data-chevron
               class:list={[
                 'h-3.5 w-3.5 shrink-0 transition-all duration-300',
-                isOpen ? 'rotate-180 text-primary' : 'text-muted-foreground/60 group-hover/btn:text-muted-foreground',
+                isOpen ? 'rotate-180 text-primary' : 'text-muted-foreground/80 group-hover/btn:text-muted-foreground',
               ]}
               viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
@@ -212,7 +212,7 @@ const isRootActive = rootPage ? isActivePath(currentPath, rootPage.href) : false
     background-color: color-mix(in oklab, var(--primary) 9%, transparent);
     padding-left: calc(0.75rem + 6px);
   }
-  .dark .fsh-item-active {
+  :global(.dark) .fsh-item-active {
     color: var(--primary-soft);
     background-color: color-mix(in oklab, var(--primary-soft) 12%, transparent);
   }
@@ -229,7 +229,7 @@ const isRootActive = rootPage ? isActivePath(currentPath, rootPage.href) : false
     background: var(--primary);
     box-shadow: 0 0 0 2px color-mix(in oklab, var(--primary) 28%, transparent);
   }
-  .dark .fsh-rail {
+  :global(.dark) .fsh-rail {
     background: var(--primary-soft);
     box-shadow: 0 0 0 2px color-mix(in oklab, var(--primary-soft) 30%, transparent);
   }
@@ -282,7 +282,7 @@ const isRootActive = rootPage ? isActivePath(currentPath, rootPage.href) : false
       if (chevron) {
         chevron.classList.toggle('rotate-180', open);
         chevron.classList.toggle('text-primary', open);
-        chevron.classList.toggle('text-muted-foreground/60', !open);
+        chevron.classList.toggle('text-muted-foreground/80', !open);
       }
       item.classList.toggle('fsh-chapter-open', open);
       item.classList.toggle('border-border', !open);
@@ -293,7 +293,7 @@ const isRootActive = rootPage ? isActivePath(currentPath, rootPage.href) : false
       const lbl = trigger?.querySelector<HTMLElement>('span:nth-child(2)');
       if (num) {
         num.classList.toggle('text-primary', open);
-        num.classList.toggle('text-muted-foreground/60', !open);
+        num.classList.toggle('text-muted-foreground/80', !open);
       }
       if (lbl) {
         lbl.classList.toggle('text-foreground', open);

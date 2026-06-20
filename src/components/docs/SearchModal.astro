@@ -13,6 +13,7 @@
   class="fixed inset-0 z-modal pointer-events-none opacity-0 transition-opacity duration-150"
   data-search-modal
   aria-hidden="true"
+  inert
 >
   <button
     type="button"
@@ -104,6 +105,7 @@
       modal.classList.remove('pointer-events-none', 'opacity-0');
       modal.classList.add('pointer-events-auto', 'opacity-100');
       modal.setAttribute('aria-hidden', 'false');
+      modal.removeAttribute('inert');
       document.body.style.overflow = 'hidden';
       setTimeout(() => input?.focus(), 50);
     }
@@ -112,6 +114,7 @@
       modal.classList.add('pointer-events-none', 'opacity-0');
       modal.classList.remove('pointer-events-auto', 'opacity-100');
       modal.setAttribute('aria-hidden', 'true');
+      modal.setAttribute('inert', '');
       document.body.style.overflow = '';
       if (input) input.value = '';
       if (results) results.innerHTML = '<p class="px-3 py-6 text-center text-muted-foreground">Type to search…</p>';

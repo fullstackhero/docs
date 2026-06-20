@@ -128,7 +128,7 @@ const items = headings.filter((h) => h.depth === 2 || h.depth === 3);
     font-weight: 500;
     background-color: color-mix(in oklab, var(--primary) 8%, transparent);
   }
-  .dark .fsh-toc-link[data-active="true"] {
+  :global(.dark) .fsh-toc-link[data-active="true"] {
     color: var(--primary-soft);
     background-color: color-mix(in oklab, var(--primary-soft) 12%, transparent);
   }
@@ -138,7 +138,7 @@ const items = headings.filter((h) => h.depth === 2 || h.depth === 3);
     transform: translateY(-50%) scale(1.1);
     box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 18%, transparent);
   }
-  .dark .fsh-toc-link[data-active="true"] .fsh-toc-dot {
+  :global(.dark) .fsh-toc-link[data-active="true"] .fsh-toc-dot {
     background: var(--primary-soft);
     border-color: var(--primary-soft);
     box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary-soft) 22%, transparent);

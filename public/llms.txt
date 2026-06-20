@@ -59,21 +59,24 @@ The single command `dotnet run --project src/Host/FSH.Starter.AppHost` boots the
 
 For production deployment, `deploy/docker/docker-compose.yml` ships a complete Docker Compose stack covering all the above services.
 
-## Documentation map
+## Docs
 
-- Landing: https://fullstackhero.net/
-- Getting Started: https://fullstackhero.net/docs/getting-started/
-- Install: https://fullstackhero.net/docs/getting-started/install/
-- Architecture: https://fullstackhero.net/docs/architecture/
-- Modules: https://fullstackhero.net/docs/modules/
-- Building Blocks: https://fullstackhero.net/docs/building-blocks/
-- Cross-Cutting Concerns: https://fullstackhero.net/docs/cross-cutting-concerns/
-- Security: https://fullstackhero.net/docs/security/
-- Frontend: https://fullstackhero.net/docs/frontend/
-- Guides: https://fullstackhero.net/docs/guides/
-- Compare: https://fullstackhero.net/docs/compare/
-- Contributing: https://fullstackhero.net/docs/contributing/
-- Full documentation corpus (single file): https://fullstackhero.net/llms-full.txt
+- [Landing](https://fullstackhero.net/): Project overview, features, and positioning
+- [Getting Started](https://fullstackhero.net/docs/getting-started/): Prerequisites, install, and quick start
+- [Install](https://fullstackhero.net/docs/getting-started/install/): Step-by-step local setup
+- [Architecture](https://fullstackhero.net/docs/architecture/): Modular monolith + vertical slice design
+- [Modules](https://fullstackhero.net/docs/modules/): The ten shipped feature modules
+- [Building Blocks](https://fullstackhero.net/docs/building-blocks/): Shared infrastructure libraries
+- [Cross-Cutting Concerns](https://fullstackhero.net/docs/cross-cutting-concerns/): Caching, eventing, jobs, and more
+- [Security](https://fullstackhero.net/docs/security/): Auth, multitenancy isolation, and webhook signing
+- [Frontend](https://fullstackhero.net/docs/frontend/): React admin and dashboard apps
+- [Guides](https://fullstackhero.net/docs/guides/): Task-oriented how-tos
+- [Compare](https://fullstackhero.net/docs/compare/): How it differs from alternatives
+- [Contributing](https://fullstackhero.net/docs/contributing/): How to contribute
+
+## Optional
+
+- [Full documentation corpus](https://fullstackhero.net/llms-full.txt): The entire docs site as a single text file
 
 ## Positioning
 

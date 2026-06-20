@@ -5,7 +5,9 @@
  * wordmark + blurb) + two nav columns + an open-source CTA card that anchors
  * the right edge, over a hairline copyright bar.
  */
+import { Image } from 'astro:assets';
 import siteConfig from '../../data/site';
+import logo from '../../assets/logo-fullstackhero.png';
 
 const projectLinks = [
   { name: 'Docs',            url: '/docs/' },
@@ -32,8 +34,8 @@ const licenseUrl = 'https://github.com/fullstackhero/dotnet-starter-kit/blob/mai
     <div class="flex flex-col items-center gap-12 py-14 text-center md:grid md:grid-cols-12 md:items-start md:gap-x-8 md:gap-y-10 md:py-16 md:text-left">
       <!-- Brand -->
       <div class="flex flex-col items-center md:col-span-4 md:items-start">
-        <a href="/" class="inline-flex items-center gap-2.5" aria-label="fullstackhero — home">
-          <img src="/logo-fullstackhero.png" alt="" width="36" height="36" class="h-9 w-9" loading="lazy" decoding="async" />
+        <a href="/" class="inline-flex items-center gap-2.5">
+          <Image src={logo} alt="" width={36} height={36} densities={[1, 2]} format="webp" class="h-9 w-9" loading="lazy" decoding="async" />
           <span class="inline-flex items-baseline gap-1">
             <span class="font-display text-[20px] tracking-[-0.03em] text-foreground lowercase leading-none">
               <span class="font-light">fullstack</span><span class="font-semibold">hero</span>
