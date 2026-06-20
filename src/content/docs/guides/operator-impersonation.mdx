@@ -53,15 +53,11 @@ Navigate to **Users → All users**. The list shows every user across every tena
             alt="Admin users list page"
             caption="Search by name or email; click a user to open the detail page." />
 
-Search by email or name, then open the user's detail page.
-
-<Screenshot src="/screenshots/admin/user-detail.png"
-            alt="Admin user detail page with Impersonate button"
-            caption="The Impersonate action lives near the top of the detail page, gated by Identity.Impersonation.Start permission." />
+Impersonation itself is launched from the **tenant's** detail page — open **Tenants**, pick the tenant the user belongs to, and click **Impersonate user** (the action is gated by `Identity.Impersonation.Start`). The dialog carries its own user search, so you select the exact target there.
 
 ### 3. Start a grant
 
-Click **Impersonate**. A modal opens asking for:
+In the **Impersonate user** dialog, search for and select the target user, then set:
 
 - **Duration** — 10 / 15 / 30 minutes (configurable). 30 minutes is the default; pick the shortest window that fits the investigation.
 - **Reason** — mandatory free text. "Investigating ticket #4127 — user can't upload invoice PDF." This text lands in the audit trail; future you will appreciate the specifics.
@@ -94,7 +90,7 @@ The kit doesn't ship a banner because some debug scenarios need an authentic-use
 
 When you're done, three ways to end the grant:
 
-- **Click "End impersonation"** in the admin console (cleanest).
+- **Click "End impersonation"** in the impersonated dashboard tab (cleanest) — the banner at the top of that tab carries the button.
 - **Close the impersonated tab** and ignore the token — the grant stays active until it expires; safe but messy.
 - **Let it expire** naturally after the duration ends; the token stops working at that instant.
 
@@ -105,11 +101,7 @@ POST /api/v1/identity/impersonation/end
 Authorization: Bearer <impersonation-token>
 ```
 
-…which sets `EndedAtUtc` on the grant. The admin console fires this automatically when you click **End**.
-
-<Screenshot src="/screenshots/admin/impersonation-active-toolbar.png"
-            alt="Admin toolbar while an impersonation grant is active"
-            caption="An active grant shows the remaining time + an End button in the admin layout's top bar." />
+…which sets `EndedAtUtc` on the grant. The dashboard fires this automatically when you click **End impersonation** in the impersonation banner.
 
 ### 6. Revoke (emergency kill)
 
@@ -123,17 +115,17 @@ Click the **Revoke** action; supply an optional reason; confirm. The grant trans
 
 ### 7. Read the audit trail
 
-Navigate to **Audits → Security**. Filter by event type containing `Impersonation`.
+Navigate to **Audits** and filter by the **Security** event type — impersonation actions (`ImpersonationStarted`, `ImpersonationEnded`, `ImpersonationRevoked`) are recorded as security events.
 
 <Screenshot src="/screenshots/admin/audit-impersonation-list.png"
-            alt="Audit log filtered to impersonation events"
-            caption="Each row shows action, actor, target, tenant, reason, IP, user agent, and timestamp." />
+            alt="Audit log filtered to Security events"
+            caption="The Security filter surfaces impersonation start/end/revoke alongside logins and role grants; each row opens its full payload." />
 
-Click any row to expand the full payload — `MetadataJson` carries every field that the grant captured.
+Click any row to open its detail sheet — the payload carries every field the grant captured.
 
 <Screenshot src="/screenshots/admin/audit-impersonation-detail.png"
-            alt="Audit detail panel for an impersonation event"
-            caption="The detail panel shows actor + target identity, tenant context, full reason, and a link to the originating grant." />
+            alt="Audit detail sheet for an impersonation event"
+            caption="The payload shows the action (ImpersonationStarted), the reason, actor + target tenants, and the captured claims snapshot (IP, user agent, target user)." />
 
 ## Cross-tenant impersonation
 
