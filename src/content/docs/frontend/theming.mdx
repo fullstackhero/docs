@@ -79,10 +79,6 @@ Reads are cached via HybridCache (1 hour distributed / 2 minutes local) and inva
 
 The branding card on the admin console's **tenant detail page** is the operator-facing editor. It scopes each call to the target tenant by overriding the `tenant` header — only root operators get past that override — and covers the light + dark palettes plus brand assets. Typography and layout exist on the DTO but are intentionally left out of the v1 editor; wire them in if your product needs them.
 
-<Screenshot src="/screenshots/admin/tenant-theme-editor.png"
-            alt="Tenant branding editor"
-            caption="Edit each colour role for light + dark mode and the brand assets; Save persists, Reset restores the kit defaults." />
-
 **Save** persists via `PUT /api/v1/tenants/theme`; **Reset** calls `POST /api/v1/tenants/theme/reset`. Both invalidate the server-side cache immediately.
 
 ## The dashboard's appearance system (per-user)

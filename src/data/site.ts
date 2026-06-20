@@ -9,6 +9,8 @@ const siteConfig = {
   description:
     'Free, MIT-licensed .NET 10 starter kit with a React admin + dashboard. Modular monolith, vertical slice, multitenant, with ten ready-to-ship modules.',
   repo: 'https://github.com/fullstackhero/dotnet-starter-kit',
+  // This documentation site's own repo — used for the per-page "Edit on GitHub" link.
+  docsRepo: 'https://github.com/fullstackhero/docs',
   author: 'Mukesh Murugan',
   // Default social card; per-page cards live at /og/docs/<slug>.jpg (1200×630).
   ogImage: '/logo-fullstackhero.png',

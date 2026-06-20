@@ -173,10 +173,6 @@ useRealtimeEvent<NotificationDto>("NotificationCreated", (notification) => {
 
 The admin console only wires `NotificationCreated` today — the dashboard's variant of the same context carries the chat + presence traffic. A bell icon in the top bar shows unread count + a popover with the recent items.
 
-<Screenshot src="/screenshots/admin/notifications-bell.png"
-            alt="Notifications bell with unread indicator"
-            caption="Real-time push from the Notifications module — security events, audit alerts, impersonation activity." />
-
 ## The impersonation flow in the UI
 
 This is the admin console's most-asked-about feature. Full walkthrough lives in the [operator impersonation guide](/docs/guides/operator-impersonation/); short version:
@@ -195,10 +191,6 @@ This is the admin console's most-asked-about feature. Full walkthrough lives in 
 ## Tenant branding editor
 
 The tenant detail page carries a branding card where root operators edit a tenant's `TenantTheme` — the light + dark colour palettes and brand asset URLs (logo, dark logo, favicon). Typography and layout fields exist on the server-side DTO but are intentionally left out of the v1 editor. The admin console itself stays themed in the kit's own palette (no per-tenant chrome for operator tools).
-
-<Screenshot src="/screenshots/admin/tenant-theme-editor.png"
-            alt="Tenant branding editor"
-            caption="Edit light + dark palettes and brand assets per tenant; save or reset to the kit defaults." />
 
 See [Theming](/docs/frontend/theming/) for the full palette + asset surface.
 
@@ -223,10 +215,6 @@ Permission assignment per role, grouped by resource with per-action toggles and 
 ### Webhooks
 
 Subscription list with delivery log per subscription — every attempt, response code, error message.
-
-<Screenshot src="/screenshots/admin/webhooks-delivery-log.png"
-            alt="Webhooks subscription with delivery log"
-            caption="Per-subscription log of every delivery attempt — HTTP code, duration, error, retry count." />
 
 ## Local development
 

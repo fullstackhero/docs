@@ -5,6 +5,7 @@ import PageHeader from '../../components/docs/PageHeader.astro';
 import CourseCta from '../../components/docs/CourseCta.astro';
 import Breadcrumbs from '../../components/docs/Breadcrumbs.astro';
 import PrevNext from '../../components/docs/PrevNext.astro';
+import EditOnGitHub from '../../components/docs/EditOnGitHub.astro';
 import { mdxComponents } from '../../components/mdx';
 import { buildBreadcrumbItems, buildBreadcrumbSchema } from '../../helpers/breadcrumb';
 import { sections } from '../../content/docs/_sections';
@@ -30,6 +31,14 @@ const { entry } = Astro.props;
 const { Content, headings } = await render(entry);
 const currentHref = Astro.url.pathname.endsWith('/') ? Astro.url.pathname : `${Astro.url.pathname}/`;
 const slugForCrumb = entry.id.replace(/\.mdx$/, '').replace(/\/index$/, '');
+// Repo-relative path to this page's source MDX, for the "Edit on GitHub" link.
+// Prefer the glob loader's `filePath` (already root-relative, e.g.
+// "src/content/docs/security/index.mdx") — the `id` strips `/index`, so it
+// can't distinguish "security.mdx" from "security/index.mdx". Fall back to an
+// id-based reconstruction only if filePath is somehow absent.
+const sourcePath =
+  entry.filePath ??
+  `src/content/docs/${entry.id.endsWith('.mdx') ? entry.id : `${entry.id}.mdx`}`;
 
 // ── Per-page SEO ────────────────────────────────────────────────────────
 const seo = entry.data.seo ?? {};
@@ -98,5 +107,6 @@ const additionalSchemas = [breadcrumbSchema, articleSchema];
   <article class="prose max-w-none" data-pagefind-body>
     <Content components={mdxComponents} />
   </article>
+  <EditOnGitHub filePath={sourcePath} />
   <PrevNext currentHref={currentHref} />
 </DocsLayout>

@@ -42,6 +42,32 @@ const { src, alt, caption, width, aspect = '16/9' } = Astro.props as Props;
 const publicPath = src ? path.join(process.cwd(), 'public', src.replace(/^\//, '')) : null;
 const exists = publicPath ? fs.existsSync(publicPath) : false;
 
+/**
+ * Read intrinsic pixel dimensions from a PNG header (IHDR width/height are
+ * big-endian uint32s at byte offsets 16 and 20). We emit these as the img's
+ * width/height attributes so that (a) the image is exempt from prose.css's
+ * `img:not([width])` CLS rule — which otherwise forces a 16/9 box with
+ * object-fit:contain and pillarboxes any non-16/9 screenshot with side bars —
+ * and (b) the browser reserves the correct aspect ratio, preventing layout
+ * shift. Works for any aspect ratio; falls back to the `width` prop if the
+ * file isn't a parseable PNG.
+ */
+function readPngSize(file: string): { width: number; height: number } | null {
+  try {
+    const buf = fs.readFileSync(file);
+    if (buf.length < 24) return null;
+    // PNG signature: 89 50 4E 47 0D 0A 1A 0A
+    if (buf.toString('hex', 0, 8) !== '89504e470d0a1a0a') return null;
+    return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
+  } catch {
+    return null;
+  }
+}
+
+const dim = exists && publicPath ? readPngSize(publicPath) : null;
+const imgWidth = dim?.width ?? width;
+const imgHeight = dim?.height;
+
 // Hide placeholders in production builds — missing screenshots leave no
 // trace in shipped docs. Dev keeps showing them so the author can see
 // what's still needed.
@@ -53,10 +79,11 @@ const showPlaceholder = !exists && import.meta.env.DEV;
     <img
       src={src}
       alt={alt}
-      width={width}
+      width={imgWidth}
+      height={imgHeight}
       loading="lazy"
       decoding="async"
-      class="block w-full rounded-lg border border-border shadow-lg"
+      class="block h-auto w-full rounded-lg border border-border shadow-lg"
     />
     {caption && (
       <figcaption class="mt-3 text-center text-[13px] text-muted-foreground">
