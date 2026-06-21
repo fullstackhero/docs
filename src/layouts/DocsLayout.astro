@@ -17,11 +17,15 @@ interface Props {
   seoTitle?: string;
   /** Block search-engine indexing for this page (drafts, legal, etc.). */
   noindex?: boolean;
+  /** Open Graph object type — docs pages pass "article". */
+  ogType?: 'website' | 'article';
+  /** ISO timestamp for article:modified_time. */
+  modifiedTime?: string;
   /** Additional JSON-LD schemas (BreadcrumbList, TechArticle, …). */
   additionalSchemas?: unknown[];
 }
 
-const { title, description, headings, image, seoTitle, noindex, additionalSchemas } = Astro.props;
+const { title, description, headings, image, seoTitle, noindex, ogType, modifiedTime, additionalSchemas } = Astro.props;
 
 // Identify the current docs section for the mobile trigger label.
 const pathname = new URL(Astro.request.url).pathname;
@@ -31,7 +35,7 @@ const currentSection = currentSectionDir
   ? sections.find((s) => s.dir === currentSectionDir)
   : undefined;
 ---
-<BaseLayout {title} {description} {image} {seoTitle} {noindex} {additionalSchemas}>
+<BaseLayout {title} {description} {image} {seoTitle} {noindex} {ogType} {modifiedTime} {additionalSchemas}>
   <Header />
   <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
     <div class="lg:grid lg:grid-cols-[16rem_minmax(0,1fr)_14rem] lg:gap-10 xl:gap-12">

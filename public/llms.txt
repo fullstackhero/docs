@@ -51,7 +51,7 @@ Core, Persistence, Shared, Web, Caching, Eventing, Eventing.Abstractions, Jobs, 
 - .NET Aspire 13.3.3 (AppHost) for local orchestration
 - React 19 + TypeScript 5.7 + Vite 7 for the admin and dashboard apps
 - xUnit + Shouldly + NSubstitute + AutoFixture + NetArchTest + Testcontainers for testing
-- Around 900 [Fact]/[Theory] tests across unit, integration, and architecture suites
+- Around 1,500 [Fact]/[Theory] backend tests (1,484: 774 unit, 661 integration, 49 architecture) plus 214 Playwright E2E tests across the two React apps
 
 ## How to run
 

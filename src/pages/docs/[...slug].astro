@@ -77,6 +77,11 @@ const articleSchema = {
   image: new URL(image ?? siteConfig.ogImage, Astro.site ?? siteConfig.url).toString(),
   author: { '@id': new URL('/#organization', siteConfig.url).toString() },
   publisher: { '@id': new URL('/#organization', siteConfig.url).toString() },
+  // Per-page keywords are authored in frontmatter (seo.keywords); surface
+  // them in the TechArticle so AI engines + crawlers can read the page's
+  // topical focus. (Google ignores <meta keywords>, but JSON-LD keywords
+  // are parsed by LLM-based retrieval.)
+  ...(seo.keywords && { keywords: seo.keywords }),
   ...(entry.data.lastUpdated && {
     dateModified: entry.data.lastUpdated.toISOString(),
     datePublished: entry.data.lastUpdated.toISOString(),
@@ -94,6 +99,8 @@ const additionalSchemas = [breadcrumbSchema, articleSchema];
   {image}
   {seoTitle}
   {noindex}
+  ogType="article"
+  modifiedTime={entry.data.lastUpdated?.toISOString()}
   {additionalSchemas}
 >
   <Breadcrumbs slug={slugForCrumb} title={entry.data.title} />
