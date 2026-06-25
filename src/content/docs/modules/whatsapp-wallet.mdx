@@ -30,7 +30,7 @@ A top-up moves money into a tenant's wallet through an operator-approved, invoic
 
 1. **Tenant requests a top-up.** From the dashboard's **WhatsApp wallet** page a tenant user submits a top-up request for a money amount (arbitrary amount within a min/max validator). The request starts in `Pending`.
 2. **Operator reviews.** In the admin console, **Billing → Top-ups** lists pending requests across tenants. The operator can **Approve** or **Reject**.
-3. **Approve issues an invoice.** Approving **generates and issues an invoice** for the requested amount (an `Topup`-purpose invoice) and moves the request to `Invoiced`. Issuing the invoice emails it to the tenant (the existing Billing invoice-issued notification).
+3. **Approve issues an invoice.** Approving **generates and issues an invoice** for the requested amount (a `Topup`-purpose invoice) and moves the request to `Invoiced`. Issuing the invoice emails it to the tenant (the existing Billing invoice-issued notification).
 4. **Tenant pays offline.** The tenant pays the invoice manually — bank transfer, card over the phone, etc. The kit does not collect the payment.
 5. **Operator marks the invoice Paid.** On the existing invoice-detail page the operator marks the invoice **Paid**. For a top-up invoice this **auto-credits the wallet** — appending a `Topup` `WalletTransaction` to the ledger — and moves the request to `Completed`, atomically in the same save.
 
