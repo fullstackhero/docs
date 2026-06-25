@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-06-20
+lastUpdated: 2026-06-24
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -10,6 +10,10 @@ seo:
 ---
 
 Notable changes to the kit, newest first.
+
+## 2026-06-24
+
+- **Config: the tenant billing grace-period setting was renamed `Billing:GraceWindowDays` → `Billing:GracePeriodDays` (breaking).** The option (bound in both `TenantBillingOptions` and Identity's `TenantGraceOptions`) is now named consistently with the "grace period" term used everywhere else in the kit; the default of 7 days is unchanged. Deployments that set `Billing:GraceWindowDays` (env `Billing__GraceWindowDays`) must rename the key to `Billing:GracePeriodDays`, otherwise the override is silently ignored and the default applies. No public contract change — the `GraceEndsUtc` tenant-status and integration-event fields are untouched. See PR [#1313](https://github.com/fullstackhero/dotnet-starter-kit/pull/1313).
 
 ## 2026-06-20
 
