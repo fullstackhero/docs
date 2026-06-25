@@ -1,0 +1,89 @@
+---
+title: WhatsApp prepaid wallet
+lastUpdated: 2026-06-26
+description: A prepaid money wallet and operator-approved top-up lifecycle for recovering WhatsApp message costs under the BSP / Meta Tech-Provider model.
+sidebar:
+  label: WhatsApp wallet
+  order: 8.5
+pageType: reference
+seo:
+  title: 'WhatsApp prepaid wallet & top-ups — fullstackhero Billing'
+  description: 'A prepaid money wallet with an operator-approved top-up lifecycle: tenant requests a top-up, operator approves and issues an invoice, marking it paid auto-credits the wallet ledger.'
+  keywords: 'whatsapp wallet .net, prepaid wallet saas, bsp meta tech provider billing, top-up request approval, wallet ledger dotnet'
+---
+
+The WhatsApp prepaid wallet extends the [Billing module](/docs/modules/billing/) with a **prepaid money wallet** and an **operator-approved top-up lifecycle**. It exists to recover the cost of WhatsApp message traffic when you operate as a **BSP (Business Solution Provider) / Meta Tech Provider**: tenants' WhatsApp numbers are onboarded under *your* Meta account, so **Meta bills you** for all of their message traffic, and you recover that cost from each tenant by having them keep a prepaid balance with you.
+
+<Callout type="note" title="Phase 1 — wallet and top-ups only">
+This is Phase 1. It ships the **money wallet** and the **top-up lifecycle**. It does **not** meter message sends: nothing debits the wallet per WhatsApp message yet — that needs the Meta Cloud API send integration, which is Phase 2. See [Out of scope](#out-of-scope-phase-2) below. The wallet holds and grows a balance today; it does not shrink.
+</Callout>
+
+## The BSP / Meta Tech-Provider model
+
+A clinic (tenant) does not hold its own Meta billing relationship. Its WhatsApp Business number is onboarded under your Meta Tech-Provider account, so **Meta charges you** for every conversation and template send across all tenants. You front that cost and recover it from each tenant through a prepaid wallet they top up in advance.
+
+This is why the wallet holds a **money balance** (Phase 1 currency is **USD**), not a message or "credits remaining" count: the balance is what the tenant has prepaid against their future message cost. Phase 2 will debit that balance per send.
+
+## The top-up lifecycle
+
+A top-up moves money into a tenant's wallet through an operator-approved, invoice-backed flow. Payment is **manual / offline** — the kit issues an invoice and records the credit; it does not integrate a payment gateway.
+
+1. **Tenant requests a top-up.** From the dashboard's **WhatsApp wallet** page a tenant user submits a top-up request for a money amount (arbitrary amount within a min/max validator). The request starts in `Pending`.
+2. **Operator reviews.** In the admin console, **Billing → Top-ups** lists pending requests across tenants. The operator can **Approve** or **Reject**.
+3. **Approve issues an invoice.** Approving **generates and issues an invoice** for the requested amount (an `Topup`-purpose invoice) and moves the request to `Invoiced`. Issuing the invoice emails it to the tenant (the existing Billing invoice-issued notification).
+4. **Tenant pays offline.** The tenant pays the invoice manually — bank transfer, card over the phone, etc. The kit does not collect the payment.
+5. **Operator marks the invoice Paid.** On the existing invoice-detail page the operator marks the invoice **Paid**. For a top-up invoice this **auto-credits the wallet** — appending a `Topup` `WalletTransaction` to the ledger — and moves the request to `Completed`, atomically in the same save.
+
+`Reject` moves a `Pending` request to `Rejected` (no invoice, no credit). The wallet balance changes **only when a top-up invoice is marked Paid** — there is no provisional balance for a pending or merely-invoiced request.
+
+### Request states
+
+| State | Meaning |
+|---|---|
+| `Pending` | Submitted by the tenant, awaiting operator action |
+| `Invoiced` | Operator approved; an invoice has been issued for the amount |
+| `Completed` | Invoice paid; wallet credited |
+| `Rejected` | Operator rejected the pending request |
+| `Cancelled` | Reserved for tenant-cancelled requests |
+
+## The wallet ledger
+
+The wallet's balance is the **sum of an append-only ledger** of `WalletTransaction` rows, not a single mutable number — so every balance change is auditable. Phase 1 writes only credit transactions:
+
+| Kind | Phase 1 use |
+|---|---|
+| `Topup` | Credit written when a top-up invoice is marked Paid |
+| `MessageCharge` | **Phase 2** — debit per WhatsApp message send (not yet written) |
+| `Adjustment` | Manual operator correction |
+
+`Wallet.Debit` and `WalletTransactionKind.MessageCharge` exist so the ledger is ready for metering, but **nothing calls `Debit` in Phase 1**.
+
+## Endpoints
+
+All routes mount under `/api/v1/billing` alongside the rest of the Billing module. Like the rest of Billing, the wallet handlers are **root-gated**: an operator (root tenant) may act across tenants, every other caller is pinned to its own tenant id.
+
+| Verb | Route | Permission | Caller |
+|---|---|---|---|
+| GET | `/wallet/me` | `Billing.View` | Tenant — own wallet balance |
+| POST | `/wallet/topup-requests` | `Billing.View` | Tenant — submit a top-up request |
+| GET | `/wallet/topup-requests/me` | `Billing.View` | Tenant — own request history |
+| GET | `/wallet/topup-requests` | `Billing.View` | Operator — all pending/historic requests |
+| POST | `/wallet/topup-requests/{id}/approve` | `Billing.Manage` | Operator — issue invoice, move to `Invoiced` |
+| POST | `/wallet/topup-requests/{id}/reject` | `Billing.Manage` | Operator — move to `Rejected` |
+
+Viewing a wallet and **requesting** a top-up need only `Billing.View`; **approving** or **rejecting** needs `Billing.Manage`. There is no dedicated wallet-credit endpoint — the credit is a side effect of marking the top-up invoice paid via the existing `POST /invoices/{invoiceId}/pay`.
+
+## Out of scope (Phase 2)
+
+The following are intentionally **not** shipped in Phase 1 — readers should not expect message-level deduction yet:
+
+- **Metering / debit** — decrementing the wallet per WhatsApp template send (per Meta category pricing plus markup). Needs the Meta Cloud API send integration.
+- **Low-balance notifications / auto-block** at a zero balance.
+- **Fixed top-up packages** (UI presets) — Phase 1 uses an arbitrary amount with a min/max validator.
+- **Per-category credit pricing display** ("messages remaining") — Phase 1 shows a money balance.
+- **Embedded Signup / WABA onboarding** under your Meta Tech-Provider account.
+
+## Related
+
+- [Billing module](/docs/modules/billing/) — plans, the invoice state machine, and the `POST /invoices/{invoiceId}/pay` transition that triggers the wallet credit.
+- [Modules overview](/docs/modules/) — the other modules that ship in v10.
