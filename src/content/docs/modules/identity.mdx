@@ -1,6 +1,6 @@
 ---
 title: Identity module
-lastUpdated: 2026-06-11
+lastUpdated: 2026-07-02
 description: JWT bearer + refresh tokens, ASP.NET Identity with roles + permissions, user groups, operator impersonation, two-factor TOTP, sessions, and password-policy enforcement.
 sidebar:
   label: Identity
@@ -148,6 +148,10 @@ endpoints.MapPost("/users", handler)
 ## Endpoints
 
 All 51 endpoints are under `/api/v1/identity/`. The rate-limited `auth` policy covers `POST /token/issue`, `POST /token/refresh`, `GET /confirm-email`, `POST /users/{id}/resend-confirmation-email`, `POST /forgot-password`, `POST /reset-password`, and `POST /self-register`. Full table:
+
+<Callout type="note" title="Where reset & confirmation e-mails point">
+The `forgot-password` and registration e-mails link back to the **front-end that made the request**: the Identity module resolves the link's base URL from the request `Origin` header, validated against `CorsOptions.AllowedOrigins`. With more than one SPA each user gets a link to the app they started from, and a forged or unlisted origin is rejected rather than e-mailed. The confirmation link lands on the SPA `/confirm-email` page (which then calls `GET /confirm-email`), not the API route directly. List your SPA origins in `AllowedOrigins` for these flows to work — see [CORS & headers](/docs/security/cors-and-headers/).
+</Callout>
 
 | Verb | Route | What it does |
 |---|---|---|
