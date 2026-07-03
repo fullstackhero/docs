@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-06-20
+lastUpdated: 2026-07-03
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -10,6 +10,10 @@ seo:
 ---
 
 Notable changes to the kit, newest first.
+
+## 2026-07-03
+
+- **Identity: auth e-mail links now resolve to the front-end the request came from, and `CorsOptions.AllowedOrigins` is their allow-list (fix).** The kit ships two SPAs (admin on `:5173`, dashboard on `:5174`), but the back-end had no way to build a user-facing link that targets the app a request actually came from. `forgot-password` built the reset link from a single configured `OriginOptions.OriginUrl` — the API URL in `appsettings.json`, empty in `appsettings.Production.json`, so the handler threw `"Origin URL is not configured."` — and register / self-register / resend-confirmation built the confirmation link from the raw request host and pointed it at the API's `confirm-email` route (which returns JSON) rather than a front-end page. A small `IOriginResolver` (Identity module, no `BuildingBlocks` change) now resolves this per request: **`FrontendOrigin()`** validates the request `Origin` header against `CorsOptions.AllowedOrigins` (normalising trailing slash and case, matching scheme + host + port exactly) and is used for links that land on a SPA, while **`ApiOrigin()`** keeps the previous configured-origin-then-request-host behaviour for API-served assets like avatar URLs. The confirmation e-mail now points at the SPA `/confirm-email` page (present in both apps, which then calls the API). **Action required for deployments:** populate `CorsOptions.AllowedOrigins` with your real SPA URLs — the resolver validates against it **independently of `CorsOptions.AllowAll`**, so an empty list makes `forgot-password`, `register`, `self-register`, and `resend-confirmation-email` reject the request rather than turn a forged `Origin` into a link inside an e-mail. `appsettings.json` now lists the dev origins (`http://localhost:5173`, `http://localhost:5174`); `appsettings.Production.json` intentionally leaves the list empty. This is the structural follow-up to the earlier reset-link string-format fix. See [Identity → origin resolution](/docs/modules/identity/) and [CORS & headers](/docs/security/cors-and-headers/).
 
 ## 2026-06-20
 

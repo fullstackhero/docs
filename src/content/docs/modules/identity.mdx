@@ -1,6 +1,6 @@
 ---
 title: Identity module
-lastUpdated: 2026-06-11
+lastUpdated: 2026-07-03
 description: JWT bearer + refresh tokens, ASP.NET Identity with roles + permissions, user groups, operator impersonation, two-factor TOTP, sessions, and password-policy enforcement.
 sidebar:
   label: Identity
@@ -227,6 +227,19 @@ Yes, the role-permission routes really are `/{id}/permissions` directly under `/
 ```
 
 Lockout is configured by `IdentityOptions` and defaults to 5 failed attempts → 15-minute lock. Outbox events are dispatched by the framework's `OutboxDispatcherHostedService` (on by default) — the module deliberately registers no dispatcher of its own, since a second one would race the same rows.
+
+### Where auth e-mail links point (origin resolution)
+
+Confirmation and password-reset e-mails link to a **front-end** page, not to the API. Because the kit ships two SPAs (admin on `:5173`, dashboard on `:5174`), each link has to target the app the request actually came from. A small `IOriginResolver` in the Identity module resolves this per request, with two distinct notions of origin:
+
+- **`FrontendOrigin()`** — reads the request's `Origin` header and validates it against `CorsOptions.AllowedOrigins`, normalising trailing slash and case and matching scheme + host + port exactly. Used for links that land on a SPA (reset-password and e-mail confirmation). It **throws** when the request carries no allow-listed origin rather than guessing a front-end.
+- **`ApiOrigin()`** — the configured `OriginOptions.OriginUrl`, or the request host when that is empty. Used for links and assets served by the API itself, such as avatar URLs and `RequestContextService`. `OriginUrl` is the API's public base — it is no longer overloaded as the reset-link base.
+
+The e-mail-confirmation link now points at the SPA `/confirm-email` page — present in both `clients/admin` and `clients/dashboard`, which then calls the API — instead of the API route directly.
+
+<Callout type="warning" title="AllowedOrigins gates anonymous e-mail links">
+The allow-list check is a security boundary, not just a CORS convenience. `forgot-password` is anonymous, so a forged `Origin` header must never be turned into a link inside an e-mail. The resolver always validates against `CorsOptions.AllowedOrigins` — **independently of `CorsOptions.AllowAll`** — and rejects anything not on the list. A deployment that leaves `AllowedOrigins` empty makes `forgot-password`, `register`, `self-register`, and `resend-confirmation-email` **reject the request** (no allow-listed front-end origin), not merely fail browser CORS. Populate it with your real SPA URLs. See [CORS & headers](/docs/security/cors-and-headers/).
+</Callout>
 
 ## How to extend
 

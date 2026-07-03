@@ -1,6 +1,6 @@
 ---
 title: CORS & security headers
-lastUpdated: 2026-06-11
+lastUpdated: 2026-07-03
 description: CORS-before-HTTPS-redirect ordering, the SignalR-credentialed-CORS gotcha, and the production security headers the kit emits by default.
 sidebar:
   label: CORS & headers
@@ -40,6 +40,10 @@ CORS in fullstackhero has two non-default conventions: **CORS middleware runs be
 - `AllowAll: false` → `WithOrigins/WithHeaders/WithMethods` from the three lists + `AllowCredentials()`. Startup validation **fails** if any of the three lists is empty while `AllowAll` is false.
 - Credentials are always allowed by the policy — there is no `AllowCredentials` config key.
 - If `AllowAll` is false **and** `AllowedOrigins` is empty, CORS isn't mounted at all — cross-origin browser calls will simply fail. (`appsettings.Production.json` ships with an empty list precisely so you have to fill it in.)
+
+<Callout type="warning" title="AllowedOrigins also gates auth e-mail links">
+`AllowedOrigins` is no longer only the browser CORS allow-list. Identity's origin resolver validates the request `Origin` header against it — **independently of `AllowAll`** — to decide which front-end a password-reset or e-mail-confirmation link points at. Because `forgot-password` is anonymous, this is the security boundary that stops a forged `Origin` from being turned into a link inside an e-mail. A deployment with an empty `AllowedOrigins` makes `forgot-password`, `register`, `self-register`, and `resend-confirmation-email` **reject the request**, not just fail browser CORS. See [Identity → origin resolution](/docs/modules/identity/).
+</Callout>
 
 `UseHeroPlatform` mounts the middleware **before HTTPS redirect**, because OPTIONS preflight requests cannot follow HTTP→HTTPS redirects per the Fetch spec — the redirect breaks the preflight and the actual request never goes out.
 
@@ -129,7 +133,7 @@ The cookie should be HttpOnly (no JS access — limits XSS impact), Secure (HTTP
 ## Common mistakes
 
 - **Setting `AllowAll = true` in production.** CORS exists to give browsers a sanity check on cross-origin calls. Opening to the world removes the check (it doesn't directly compromise auth — auth still gates the request — but it removes the browser-enforced "is this site allowed to call you?" layer).
-- **Forgetting to fill `AllowedOrigins` in production.** With `AllowAll: false` and no origins, CORS isn't mounted — your React apps on other origins will get blocked by the browser. The symptom is "works in Postman, fails in the browser".
+- **Forgetting to fill `AllowedOrigins` in production.** With `AllowAll: false` and no origins, CORS isn't mounted — your React apps on other origins will get blocked by the browser. The symptom is "works in Postman, fails in the browser". It now also breaks auth e-mail links: `forgot-password` and `register` reject the request because the origin resolver finds no allow-listed front-end (see the callout above).
 - **Missing HSTS.** Without HSTS, an attacker on the network can downgrade to HTTP for the first request. The kit emits it on HTTPS responses automatically; verify your proxy doesn't strip it.
 - **CSP that breaks the UI.** If a third-party widget breaks after tightening CSP, look at the browser console — CSP violations are logged. Add the needed origins to `ScriptSources`/`StyleSources`, don't disable the middleware.
 
