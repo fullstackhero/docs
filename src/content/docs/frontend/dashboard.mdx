@@ -46,7 +46,7 @@ clients/dashboard/src/pages/
 ├── identity/          Tenant-scoped admin: users, roles, groups (+ detail pages)
 ├── invoices.tsx       Invoice list + invoice-detail.tsx
 ├── subscription.tsx   Current plan + billing status
-├── settings/          Profile, security (2FA), appearance, notifications, API keys
+├── settings/          Profile, security (2FA), appearance, branding, notifications, API keys
 ├── system/            Sessions, trash (recycle bin) — plus health + audits routes
 ├── tickets/           File ticket, list, detail, comments
 ├── impersonation-ended.tsx   Graceful landing when an operator grant ends
@@ -65,7 +65,7 @@ A few notes:
 
 The dashboard's appearance system is **per-user**: light/dark/system mode, an accent colour (presets or a custom hue), font, density, and reduced motion — all stored in localStorage and applied via CSS custom properties (Settings → Appearance). The neutral chassis is deliberately untinted so the accent does the branding work.
 
-Per-**tenant** branding lives server-side as the Multitenancy module's `TenantTheme` (palette, brand assets, typography, layout) with a permission-gated editor in the admin console. Full details: [theming](/docs/frontend/theming/).
+Per-**tenant** branding lives server-side as the Multitenancy module's `TenantTheme` (palette, brand assets, typography, layout). A tenant admin edits their **own** tenant's brand from **Settings → Branding** (light + dark palettes + logo/favicon URLs, with a live preview and reset-to-defaults) — the tab is permission-gated on `Tenants.UpdateTheme` and the calls are current-tenant-scoped (no `tenant:` header). Operators can still edit any tenant's brand from the admin console. Full details: [theming](/docs/frontend/theming/).
 
 ## Chat — the realtime showcase
 

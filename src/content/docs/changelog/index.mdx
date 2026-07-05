@@ -11,6 +11,10 @@ seo:
 
 Notable changes to the kit, newest first.
 
+## 2026-07-04
+
+- **Dashboard: tenants can now edit their own branding.** The Multitenancy module already exposed current-tenant theme endpoints gated on `Tenants.ViewTheme` (basic) + `Tenants.UpdateTheme` (a tenant-assignable permission), but the only UI lived in the admin console — a tenant had no way to manage its own brand. The dashboard now ships a **Settings → Branding** tab: light + dark colour palettes (swatch + hex), brand-asset URLs (logo, dark logo, favicon) with inline previews, a live theme preview, and reset-to-defaults. The tab renders only for holders of `Tenants.UpdateTheme` (mirroring the sidebar permission gate) and its calls are current-tenant-scoped — no `tenant:` header, unlike the operator editor. Scope matches the admin card's v1 (palette + brand assets; typography/layout on the DTO are omitted). This edits the stored `TenantTheme`; per-tenant *rendering* of app chrome is still opt-in — see [theming](/docs/frontend/theming/). See [#1329](https://github.com/fullstackhero/dotnet-starter-kit/pull/1329).
+
 ## 2026-06-20
 
 - **The `fsh` CLI and `dotnet new` template are now on NuGet as stable `10.0.0`.** The two distribution packages that 10.0.0 had been waiting on have shipped: `FullStackHero.CLI` (install with `dotnet tool install -g FullStackHero.CLI` — no more `--prerelease`) and `FullStackHero.NET.StarterKit` (`dotnet new install FullStackHero.NET.StarterKit`). Because `fsh new` scaffolds *from* that template, the one-command flow is now end-to-end: `dotnet tool install -g FullStackHero.CLI && fsh new MyApp` produces a fully renamed project — unique JWT signing key, generated Docker secrets, `npm install` run, initial commit on `main`. The [Install](/docs/getting-started/install/) and [CLI](/docs/cli/) pages now lead with the CLI as the recommended path; `git clone` and the GitHub template remain available for reading the source or zero-install runs. See the [10.0.0 release](https://github.com/fullstackhero/dotnet-starter-kit/releases/tag/10.0.0).
