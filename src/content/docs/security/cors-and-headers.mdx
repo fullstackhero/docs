@@ -126,10 +126,27 @@ services.ConfigureApplicationCookie(o =>
 
 The cookie should be HttpOnly (no JS access - limits XSS impact), Secure (HTTPS only), and SameSite=Strict for the strongest CSRF defence.
 
+## Front-end origin for auth e-mail links
+
+Links that land on a front-end SPA - the password-reset and e-mail-confirmation e-mails - are **not** built from the CORS list. They resolve through a dedicated `FrontendOptions`, kept separate from CORS on purpose: the CORS allowlist governs which browsers may *call* the API, while this list governs which origins may appear *inside an outbound link*. The two often overlap but carry different duties, and coupling them breaks same-origin / reverse-proxy topologies (SPA + API on one domain need no CORS entries, yet the browser still sends `Origin` on the POST).
+
+```jsonc
+  "FrontendOptions": {
+    "AllowedOrigins": [ "http://localhost:5173", "http://localhost:5174" ],
+    "DefaultOrigin": "http://localhost:5174"   // the tenant SPA
+  }
+```
+
+- **Self-service flows** (`forgot-password`, `self-register`) build the link from the request `Origin` header, validated against `AllowedOrigins` and returned as the canonical list entry - so with more than one SPA each user gets a link back to the app they started from. Because forgot-password is anonymous this is a security boundary: a **forged or unlisted `Origin` is rejected with `400`** rather than turned into a link. A request with **no** `Origin` header (curl, the Scalar try-it UI, mobile, server-to-server) falls back to `DefaultOrigin` instead of failing.
+- **Operator-driven flows** (`register`, `resend-confirmation-email`) target `DefaultOrigin` - the recipient's app - not the calling operator's origin, so a tenant user provisioned from the admin console gets a link into the tenant app, not the console.
+- Matching is component-wise (scheme + host + port, port exact). `appsettings.Production.json` ships both settings empty. The host **still starts** without them: it logs one startup `Warning` naming `FrontendOptions:DefaultOrigin`, and link resolution falls back to the API's own origin (`OriginOptions:OriginUrl`), so e-mails keep going out but point at the API rather than your SPA. Configure them (see the [production checklist](/docs/security/production-checklist/)) to send users where they expect to land.
+
+(`OriginOptions:OriginUrl` has a second, unrelated role: it's the API's own public base for back-end-served assets such as avatar URLs, exposed via `IRequestContext.Origin`.)
+
 ## Common mistakes
 
 - **Setting `AllowAll = true` in production.** CORS exists to give browsers a sanity check on cross-origin calls. Opening to the world removes the check (it doesn't directly compromise auth - auth still gates the request - but it removes the browser-enforced "is this site allowed to call you?" layer).
-- **Forgetting to fill `AllowedOrigins` in production.** With `AllowAll: false` and no origins, CORS isn't mounted - your React apps on other origins will get blocked by the browser. The symptom is "works in Postman, fails in the browser".
+- **Forgetting to fill `AllowedOrigins` in production.** With `AllowAll: false` and no origins, CORS isn't mounted - your React apps on other origins will get blocked by the browser. The symptom is "works in Postman, fails in the browser". (Auth e-mail links are a *separate* concern - they use `FrontendOptions`, see above - which ships empty in production too, and silently falls back to the API origin until you set it.)
 - **Missing HSTS.** Without HSTS, an attacker on the network can downgrade to HTTP for the first request. The kit emits it on HTTPS responses automatically; verify your proxy doesn't strip it.
 - **CSP that breaks the UI.** If a third-party widget breaks after tightening CSP, look at the browser console - CSP violations are logged. Add the needed origins to `ScriptSources`/`StyleSources`, don't disable the middleware.
 
