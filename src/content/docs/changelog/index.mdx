@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-06-20
+lastUpdated: 2026-07-11
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -10,6 +10,16 @@ seo:
 ---
 
 Notable changes to the kit, newest first.
+
+## 2026-07-11
+
+A security & reliability audit pass across the backend. Every finding was reproduced with a failing test and adversarially verified before fixing; the suite stays green (warnings-as-errors, Testcontainers integration tests).
+
+- **Webhooks: outbound delivery now blocks SSRF targets (security fix).** A subscription's destination URL is tenant-supplied, but the create validator only checked "absolute URI + http/https scheme" and both delivery sinks POSTed to it with redirects allowed and no address screening. Any tenant with `Webhooks.Create` could point a webhook at `169.254.169.254` (cloud instance metadata), loopback, or an RFC1918 host and read the delivery log as a blind-SSRF oracle. A shared guard now rejects loopback / link-local / private / CGNAT / IPv6-ULA / `localhost` targets at create time, and the `Webhooks` HTTP client screens the **resolved** IP at connect time (defeating DNS rebinding) with redirects disabled. See [Webhooks](/docs/modules/webhooks/).
+- **Idempotency: replayed responses now actually replay — with the right body and status (fix).** Three defects in the idempotency endpoint filter: the write went through `HybridCache` while the probe read `IDistributedCache` by the raw key, so the entry was never found and **replay silently never engaged**; the cached payload was the wrapped `IResult` (`{"value":…,"statusCode":200}`) rather than the wire body, and the status was captured before the result executed, so a `201 Created` replayed as `200`. The filter now caches the real wire body + status in the same store and key the probe reads. Concurrent duplicate keys are also serialized by an atomic in-flight reservation (Redis `SET NX` when Redis is configured, in-process otherwise) — a duplicate that arrives mid-flight gets `409 Conflict` instead of both executing. Redis stays optional.
+- **Behind a reverse proxy, the real client IP now reaches the pipeline (fix).** The host never enabled forwarded-headers processing, so behind Caddy / cloudflared `RemoteIpAddress` was always the proxy's container IP. That collapsed every rate-limit partition into a single install-wide bucket — one anonymous spike could throttle every tenant's login — and recorded a useless proxy IP on audit trails and user sessions. The platform now honors `X-Forwarded-For` / `X-Forwarded-Proto` early in the pipeline; restrict the trusted set via `ForwardedHeadersOptions` when your ingress topology is fixed.
+- **Mailing: a rejected SendGrid send no longer looks like success (fix).** `SendGridMailService` discarded the `Response` from `SendEmailAsync`, and the client runs with `HttpErrorAsException=false`, so a non-2xx reply (invalid API key, rejected recipient, rate limit) returned normally. Every caller — auth e-mail links, webhooks, notifications — treated a failed send as delivered. A non-success status now throws so the failure reaches the global error handler.
+- **Auditing: the security/exception audit list endpoints are now bounded (fix).** `GET /api/v1/audits/security` and `/audits/exception` did `ToListAsync` with no paging and no default window, so a no-argument call materialized a tenant's entire audit history — a latent out-of-memory on an active tenant. Both now accept optional `Skip`/`Take` and cap server-side (page size 1–200, default 50), mirroring the session-list convention. The unified `GET /api/v1/audits/` endpoint the console uses was already bounded and is unaffected.
 
 ## 2026-06-20
 
