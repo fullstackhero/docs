@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-06-20
+lastUpdated: 2026-07-13
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -11,7 +11,9 @@ seo:
 
 Notable changes to the kit, newest first.
 
-## 2026-06-20
+## 2026-07-13
+
+- **Dashboard: tenants can now edit their own branding from Settings.** A new **Settings → Branding** tab lets a tenant admin holding `Tenants.UpdateTheme` customise their **light and dark palettes** and **brand asset URLs** (logo, dark-mode logo, favicon) with a live preview — mirroring the operator's existing tenant-branding card, but self-service and with no `tenant:` header, since the theme endpoints are already scoped to the current tenant. The tab renders only for holders of that permission; a direct-URL visit without it hits the API's `403`, surfaced as an error band. Editing is draft-based — a **Reset to defaults** action and per-palette reset are available, and unsaved edits are preserved while you work (a co-admin's concurrent change appears on a manual refresh rather than overwriting your form).
 
 - **The `fsh` CLI and `dotnet new` template are now on NuGet as stable `10.0.0`.** The two distribution packages that 10.0.0 had been waiting on have shipped: `FullStackHero.CLI` (install with `dotnet tool install -g FullStackHero.CLI` — no more `--prerelease`) and `FullStackHero.NET.StarterKit` (`dotnet new install FullStackHero.NET.StarterKit`). Because `fsh new` scaffolds *from* that template, the one-command flow is now end-to-end: `dotnet tool install -g FullStackHero.CLI && fsh new MyApp` produces a fully renamed project — unique JWT signing key, generated Docker secrets, `npm install` run, initial commit on `main`. The [Install](/docs/getting-started/install/) and [CLI](/docs/cli/) pages now lead with the CLI as the recommended path; `git clone` and the GitHub template remain available for reading the source or zero-install runs. See the [10.0.0 release](https://github.com/fullstackhero/dotnet-starter-kit/releases/tag/10.0.0).
 
