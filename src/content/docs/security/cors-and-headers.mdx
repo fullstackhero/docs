@@ -1,7 +1,7 @@
 ---
 title: CORS & security headers
-lastUpdated: 2026-06-11
-description: CORS-before-HTTPS-redirect ordering, the SignalR-credentialed-CORS gotcha, and the production security headers the kit emits by default.
+lastUpdated: 2026-07-13
+description: CORS-before-HTTPS-redirect ordering, the SignalR-credentialed-CORS gotcha, forwarded-headers trusted-proxy config, and the production security headers the kit emits by default.
 sidebar:
   label: CORS & headers
   order: 7
@@ -47,12 +47,33 @@ Pipeline order (relevant slice):
 
 ```
 1. UseExceptionHandler
-2. UseResponseCompression
-3. UseCors                ← before HTTPS redirect
-4. UseHttpsRedirection
-5. Security headers
-6. ...
+2. UseForwardedHeaders    ← before anything reads the client IP or scheme
+3. UseResponseCompression
+4. UseCors                ← before HTTPS redirect
+5. UseHttpsRedirection
+6. Security headers
+7. ...
 ```
+
+## Reverse proxy & forwarded headers
+
+The kit runs behind a reverse proxy in production (Cloudflare / cloudflared → Caddy / Nginx → app). Without `UseForwardedHeaders`, `Connection.RemoteIpAddress` is the proxy's IP and `Request.Scheme` is the internal `http`, which breaks two things: the **IP-partitioned rate limiters** (`auth` policy + global IP limiter) collapse into one shared bucket - losing per-origin brute-force protection - and audit / `UserSession` records log the proxy IP for every request. `UseHeroPlatform` mounts `UseForwardedHeaders` **first** (right after the exception handler), so `X-Forwarded-For` / `X-Forwarded-Proto` are applied before rate limiting, auth, HTTPS redirect, and audit read the client.
+
+Blindly trusting `X-Forwarded-For` is itself a hole - any client that can reach the app could forge its own IP, poisoning audit trails and evading the rate limiter. So trust is bound to the ingress you actually run, via `TrustedProxyOptions`:
+
+```jsonc
+{
+  "TrustedProxyOptions": {
+    "KnownProxies": [ "10.0.0.5" ],       // individual upstream proxy IPs
+    "KnownNetworks": [ "10.0.0.0/8" ],    // or trusted upstream CIDRs
+    "ForwardLimit": 2                      // ingress hop count (cloudflared → Caddy → app = 2)
+  }
+}
+```
+
+- Forwarded headers are honoured **only** when the immediate upstream is one of the configured proxies/networks; from any other source they're ignored and the connection IP/scheme stand.
+- `ForwardLimit` must match the real number of proxy hops. The framework default of `1` reads only the rightmost hop, which in a multi-hop ingress yields the nearest proxy's IP (or an attacker-injected value) instead of the real client.
+- **Secure by default:** with `KnownProxies` and `KnownNetworks` both empty (as `appsettings.json` / `appsettings.Production.json` ship them), the framework default - trust loopback only - stands, so forwarded headers from a real proxy are ignored until you configure the ingress. Set them as part of your deploy.
 
 ## Why not AllowAnyOrigin for SignalR
 
