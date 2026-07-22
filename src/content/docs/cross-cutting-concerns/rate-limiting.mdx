@@ -7,18 +7,18 @@ sidebar:
   order: 6
 pageType: concept
 seo:
-  title: 'Rate limiting in .NET 10 — tenant, user, IP + auth policy'
+  title: 'Rate limiting in .NET 10 - tenant, user, IP + auth policy'
   description: 'How fullstackhero wires Microsoft.AspNetCore.RateLimiting with chained tenant/user/IP global limiters and an auth policy on login, refresh, forgot-password…'
   keywords: 'asp.net core rate limiting, auth rate limit dotnet, brute force protection .net, fixed window rate limit, per tenant rate limit'
 ---
 
 `Microsoft.AspNetCore.RateLimiting` lives in the Web block (`BuildingBlocks/Web/RateLimiting/`). The kit ships **two layers**:
 
-1. A **global limiter** — three chained fixed-window limiters partitioned per **tenant**, per **user**, and per **IP** — applied to every request when rate limiting is enabled.
-2. A named **`auth` policy** that throttles authentication-flow endpoints — login, refresh, forgot-password, reset-password, confirm-email, resend-confirmation, self-register — for brute-force protection where it matters most.
+1. A **global limiter** - three chained fixed-window limiters partitioned per **tenant**, per **user**, and per **IP** - applied to every request when rate limiting is enabled.
+2. A named **`auth` policy** that throttles authentication-flow endpoints - login, refresh, forgot-password, reset-password, confirm-email, resend-confirmation, self-register - for brute-force protection where it matters most.
 
 <Callout type="tip" title="Rate limit ≠ quota">
-Rate limiting protects against abuse — bursts of requests from a small number of callers. Quotas (the Quota building block) enforce per-tenant resource budgets across a calendar month. Different concerns, different mechanisms; the kit ships both.
+Rate limiting protects against abuse - bursts of requests from a small number of callers. Quotas (the Quota building block) enforce per-tenant resource budgets across a calendar month. Different concerns, different mechanisms; the kit ships both.
 </Callout>
 
 ## How it's configured
@@ -37,11 +37,11 @@ Everything binds from the `RateLimitingOptions` section. These are the shipped v
 }
 ```
 
-All four buckets are fixed-window limiters with no queueing (`QueueLimit: 0`) — excess requests get an immediate 429. Rate limiting is **off in local dev** (`appsettings.json`) and **on in production** (`appsettings.Production.json`).
+All four buckets are fixed-window limiters with no queueing (`QueueLimit: 0`) - excess requests get an immediate 429. Rate limiting is **off in local dev** (`appsettings.json`) and **on in production** (`appsettings.Production.json`).
 
 ## The global limiter
 
-When enabled, `AddHeroRateLimiting` builds a chained `GlobalLimiter` (`PartitionedRateLimiter.CreateChained`) — a request must pass **all three** dimensions:
+When enabled, `AddHeroRateLimiting` builds a chained `GlobalLimiter` (`PartitionedRateLimiter.CreateChained`) - a request must pass **all three** dimensions:
 
 | Dimension | Partition key | Skipped when |
 |---|---|---|
@@ -73,7 +73,7 @@ group.MapGenerateTokenEndpoint().AllowAnonymous().RequireRateLimiting("auth");
 
 `AuthRateLimitWiringTests` (in `src/Tests/Integration.Tests/Tests/Authentication/`) verifies every endpoint that should carry the policy actually does. Run it after touching the Identity module's endpoint registrations.
 
-Reuse the same policy on your own sensitive anonymous endpoints — anything a bot can hammer without credentials is a candidate:
+Reuse the same policy on your own sensitive anonymous endpoints - anything a bot can hammer without credentials is a candidate:
 
 ```csharp
 endpoints.MapPost("/api/v1/contact", handler)
@@ -81,7 +81,7 @@ endpoints.MapPost("/api/v1/contact", handler)
          .RequireRateLimiting("auth");
 ```
 
-Additional named policies aren't config-driven — they're registered in code inside `AddHeroRateLimiting` (the Web building block, which is protected; see `buildingblocks-protection.md` before changing it).
+Additional named policies aren't config-driven - they're registered in code inside `AddHeroRateLimiting` (the Web building block, which is protected; see `buildingblocks-protection.md` before changing it).
 
 ## What a rejected request sees
 
@@ -107,9 +107,9 @@ Content-Type: application/problem+json
 
 ## What rate limiting doesn't protect against
 
-- **Distributed brute force** — 10,000 IPs sending one request each per minute get through every per-IP limit. Combine with credential-stuffing detection, MFA, and account lockout (the kit ships lockout via ASP.NET Identity — 15-minute default lockout window).
-- **Slow-rate attacks** — an attacker sending 1 request per 10 seconds from one IP never hits a 10/min limit but might still be malicious. Combine with anomaly detection on auth-failure rates.
-- **Application-layer DDoS** — rate limiting helps but isn't a complete defence. Use a CDN / WAF in front (Cloudflare, AWS WAF, Azure Front Door) for layer-7 protection.
+- **Distributed brute force** - 10,000 IPs sending one request each per minute get through every per-IP limit. Combine with credential-stuffing detection, MFA, and account lockout (the kit ships lockout via ASP.NET Identity - 15-minute default lockout window).
+- **Slow-rate attacks** - an attacker sending 1 request per 10 seconds from one IP never hits a 10/min limit but might still be malicious. Combine with anomaly detection on auth-failure rates.
+- **Application-layer DDoS** - rate limiting helps but isn't a complete defence. Use a CDN / WAF in front (Cloudflare, AWS WAF, Azure Front Door) for layer-7 protection.
 
 ## Watching for false positives
 
@@ -123,6 +123,6 @@ Set up an alert on "429 rate > X% of requests" so you catch tuning issues early.
 
 ## Related
 
-- [Security overview](/docs/security/) — broader auth + abuse protection.
-- [Quota building block](/docs/building-blocks/quota/) — per-tenant resource budgets (different concern).
-- [HTTP resilience](/docs/cross-cutting-concerns/http-resilience/) — caller-side back-off when receiving 429.
+- [Security overview](/docs/security/) - broader auth + abuse protection.
+- [Quota building block](/docs/building-blocks/quota/) - per-tenant resource budgets (different concern).
+- [HTTP resilience](/docs/cross-cutting-concerns/http-resilience/) - caller-side back-off when receiving 429.

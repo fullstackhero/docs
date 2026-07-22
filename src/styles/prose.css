@@ -85,7 +85,7 @@
   @apply text-[15px] dark:text-gray-300;
   line-height: 1.65;
 
-  /* Mobile overflow defense — long unbreakable strings (URLs, type names,
+  /* Mobile overflow defense - long unbreakable strings (URLs, type names,
      identifiers) wrap instead of pushing the article column past the
      viewport edge. Combined with `min-w-0` on the article tag, this stops
      the page from getting clipped on narrow screens. */
@@ -93,7 +93,7 @@
   word-break: break-word;
   overflow-wrap: anywhere;
 
-  /* Embedded media — iframes (YouTube/CodePen) without explicit max-width
+  /* Embedded media - iframes (YouTube/CodePen) without explicit max-width
      in their MDX call site would happily render at their HTML width attribute
      (e.g. 800px) and push the column wider than mobile viewport. */
   & :where(iframe, video, object, embed) {
@@ -108,7 +108,7 @@
     @apply my-10;
   }
 
-  /* Doc-scale headings — Stripe/Linear/Anthropic conventions.
+  /* Doc-scale headings - Stripe/Linear/Anthropic conventions.
      Display font (Outfit) at semibold 600; sizes tuned for in-content
      scanning rather than landing-page hero use. */
   & > h2 {
@@ -151,7 +151,7 @@
     @apply my-4 pl-8;
   }
 
-  /* Star list marker — matches blog. The ::marker selector doesn't allow
+  /* Star list marker - matches blog. The ::marker selector doesn't allow
      customizing spacing as easily, so we use a ::before with a mask-image. */
   & ul li::before {
     content: '';
@@ -215,7 +215,7 @@
     @apply border-b-0;
   }
 
-  /* Inline code styling — consolidated selector */
+  /* Inline code styling - consolidated selector */
   & :where(p, li, h2, h3, h4) code {
     @apply mx-px rounded break-words px-[0.4em] py-[0.1em] align-baseline text-[0.85em] font-medium;
     background: rgb(22 163 74 / 0.07);

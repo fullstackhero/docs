@@ -13,7 +13,7 @@ const items: Array<{ label: string; href: string | null }> = [{ label: 'Docs', h
 const section = parts.length > 0 && parts[0] !== 'index' ? sections.find((s) => s.dir === parts[0]) : undefined;
 
 // A section overview page (slug is just the section dir) IS the section crumb,
-// so render the section as the final, unlinked crumb and stop — appending the
+// so render the section as the final, unlinked crumb and stop - appending the
 // page title here would duplicate it (e.g. "Docs / Modules / Modules").
 const isSectionIndex = section !== undefined && parts.length === 1;
 

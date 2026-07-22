@@ -1,18 +1,18 @@
 ---
 title: Multitenancy deep dive
 lastUpdated: 2026-06-11
-description: How tenancy is the default in every layer — Finbuckle strategies, EF Core global query filter, IGlobalEntity opt-out, named filters, cross-tenant query discipline.
+description: How tenancy is the default in every layer - Finbuckle strategies, EF Core global query filter, IGlobalEntity opt-out, named filters, cross-tenant query discipline.
 sidebar:
   label: Multitenancy deep-dive
   order: 4
 pageType: concept
 seo:
-  title: 'Multitenancy deep dive in .NET 10 — Finbuckle + EF Core'
-  description: 'How fullstackhero enforces tenant isolation as the default — Finbuckle.MultiTenant 10 with claim/header/query strategies, EF Core global query filter via…'
+  title: 'Multitenancy deep dive in .NET 10 - Finbuckle + EF Core'
+  description: 'How fullstackhero enforces tenant isolation as the default - Finbuckle.MultiTenant 10 with claim/header/query strategies, EF Core global query filter via…'
   keywords: 'multitenant .net 10, ef core global query filter, finbuckle multitenant deep dive, iglobalentity opt out, tenant isolation cross-tenant queries'
 ---
 
-Multitenancy isn't a module in fullstackhero. It's a property of the platform — every EF Core entity is tenant-aware by default, every cache is tenant-scoped, every background job carries the tenant context that enqueued it, and every audit row records which tenant it belongs to. You opt **out** with `IGlobalEntity`, not in.
+Multitenancy isn't a module in fullstackhero. It's a property of the platform - every EF Core entity is tenant-aware by default, every cache is tenant-scoped, every background job carries the tenant context that enqueued it, and every audit row records which tenant it belongs to. You opt **out** with `IGlobalEntity`, not in.
 
 This page explains how that works mechanically, the design decisions behind it, and the rules for the rare cross-tenant query.
 
@@ -22,21 +22,21 @@ Tenancy is enforced at three layers, each protecting the next:
 
 | Layer | Where | What enforces it |
 |---|---|---|
-| HTTP request | Multitenancy module (`UseHeroMultiTenantDatabases()` in `Program.cs`) | Finbuckle's `UseMultiTenant()` resolves the tenant from the `tenant` header or `?tenant=` query and sets the context — first thing in the pipeline. |
+| HTTP request | Multitenancy module (`UseHeroMultiTenantDatabases()` in `Program.cs`) | Finbuckle's `UseMultiTenant()` resolves the tenant from the `tenant` header or `?tenant=` query and sets the context - first thing in the pipeline. |
 | Data access | `BuildingBlocks/Persistence` | `BaseDbContext` applies Finbuckle's tenant query filter to every entity that doesn't opt out. |
 | Background work | `BuildingBlocks/Jobs` | `FshJobFilter` captures the tenant at enqueue; `FshJobActivator` restores it before the job runs. |
 
 You don't write `WHERE tenant_id = @tenantId` in your queries. The filter is on every entity, every time, unless you explicitly bypass it.
 
-## Layer 1 — Tenant resolution
+## Layer 1 - Tenant resolution
 
 Finbuckle.MultiTenant 10 resolves the tenant on every request. The kit configures the chain:
 
 ```csharp
 // MultitenancyModule.ConfigureServices (simplified)
 builder.Services.AddMultiTenant<AppTenantInfo>()
-    .WithClaimStrategy(ClaimConstants.Tenant)         // 1. claim — no-op pre-auth (see below)
-    .WithHeaderStrategy(MultitenancyConstants.Identifier)  // 2. "tenant" header — the primary resolver
+    .WithClaimStrategy(ClaimConstants.Tenant)         // 1. claim - no-op pre-auth (see below)
+    .WithHeaderStrategy(MultitenancyConstants.Identifier)  // 2. "tenant" header - the primary resolver
     .WithDelegateStrategy(/* ?tenant= query fallback */)   // 3. query string
     .WithDistributedCacheStore(TimeSpan.FromMinutes(60))
     .WithStore<EFCoreStore<TenantDbContext, AppTenantInfo>>(ServiceLifetime.Scoped);
@@ -52,11 +52,11 @@ The kit caches resolved tenants in `DistributedCacheStore` for 60 minutes (Valke
 
 A SuperAdmin (whose JWT carries `tenant=root`) can scope a single request to another tenant. This is needed for cross-tenant admin operations like searching users in tenant X before starting impersonation.
 
-The kit implements this as **post-auth middleware**, not as a Finbuckle strategy — because the strategy chain runs before auth, it can't tell whether the caller is actually the root user. The middleware lives in `MultitenancyModule.ConfigureMiddleware` (which `UseModuleMiddlewares` runs right after `UseAuthentication`): it checks the caller's `tenant` claim is `root`, reads the `tenant` header, looks the target up in the store, and swaps the resolved context via `IMultiTenantContextSetter`.
+The kit implements this as **post-auth middleware**, not as a Finbuckle strategy - because the strategy chain runs before auth, it can't tell whether the caller is actually the root user. The middleware lives in `MultitenancyModule.ConfigureMiddleware` (which `UseModuleMiddlewares` runs right after `UseAuthentication`): it checks the caller's `tenant` claim is `root`, reads the `tenant` header, looks the target up in the store, and swaps the resolved context via `IMultiTenantContextSetter`.
 
-The same `ConfigureMiddleware` also hosts the **deactivated/expired-tenant guard**: every request from a non-root tenant is rejected if the tenant is inactive or past `ValidUpto` plus the configured grace window — enforced per request, not just at login.
+The same `ConfigureMiddleware` also hosts the **deactivated/expired-tenant guard**: every request from a non-root tenant is rejected if the tenant is inactive or past `ValidUpto` plus the configured grace window - enforced per request, not just at login.
 
-## Layer 2 — Data access
+## Layer 2 - Data access
 
 `BaseDbContext` (in `BuildingBlocks/Persistence`) is the EF Core base every module's `DbContext` inherits. Its `OnModelCreating` does two things:
 
@@ -72,12 +72,12 @@ protected override void OnModelCreating(ModelBuilder modelBuilder)
 }
 ```
 
-`ApplyTenantIsolationByDefault()` walks every entity that doesn't implement `IGlobalEntity` and calls `IsMultiTenant().AdjustUniqueIndexes()` on it — Finbuckle's hook to install the tenant filter (and widen unique indexes to include the tenant column). The result: a query like `await db.Products.ToListAsync(ct)` automatically becomes `WHERE tenant_id = @currentTenantId`.
+`ApplyTenantIsolationByDefault()` walks every entity that doesn't implement `IGlobalEntity` and calls `IsMultiTenant().AdjustUniqueIndexes()` on it - Finbuckle's hook to install the tenant filter (and widen unique indexes to include the tenant column). The result: a query like `await db.Products.ToListAsync(ct)` automatically becomes `WHERE tenant_id = @currentTenantId`.
 
 <Callout type="warning" title="A subclass DbContext must call base.OnModelCreating LAST">
 The filters are applied inside `BaseDbContext.OnModelCreating`. A module
 `DbContext` that overrides `OnModelCreating` to add its own entity configuration
-must call `base.OnModelCreating(modelBuilder)` **last** — EF only honors a query
+must call `base.OnModelCreating(modelBuilder)` **last** - EF only honors a query
 filter declared after the entity is mapped. Call `base` first (before your
 `ApplyConfigurationsFromAssembly`) and the tenant + soft-delete filters silently
 fail to attach, and every query leaks across tenants. This is the single most
@@ -88,15 +88,15 @@ common way to accidentally break isolation in a new module.
 
 ### Two opt-outs
 
-**`IGlobalEntity`** — for entities that need to live across tenants. The kit uses it for:
+**`IGlobalEntity`** - for entities that need to live across tenants. The kit uses it for:
 
-- `BillingPlan` — the plan catalogue is platform-wide
-- `ImpersonationGrant` — operator impersonation spans tenants
-- `OutboxMessage`, `InboxMessage` — eventing infrastructure
+- `BillingPlan` - the plan catalogue is platform-wide
+- `ImpersonationGrant` - operator impersonation spans tenants
+- `OutboxMessage`, `InboxMessage` - eventing infrastructure
 
 If you mark an entity `IGlobalEntity`, the global tenant filter is **not** applied. Queries against the table return rows for every tenant; access control becomes the handler's responsibility.
 
-**`IgnoreQueryFilters([QueryFilters.SoftDelete])`** — the kit registers SoftDelete as a *named* filter (the tenant filter stays anonymous, Finbuckle-owned), so individual queries can drop just the soft-delete filter without touching the tenant filter:
+**`IgnoreQueryFilters([QueryFilters.SoftDelete])`** - the kit registers SoftDelete as a *named* filter (the tenant filter stays anonymous, Finbuckle-owned), so individual queries can drop just the soft-delete filter without touching the tenant filter:
 
 ```csharp
 var trashed = await db.Products
@@ -109,7 +109,7 @@ This is the pattern for "list trashed items" queries (see `ListTrashedProductsQu
 
 ### Cross-tenant queries (rare, but real)
 
-Auditing needs to query across tenants — a root operator pulling another tenant's audit trail. The real code, from the Auditing module's `GetAuditsQueryHandler`:
+Auditing needs to query across tenants - a root operator pulling another tenant's audit trail. The real code, from the Auditing module's `GetAuditsQueryHandler`:
 
 ```csharp
 // Cross-tenant access requires an explicit permission check first…
@@ -128,14 +128,14 @@ return _dbContext.AuditRecords
     .Where(a => a.TenantId == requested);
 ```
 
-The pattern: gate with an explicit permission, use `IgnoreQueryFilters()` deliberately, then **re-filter explicitly** to the exact scope the caller asked for — never return rows for *all* tenants. Don't sprinkle this; reserve it for specific admin / audit query handlers.
+The pattern: gate with an explicit permission, use `IgnoreQueryFilters()` deliberately, then **re-filter explicitly** to the exact scope the caller asked for - never return rows for *all* tenants. Don't sprinkle this; reserve it for specific admin / audit query handlers.
 
-## Layer 3 — Background work
+## Layer 3 - Background work
 
 Hangfire jobs run on threads that have no `HttpContext`, so the tenant context resolved on the originating request is gone by the time the job dequeues. Two pieces in `BuildingBlocks/Jobs` handle this:
 
-- **At enqueue time** — `FshJobFilter` reads the current tenant (via `IMultiTenantContextAccessor`) and user id, and stores them as Hangfire job parameters.
-- **At execute time** — `FshJobActivator` reads the stored parameters back and pushes the tenant onto `IMultiTenantContextSetter` (and the user onto `ICurrentUserInitializer`) before the job body runs. The job sees the same tenant the request did.
+- **At enqueue time** - `FshJobFilter` reads the current tenant (via `IMultiTenantContextAccessor`) and user id, and stores them as Hangfire job parameters.
+- **At execute time** - `FshJobActivator` reads the stored parameters back and pushes the tenant onto `IMultiTenantContextSetter` (and the user onto `ICurrentUserInitializer`) before the job body runs. The job sees the same tenant the request did.
 
 The same pattern shows up in integration-event handlers: `WebhookFanoutHandler` installs the event's `TenantId` via `IMultiTenantContextSetter` before querying the subscription table, then restores the previous context in a `finally`. Forget this and the Finbuckle query filter returns no rows on the background thread.
 
@@ -143,7 +143,7 @@ The same pattern shows up in integration-event handlers: `WebhookFanoutHandler` 
 
 Each `AppTenantInfo` row carries an optional `ConnectionString`. When set, `BaseDbContext.OnConfiguring` switches the DbContext to that connection at runtime. This lets a high-value tenant get its own database without changing application code.
 
-When not set, all tenants share the kit's main database with row-level isolation via the global query filter. For most teams, row-level isolation is sufficient through the kit's lifecycle and scales further than you'd expect — Postgres handles hundreds of thousands of tenants in one database fine. Reach for per-tenant databases only when you have a compliance requirement (HIPAA, PCI-DSS) or a single tenant whose data volume genuinely needs its own physical store.
+When not set, all tenants share the kit's main database with row-level isolation via the global query filter. For most teams, row-level isolation is sufficient through the kit's lifecycle and scales further than you'd expect - Postgres handles hundreds of thousands of tenants in one database fine. Reach for per-tenant databases only when you have a compliance requirement (HIPAA, PCI-DSS) or a single tenant whose data volume genuinely needs its own physical store.
 
 ## Caching tenant-scoped data
 
@@ -168,24 +168,24 @@ L1 (in-memory) cache has no backplane; the kit's `DefaultLocalCacheExpiration` (
 ## The documented exception: Billing
 
 One module deliberately steps outside the default. `BillingDbContext` is a plain
-`DbContext` — **not** `BaseDbContext` — so the auto-applied tenant filter does
+`DbContext` - **not** `BaseDbContext` - so the auto-applied tenant filter does
 **not** govern it. Subscriptions, invoices, and usage snapshots instead carry an
 explicit `TenantId` column, and the billing query services filter on it by hand.
 
 This is intentional: billing is a finance/admin concern that routinely queries
-*across* tenants — the monthly invoice job iterates every active tenant, and
+*across* tenants - the monthly invoice job iterates every active tenant, and
 operators pull cross-tenant invoice reports. Forcing it through the per-request
 tenant filter would fight the feature. The trade-off is that **billing handlers
 own their tenant scoping**: every query that should be tenant-bound must say so
 (`.Where(x => x.TenantId == current)`), because nothing does it for them.
 
-The plan catalogue (`BillingPlan`) goes further and is `IGlobalEntity` — a single
+The plan catalogue (`BillingPlan`) goes further and is `IGlobalEntity` - a single
 platform-wide list of plans shared by all tenants. See the [Billing module](/docs/modules/billing/).
 
 <Callout type="note" title="The rule of thumb">
 Default to `BaseDbContext` (isolation on). Reach for a plain `DbContext` with a
 manual `TenantId` column only when the module's whole job is cross-tenant
-administration — and document it, like Billing does.
+administration - and document it, like Billing does.
 </Callout>
 
 ## Per-tenant migrations & provisioning
@@ -198,7 +198,7 @@ collide.
 
 New tenants are provisioned asynchronously. `CreateTenantCommand` returns
 immediately, buffers the operator-supplied admin password in
-`ITenantInitialPasswordBuffer` (a singleton — there is no hard-coded default
+`ITenantInitialPasswordBuffer` (a singleton - there is no hard-coded default
 password), and queues a Hangfire job that walks ordered, resumable steps
 (Database → Migrations → Seeding → CacheWarm). A tenant is only **activated once
 provisioning reaches `Completed`**; a failed step is resumable via
@@ -213,7 +213,7 @@ operator, and that seeding is tenant-scoped.
 
 <Callout type="warning" title="Set the tenant context inline in tests">
 Finbuckle's tenant context flows through `AsyncLocal`. In an integration test,
-set it **in the same method** as the `DbContext` / `UserManager` call — if you
+set it **in the same method** as the `DbContext` / `UserManager` call - if you
 set it inside an awaited helper, the value is lost across the async boundary and
 the tenant query filter NREs (it has no tenant to filter on). This is the most
 common cause of a flaky tenant test.
@@ -227,9 +227,9 @@ common cause of a flaky tenant test.
 
 ## Related
 
-- [Multitenancy module](/docs/modules/multitenancy/) — the module that owns tenant lifecycle.
-- [Billing module](/docs/modules/billing/) — the documented cross-tenant exception.
-- [Database Migrations](/docs/deployment/database-migrations/) — per-tenant migration ordering.
-- [Persistence](/docs/building-blocks/persistence/) — `BaseDbContext` and the auto-applied filters.
-- [Jobs](/docs/building-blocks/jobs/) — `FshJobFilter` and tenant restoration.
-- [Webhooks module](/docs/modules/webhooks/) — the cross-thread "restore tenant context manually" pattern.
+- [Multitenancy module](/docs/modules/multitenancy/) - the module that owns tenant lifecycle.
+- [Billing module](/docs/modules/billing/) - the documented cross-tenant exception.
+- [Database Migrations](/docs/deployment/database-migrations/) - per-tenant migration ordering.
+- [Persistence](/docs/building-blocks/persistence/) - `BaseDbContext` and the auto-applied filters.
+- [Jobs](/docs/building-blocks/jobs/) - `FshJobFilter` and tenant restoration.
+- [Webhooks module](/docs/modules/webhooks/) - the cross-thread "restore tenant context manually" pattern.

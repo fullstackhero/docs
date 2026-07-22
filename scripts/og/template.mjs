@@ -1,5 +1,5 @@
 // scripts/og/template.mjs
-// Pure HTML builders for OG cards. No I/O — the caller injects the inlined
+// Pure HTML builders for OG cards. No I/O - the caller injects the inlined
 // CSS and the base64 logo. Three data-driven variants: home / overview / doc.
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';

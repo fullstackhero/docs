@@ -1,6 +1,6 @@
 ---
 /**
- * Faq — a docs-page FAQ block that doubles as GEO/AI-citation surface.
+ * Faq - a docs-page FAQ block that doubles as GEO/AI-citation surface.
  *
  * Renders an accessible <details> disclosure list AND emits FAQPage JSON-LD
  * so AI engines (ChatGPT, Claude, Perplexity, Gemini, Google AI Overviews)
@@ -9,11 +9,11 @@
  *
  * Usage in MDX:
  *   <Faq items={[
- *     { q: "Is fullstackhero free?", a: "Yes — MIT licensed end to end." },
+ *     { q: "Is fullstackhero free?", a: "Yes - MIT licensed end to end." },
  *   ]} />
  *
  * Answers are plain strings (no markup) so the JSON-LD `text` stays clean.
- * Keep questions in the exact phrasing a user would type — that's what the
+ * Keep questions in the exact phrasing a user would type - that's what the
  * question-shaped query matching rewards.
  */
 interface FaqItem {
@@ -49,7 +49,7 @@ const { items, title = 'Frequently asked questions' } = Astro.props;
   ))}
 </div>
 
-{/* FAQPage structured data — extractable Q&A for AI engines + search. */}
+{/* FAQPage structured data - extractable Q&A for AI engines + search. */}
 <script
   type="application/ld+json"
   set:html={JSON.stringify({

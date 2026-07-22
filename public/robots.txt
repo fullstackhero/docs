@@ -1,4 +1,4 @@
-# FullStackHero docs — robots.txt
+# FullStackHero docs - robots.txt
 # https://fullstackhero.net
 
 # Default policy: allow everyone

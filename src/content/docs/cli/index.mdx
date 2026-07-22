@@ -1,12 +1,12 @@
 ---
 title: Overview
 lastUpdated: 2026-06-20
-description: The fsh CLI — scaffold projects, check your environment, and stay current.
+description: The fsh CLI - scaffold projects, check your environment, and stay current.
 sidebar:
   order: 1
 pageType: reference
 seo:
-  title: 'fsh CLI — scaffold and manage fullstackhero projects'
+  title: 'fsh CLI - scaffold and manage fullstackhero projects'
 ---
 
 A NuGet-distributed dotnet tool ([Spectre.Console](https://spectreconsole.net/), source at `src/Tools/CLI`) for scaffolding fullstackhero projects and verifying your environment. Four commands: `new`, `doctor`, `info`, `update`.
@@ -36,7 +36,7 @@ fsh new MyApp --non-interactive -o ./somewhere-else
 
 | Flag | What it does |
 |---|---|
-| `[name]` | Project name — used for the solution, namespaces, and folders |
+| `[name]` | Project name - used for the solution, namespaces, and folders |
 | `-o, --output` | Output directory (defaults to `./<name>`) |
 | `--no-aspire` | Exclude the .NET Aspire AppHost project |
 | `--no-frontend` | Exclude the React admin + dashboard apps |
@@ -51,11 +51,11 @@ Beyond renaming, `new` does the setup you'd otherwise do by hand: installs the t
 
 Checks your environment and prints a pass/warn/fail table:
 
-- **.NET SDK** — present and version 10+
-- **Git** — installed
-- **Docker** — installed *and* running
-- **FSH template** — installed (warns with the install command if not)
-- **Ports** — `5030`, `7030` (API) and `15888` (Aspire dashboard) free
+- **.NET SDK** - present and version 10+
+- **Git** - installed
+- **Docker** - installed *and* running
+- **FSH template** - installed (warns with the install command if not)
+- **Ports** - `5030`, `7030` (API) and `15888` (Aspire dashboard) free
 
 Exits non-zero if a required tool is missing, so it's scriptable.
 

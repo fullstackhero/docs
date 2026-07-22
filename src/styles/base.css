@@ -2,7 +2,7 @@
    Keep in sync manually until shared package extracted. */
 
 /* ════════════════════════════════════════════════════════════════════════
-   BASE TOKENS — fullstackhero docs
+   BASE TOKENS - fullstackhero docs
    ────────────────────────────────────────────────────────────────────────
    Token system inherited from codewithmukesh/blog (warm paper neutrals
    light, warm-dark surfaces dark), re-anchored on FSH brand green #15803d
@@ -21,7 +21,7 @@
   :root {
     color-scheme: light;
 
-    /* Surfaces — warm paper */
+    /* Surfaces - warm paper */
     --background: #faf7f2;
     --foreground: #1a1814;
     --card: #ffffff;
@@ -35,7 +35,7 @@
     --primary-hover: #166534;
     --primary-soft: #16a34a;
 
-    /* Accent — warm beige tint, saffron-toned foreground (matches DSS) */
+    /* Accent - warm beige tint, saffron-toned foreground (matches DSS) */
     --accent: #f4ecdc;
     --accent-foreground: #8a5a10;
     --saffron: #e8a54b;
@@ -43,7 +43,7 @@
     --secondary: #f3ede2;
     --secondary-foreground: #1a1814;
     --muted: #f3ede2;
-    --muted-foreground: #5b5247; /* WCAG AA: ~6.5:1 vs --background — headroom so /70-/80 opacity uses still pass */
+    --muted-foreground: #5b5247; /* WCAG AA: ~6.5:1 vs --background - headroom so /70-/80 opacity uses still pass */
     --subtle: #efe9dc;
 
     --destructive: #d1252b;
@@ -91,7 +91,7 @@
     --secondary: #1c1d22;
     --secondary-foreground: #ede8df;
     --muted: #1a1b1f;
-    --muted-foreground: #b3aca0; /* WCAG AA: ~7.3:1 vs --background — headroom so /70-/80 opacity uses still pass */
+    --muted-foreground: #b3aca0; /* WCAG AA: ~7.3:1 vs --background - headroom so /70-/80 opacity uses still pass */
     --subtle: #14151a;
 
     --destructive: #ef4444;
@@ -162,11 +162,11 @@
 }
 
 /* ════════════════════════════════════════════════════════════════════════
-   THEME CROSS-FADE — via the View Transitions API.
+   THEME CROSS-FADE - via the View Transitions API.
    ThemeToggle wraps the `.dark` flip in document.startViewTransition(), so the
    browser crossfades a GPU-composited snapshot of the page rather than
    repainting every element's colour. Text stays crisp, and gradients, shadows
-   and images all fade together — no muddy mid-transition frame, no jank.
+   and images all fade together - no muddy mid-transition frame, no jank.
    We keep the old snapshot static and dissolve the new one in over it, which
    reads as a clean colour morph with no see-through ghosting.
    Reduced motion (and unsupported browsers, which simply switch instantly) get
@@ -190,7 +190,7 @@
 }
 
 /* ════════════════════════════════════════════════════════════════════════
-   CATPPUCCIN — theme-adaptive code colors
+   CATPPUCCIN - theme-adaptive code colors
    Light mode = Latte. Dark mode = Mocha. Used by .nl-codeblock and any
    `<pre style="background:#1e1e2e">` snippets that ship with raw inline
    syntax colors. The `[style*="#xxx"]` overrides remap inline Mocha hex
@@ -279,7 +279,7 @@
   html:not(.dark) [style*="color:#6c7086"] {
     color: var(--ctp-overlay) !important;
   }
-  /* Traffic-light dots use background: #f38ba8 / #f9e2af / #a6e3a1 — these
+  /* Traffic-light dots use background: #f38ba8 / #f9e2af / #a6e3a1 - these
      are intentional and should stay vivid in both themes, so override the
      `background:` form back. Comment dots use Mocha hex bg + already-handled. */
   html:not(.dark) [style*="background: #f38ba8"],

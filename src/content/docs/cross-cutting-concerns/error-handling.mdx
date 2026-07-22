@@ -7,7 +7,7 @@ sidebar:
   order: 11
 pageType: concept
 seo:
-  title: 'Error handling in .NET 10 — RFC 9457 ProblemDetails'
+  title: 'Error handling in .NET 10 - RFC 9457 ProblemDetails'
   description: 'How fullstackhero converts domain exceptions (CustomException, NotFoundException, ForbiddenException, UnauthorizedException) into RFC 9457 ProblemDetails…'
   keywords: 'asp.net core problem details, rfc 9457 dotnet, global exception handler .net 10, fluentvalidation error response'
 ---
@@ -15,7 +15,7 @@ seo:
 Every uncaught exception in fullstackhero turns into a `ProblemDetails` response (RFC 9457). One handler, one shape, every endpoint. React clients (`clients/admin` + `clients/dashboard`) parse the shape directly so error UI is consistent across the kit.
 
 <Callout type="tip" title="Throw exceptions, don't return result objects">
-The kit's idiom is throw-from-domain. Aggregates throw `CustomException` / `NotFoundException` from inside their methods; the handler catches at the boundary. You can layer a Result&lt;T&gt; pattern on top if you want, but you'd be adding ceremony — the global handler already does the HTTP translation cleanly.
+The kit's idiom is throw-from-domain. Aggregates throw `CustomException` / `NotFoundException` from inside their methods; the handler catches at the boundary. You can layer a Result&lt;T&gt; pattern on top if you want, but you'd be adding ceremony - the global handler already does the HTTP translation cleanly.
 </Callout>
 
 ## The exception hierarchy
@@ -41,8 +41,8 @@ Plus `ValidationException` from FluentValidation (returned as 400 with the field
 | `CustomException` (incl. subclasses) | `e.StatusCode` | `title` = exception type name, `detail` = message, `errors` = `ErrorMessages` when present |
 | `UnauthorizedAccessException` | 401 | BCL fallback |
 | `KeyNotFoundException` | 404 | BCL fallback |
-| `BadHttpRequestException` | Its own `StatusCode` (usually 400) | Malformed request — missing required header/param, unreadable or oversized body |
-| Anything else | 500 | Generic "An unexpected error occurred" — no internals leaked |
+| `BadHttpRequestException` | Its own `StatusCode` (usually 400) | Malformed request - missing required header/param, unreadable or oversized body |
+| Anything else | 500 | Generic "An unexpected error occurred" - no internals leaked |
 
 The `BadHttpRequestException` mapping matters more than it looks: a request to an anonymous endpoint that omits a required parameter (like the `tenant` header binding) throws it, and before this mapping existed the client saw a misleading 500 instead of a 400 (issue #1245).
 
@@ -101,7 +101,7 @@ public void Resolve(string? resolutionNote)
     // ...
 }
 
-// Handler — no try/catch
+// Handler - no try/catch
 public async ValueTask<Unit> Handle(ResolveTicketCommand cmd, CancellationToken ct)
 {
     var ticket = await _db.Tickets.FindAsync([cmd.TicketId], ct).ConfigureAwait(false)
@@ -136,23 +136,23 @@ The response carries an `errors` map keyed by field name with arrays of message 
 
 ## What never reaches the client
 
-Stack traces and inner exception details are **never** included in the response — there is no "development mode" flag that adds them. The handler pushes the stack trace, title, detail, and status onto the Serilog `LogContext` instead, so the full picture lands in your logs while the client only sees the structured ProblemDetails. Unexpected exceptions (the 500 fallthrough) get a fixed generic message — internal type names and messages stay server-side.
+Stack traces and inner exception details are **never** included in the response - there is no "development mode" flag that adds them. The handler pushes the stack trace, title, detail, and status onto the Serilog `LogContext` instead, so the full picture lands in your logs while the client only sees the structured ProblemDetails. Unexpected exceptions (the 500 fallthrough) get a fixed generic message - internal type names and messages stay server-side.
 
 ## Anti-patterns to avoid
 
 - **`catch { return BadRequest(); }` in handlers.** The global handler already does this; wrapping it just hides intent. Throw the right exception type from the domain.
-- **`throw new Exception("...")` from a handler.** Use one of the typed exceptions. A bare `Exception` falls through to "500 Internal Server Error" with a generic message — useless for the client and harder to debug.
+- **`throw new Exception("...")` from a handler.** Use one of the typed exceptions. A bare `Exception` falls through to "500 Internal Server Error" with a generic message - useless for the client and harder to debug.
 - **Returning `IActionResult` / `Results.X(...)` from a handler.** Handlers return DTOs. The endpoint adapts to `IResult` via the endpoint builder. Keeping handlers DTO-only means the same handler is unit-testable without HTTP context.
 
 ## Logging vs responding
 
-The handler writes the HTTP response **and** logs the exception via `ILogger<GlobalExceptionHandler>` (structured message template — path, status code, title), with the exception detail and stack trace attached through `LogContext` properties. If a customer reports "I got an error", you ask for the `traceId`, look it up in your log aggregator, and you have the full picture.
+The handler writes the HTTP response **and** logs the exception via `ILogger<GlobalExceptionHandler>` (structured message template - path, status code, title), with the exception detail and stack trace attached through `LogContext` properties. If a customer reports "I got an error", you ask for the `traceId`, look it up in your log aggregator, and you have the full picture.
 
 The kit's `MediatorTracingBehavior` marks the command/query span as errored and tags it with `exception.type` and `exception.message` before re-throwing, so you can graph error rates per exception type and alert on spikes.
 
 ## Related
 
-- [Core building block](/docs/building-blocks/core/) — `CustomException` and friends.
-- [Web building block](/docs/building-blocks/web/) — `GlobalExceptionHandler`, validation behavior.
-- [Observability](/docs/cross-cutting-concerns/observability/) — `traceId` linking responses to server traces.
-- [Vertical Slice Architecture](/docs/architecture/vertical-slice/) — the handler conventions that work with this error model.
+- [Core building block](/docs/building-blocks/core/) - `CustomException` and friends.
+- [Web building block](/docs/building-blocks/web/) - `GlobalExceptionHandler`, validation behavior.
+- [Observability](/docs/cross-cutting-concerns/observability/) - `traceId` linking responses to server traces.
+- [Vertical Slice Architecture](/docs/architecture/vertical-slice/) - the handler conventions that work with this error model.

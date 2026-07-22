@@ -1,7 +1,7 @@
 ---
 title: Notifications module
 lastUpdated: 2026-06-11
-description: Per-user inbox driven by integration events from other modules — denormalized rows, real-time SignalR push, idempotent mark-read.
+description: Per-user inbox driven by integration events from other modules - denormalized rows, real-time SignalR push, idempotent mark-read.
 sidebar:
   label: Notifications
   order: 6
@@ -12,29 +12,29 @@ seo:
   keywords: '.net notifications inbox, realtime notifications signalr, integration events dotnet, in-app notification module'
 ---
 
-The Notifications module is the inbox layer of fullstackhero. It owns one denormalized row type (`Notification`), exposes four read/mark endpoints, and is driven entirely by integration events published by other modules. Today it consumes Chat mentions (inbox row + realtime push) and the Billing lifecycle events (tenant-admin emails for invoices and expiry); tickets, webhooks, and anything else can opt in next. New notifications are pushed to the recipient in real time via the same SignalR hub Chat uses, so the bell-icon badge updates without a refresh. Around **800 lines of code across the runtime project** — intentionally thin.
+The Notifications module is the inbox layer of fullstackhero. It owns one denormalized row type (`Notification`), exposes four read/mark endpoints, and is driven entirely by integration events published by other modules. Today it consumes Chat mentions (inbox row + realtime push) and the Billing lifecycle events (tenant-admin emails for invoices and expiry); tickets, webhooks, and anything else can opt in next. New notifications are pushed to the recipient in real time via the same SignalR hub Chat uses, so the bell-icon badge updates without a refresh. Around **800 lines of code across the runtime project** - intentionally thin.
 
 <Callout type="tip" title="It's a bridge, not a hub">
-This module has no business logic of its own. It's a destination — other modules publish integration events that describe what happened ("user X was mentioned in channel Y"), and the handler materialises a row plus a SignalR push. Adding new notification types means adding a new `IIntegrationEventHandler` here, not redesigning the inbox.
+This module has no business logic of its own. It's a destination - other modules publish integration events that describe what happened ("user X was mentioned in channel Y"), and the handler materialises a row plus a SignalR push. Adding new notification types means adding a new `IIntegrationEventHandler` here, not redesigning the inbox.
 </Callout>
 
 ## What ships in v10
 
-- **One row type** — `Notification(Id, UserId, Type, Title, Body?, Link?, Source, MetadataJson, CreatedAtUtc, ReadAtUtc?)`. Denormalized so the inbox renders without back-references into the source module.
-- **Real-time push** — the integration-event handler broadcasts a `NotificationCreated` SignalR event to the recipient's `user:{id}` group immediately after writing the row.
-- **Idempotent mark-read** — `Notification.ReadAtUtc ??= DateTime.UtcNow` means calling mark-read twice is a no-op.
-- **Bulk mark-all-read** via `ExecuteUpdateAsync` — single SQL `UPDATE`, no row materialisation, scoped to the caller; returns the number of rows touched.
-- **Four endpoints** — `GET /` (inbox, with an `unreadOnly` filter), `GET /unread-count` (badge), `POST /{id}/read` (single), `POST /read-all` (bulk).
-- **Billing lifecycle emails** — handlers for the Billing module's `InvoiceIssued`, `TenantNearingExpiry`, `TenantEnteredGrace`, and `TenantExpired` integration events email the tenant admin via the Mailing building block's `IMailService`.
-- **Free-form `Type` + `MetadataJson`** — source modules pick the strings (`chat.mention`, `ticket.assigned`, `billing.invoice.issued`) and the UI uses them to render the right icon and link.
-- **2 permissions** — `Notifications.Inbox.View` and `Notifications.Inbox.MarkRead`, both granted to Basic users by default.
+- **One row type** - `Notification(Id, UserId, Type, Title, Body?, Link?, Source, MetadataJson, CreatedAtUtc, ReadAtUtc?)`. Denormalized so the inbox renders without back-references into the source module.
+- **Real-time push** - the integration-event handler broadcasts a `NotificationCreated` SignalR event to the recipient's `user:{id}` group immediately after writing the row.
+- **Idempotent mark-read** - `Notification.ReadAtUtc ??= DateTime.UtcNow` means calling mark-read twice is a no-op.
+- **Bulk mark-all-read** via `ExecuteUpdateAsync` - single SQL `UPDATE`, no row materialisation, scoped to the caller; returns the number of rows touched.
+- **Four endpoints** - `GET /` (inbox, with an `unreadOnly` filter), `GET /unread-count` (badge), `POST /{id}/read` (single), `POST /read-all` (bulk).
+- **Billing lifecycle emails** - handlers for the Billing module's `InvoiceIssued`, `TenantNearingExpiry`, `TenantEnteredGrace`, and `TenantExpired` integration events email the tenant admin via the Mailing building block's `IMailService`.
+- **Free-form `Type` + `MetadataJson`** - source modules pick the strings (`chat.mention`, `ticket.assigned`, `billing.invoice.issued`) and the UI uses them to render the right icon and link.
+- **2 permissions** - `Notifications.Inbox.View` and `Notifications.Inbox.MarkRead`, both granted to Basic users by default.
 
 ## Architecture at a glance
 
 ```
 src/Modules/Notifications/
 ├── Modules.Notifications/                       ~800 LoC
-│   ├── NotificationsModule.cs                   IModule — order 750 (BEFORE Chat 800)
+│   ├── NotificationsModule.cs                   IModule - order 750 (BEFORE Chat 800)
 │   ├── Domain/Notification.cs                   AggregateRoot, denormalized inbox row
 │   ├── Data/NotificationsDbContext.cs           Schema: notifications
 │   ├── IntegrationEventHandlers/
@@ -49,7 +49,7 @@ src/Modules/Notifications/
 ```
 
 <Callout type="note" title="Module order">
-Notifications loads at order `750`, before Chat at `800` — consumers ahead of producers. Handler *discovery* doesn't actually depend on this (integration-event handlers are assembly-scanned into DI at startup and resolved at publish time), but keeping the consumer at a lower order keeps the dependency direction obvious and DI/middleware registration deterministic.
+Notifications loads at order `750`, before Chat at `800` - consumers ahead of producers. Handler *discovery* doesn't actually depend on this (integration-event handlers are assembly-scanned into DI at startup and resolved at publish time), but keeping the consumer at a lower order keeps the dependency direction obvious and DI/middleware registration deterministic.
 </Callout>
 
 ## The handler bridge
@@ -68,7 +68,7 @@ public sealed class MentionedInChannelIntegrationEventHandler(
 {
     public async Task HandleAsync(MentionedInChannelIntegrationEvent @event, CancellationToken ct = default)
     {
-        // Fail loud on a tenant mismatch rather than write to the wrong tenant — the DbContext
+        // Fail loud on a tenant mismatch rather than write to the wrong tenant - the DbContext
         // captures its tenant at construction.
         var ambientTenantId = tenantAccessor.MultiTenantContext.TenantInfo?.Id;
         if (!string.Equals(ambientTenantId, @event.TenantId, StringComparison.Ordinal))
@@ -95,7 +95,7 @@ public sealed class MentionedInChannelIntegrationEventHandler(
 }
 ```
 
-The handler runs **synchronously** in the originating SendMessage request scope (in-memory bus, synchronous dispatch). If the write or push fails, the SendMessage call fails. That's deliberate — fail-fast over silent loss of notifications. If you need it to be optional later, wrap with a try-catch and log. The tenant-mismatch guard exists because the DbContext captures its tenant at construction — a publisher that didn't establish the Finbuckle tenant context would otherwise leak rows cross-tenant silently.
+The handler runs **synchronously** in the originating SendMessage request scope (in-memory bus, synchronous dispatch). If the write or push fails, the SendMessage call fails. That's deliberate - fail-fast over silent loss of notifications. If you need it to be optional later, wrap with a try-catch and log. The tenant-mismatch guard exists because the DbContext captures its tenant at construction - a publisher that didn't establish the Finbuckle tenant context would otherwise leak rows cross-tenant silently.
 
 ## The row type
 
@@ -140,13 +140,13 @@ A composite index on `(UserId, ReadAtUtc, CreatedAtUtc)` covers the inbox list (
 
 ## The billing email bridge
 
-Not every notification is an inbox row. The same module also hosts the **email** side of tenant lifecycle notifications: four handlers subscribe to the Billing module's integration events (`InvoiceIssuedIntegrationEvent`, `TenantNearingExpiryIntegrationEvent`, `TenantEnteredGraceIntegrationEvent`, `TenantExpiredIntegrationEvent`), resolve the tenant admin's address from the tenant store, and send templated emails through the Mailing building block's `IMailService`. Subjects and bodies live in `BillingEmailBodies.cs`; `BillingEmailSender.cs` wraps send + logging so a mail failure never breaks the originating billing operation. Same bridge pattern, different sink — keep both flavours here so source modules never know how a notification is delivered.
+Not every notification is an inbox row. The same module also hosts the **email** side of tenant lifecycle notifications: four handlers subscribe to the Billing module's integration events (`InvoiceIssuedIntegrationEvent`, `TenantNearingExpiryIntegrationEvent`, `TenantEnteredGraceIntegrationEvent`, `TenantExpiredIntegrationEvent`), resolve the tenant admin's address from the tenant store, and send templated emails through the Mailing building block's `IMailService`. Subjects and bodies live in `BillingEmailBodies.cs`; `BillingEmailSender.cs` wraps send + logging so a mail failure never breaks the originating billing operation. Same bridge pattern, different sink - keep both flavours here so source modules never know how a notification is delivered.
 
 ## How to extend
 
 ### Add a new notification type from another module
 
-1. Define an integration event in your module's `*.Contracts` assembly. `IIntegrationEvent` is a flat contract — carry the envelope fields as record parameters:
+1. Define an integration event in your module's `*.Contracts` assembly. `IIntegrationEvent` is a flat contract - carry the envelope fields as record parameters:
 
 ```csharp
 // Modules.Tickets.Contracts/Events/TicketAssignedIntegrationEvent.cs
@@ -204,11 +204,11 @@ Add a `NotificationPreference` aggregate (per-user mute list of `Type` strings) 
 
 ## Tests
 
-- `src/Tests/Integration.Tests/Tests/Notifications/NotificationsEndpointTests.cs` — the four endpoints (list, unread count, mark-read, read-all).
+- `src/Tests/Integration.Tests/Tests/Notifications/NotificationsEndpointTests.cs` - the four endpoints (list, unread count, mark-read, read-all).
 - Chat's `MentionAndNotificationTests.cs` (`src/Tests/Integration.Tests/Tests/Chat/`) asserts the full bridge: a mention produces an inbox row and a SignalR push.
 
 ## Related
 
-- [Chat module](/docs/modules/chat/) — the first event producer; `MentionedInChannelIntegrationEvent` is the canonical example.
-- [Eventing.Abstractions](/docs/building-blocks/eventing/) — the `IEventBus` / `IIntegrationEventHandler` contract used here.
-- [Architecture overview](/docs/architecture/) — module order and event-bus wiring.
+- [Chat module](/docs/modules/chat/) - the first event producer; `MentionedInChannelIntegrationEvent` is the canonical example.
+- [Eventing.Abstractions](/docs/building-blocks/eventing/) - the `IEventBus` / `IIntegrationEventHandler` contract used here.
+- [Architecture overview](/docs/architecture/) - module order and event-bus wiring.

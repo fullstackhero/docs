@@ -7,12 +7,12 @@ sidebar:
   order: 9
 pageType: reference
 seo:
-  title: 'Sending email in .NET 10 — SMTP or SendGrid via IMailService'
+  title: 'Sending email in .NET 10 - SMTP or SendGrid via IMailService'
   description: 'How the Mailing building block ships IMailService with SMTP (MailKit) and SendGrid implementations, selected from configuration, used by Identity for…'
   keywords: '.net send email mailkit, sendgrid dotnet, asp.net mail service, multi-recipient email .net, identity email confirmation'
 ---
 
-The Mailing block is the email abstraction the kit's transactional emails go through. Identity uses it for email confirmation, password reset, and welcome flows; any other module that needs to send mail does so via `IMailService`. Two implementations ship — SMTP via MailKit / MimeKit, and SendGrid via the official SDK — picked at startup from a single `UseSendGrid` flag.
+The Mailing block is the email abstraction the kit's transactional emails go through. Identity uses it for email confirmation, password reset, and welcome flows; any other module that needs to send mail does so via `IMailService`. Two implementations ship - SMTP via MailKit / MimeKit, and SendGrid via the official SDK - picked at startup from a single `UseSendGrid` flag.
 
 <Callout type="tip" title="Stay transactional, keep templating outside">
 The block sends mail; it does not template it. Build your HTML body in your handler (with Razor, Scriban, or a static string), then pass it to `SendAsync`. Keep templating out of the abstraction so you're free to swap engines without touching every call site.
@@ -22,7 +22,7 @@ The block sends mail; it does not template it. Build your HTML body in your hand
 
 ### Extension
 
-- **`AddHeroMailing(services)`** — binds `MailOptions`, registers one process-wide `ISendGridClient` singleton (per-send client construction leaks sockets), and a transient `IMailService` factory that returns `SendGridMailService` when `MailOptions:UseSendGrid` is `true`, otherwise `SmtpMailService`.
+- **`AddHeroMailing(services)`** - binds `MailOptions`, registers one process-wide `ISendGridClient` singleton (per-send client construction leaks sockets), and a transient `IMailService` factory that returns `SendGridMailService` when `MailOptions:UseSendGrid` is `true`, otherwise `SmtpMailService`.
 
 ### Service interface
 
@@ -35,7 +35,7 @@ public interface IMailService
 
 ### Request model
 
-`MailRequest` is a constructor-built class — recipients always come as a `Collection<string>`:
+`MailRequest` is a constructor-built class - recipients always come as a `Collection<string>`:
 
 ```csharp
 public class MailRequest(
@@ -56,16 +56,16 @@ The body is treated as HTML by both implementations (MailKit's `BodyBuilder.Html
 
 ### Implementations
 
-- **`SmtpMailService`** — uses MailKit + MimeKit. Reads `MailOptions:Smtp:*` for host, port, credentials; connects with STARTTLS per send.
-- **`SendGridMailService`** — uses the SendGrid SDK via the shared `ISendGridClient`. One API call per `MailRequest`; the first `To` address is the primary recipient, `Cc`/`Bcc`/`ReplyTo`/attachments map onto the SendGrid message.
+- **`SmtpMailService`** - uses MailKit + MimeKit. Reads `MailOptions:Smtp:*` for host, port, credentials; connects with STARTTLS per send.
+- **`SendGridMailService`** - uses the SendGrid SDK via the shared `ISendGridClient`. One API call per `MailRequest`; the first `To` address is the primary recipient, `Cc`/`Bcc`/`ReplyTo`/attachments map onto the SendGrid message.
 
 ### Options
 
-- **`MailOptions`** — `From`, `DisplayName`, `UseSendGrid` (bool), `Smtp` (`Host` / `Port` / `UserName` / `Password`), `SendGrid` (`ApiKey` plus optional `From` / `DisplayName` overrides).
+- **`MailOptions`** - `From`, `DisplayName`, `UseSendGrid` (bool), `Smtp` (`Host` / `Port` / `UserName` / `Password`), `SendGrid` (`ApiKey` plus optional `From` / `DisplayName` overrides).
 
 ## How modules consume Mailing
 
-Inject `IMailService` and call `SendAsync` — or better, do what Identity does and push the send onto the Hangfire `email` queue so a slow SMTP server never blocks the request:
+Inject `IMailService` and call `SendAsync` - or better, do what Identity does and push the send onto the Hangfire `email` queue so a slow SMTP server never blocks the request:
 
 ```csharp
 var mailRequest = new MailRequest(
@@ -129,7 +129,7 @@ Build a separate `IMailTemplateRenderer` service. Resolve a Razor or Scriban tem
 
 ## Gotchas
 
-- **`MailRequest.To` is always a `Collection<string>`** — even for one recipient. Note the SendGrid path builds a *single* email to `To[0]` (extra recipients ride along only as Cc/Bcc); the SMTP path addresses everyone in `To`. Bulk lists of 100+ recipients should be split into multiple `SendAsync` calls so a single bad address doesn't fail the whole batch.
+- **`MailRequest.To` is always a `Collection<string>`** - even for one recipient. Note the SendGrid path builds a *single* email to `To[0]` (extra recipients ride along only as Cc/Bcc); the SMTP path addresses everyone in `To`. Bulk lists of 100+ recipients should be split into multiple `SendAsync` calls so a single bad address doesn't fail the whole batch.
 - **No built-in templating.** This is by design. If you need it, ship `IMailTemplateRenderer` next to your handlers.
 - **`SmtpMailService` opens a fresh connection per send.** Heavy traffic? Switch to SendGrid or wrap with a pool. The kit doesn't ship a long-lived SMTP client.
 - **SendGrid charges per API call.** Bulk personalisation via the SendGrid Personalisations API is faster and cheaper for newsletter-style use. The kit's wrapper is the transactional path; replace it for marketing.
@@ -145,6 +145,6 @@ Build a separate `IMailTemplateRenderer` service. Resolve a Razor or Scriban tem
 
 ## Related
 
-- [Web](/docs/building-blocks/web/) — `FshPlatformOptions.EnableMailing` toggle.
-- [Identity module](/docs/modules/identity/) — the biggest consumer (confirmation, reset, welcome).
-- [Notifications module](/docs/modules/notifications/) — in-app inbox; pair it with email for double-channel delivery.
+- [Web](/docs/building-blocks/web/) - `FshPlatformOptions.EnableMailing` toggle.
+- [Identity module](/docs/modules/identity/) - the biggest consumer (confirmation, reset, welcome).
+- [Notifications module](/docs/modules/notifications/) - in-app inbox; pair it with email for double-channel delivery.

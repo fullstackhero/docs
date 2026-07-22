@@ -1,21 +1,21 @@
 ---
 title: Health checks
 lastUpdated: 2026-06-11
-description: Liveness + readiness endpoints — per-module database checks, Valkey, Hangfire, tenant migrations — for Kubernetes / Docker Compose / load balancer probes.
+description: Liveness + readiness endpoints - per-module database checks, Valkey, Hangfire, tenant migrations - for Kubernetes / Docker Compose / load balancer probes.
 sidebar:
   label: Health checks
   order: 7
 pageType: concept
 seo:
-  title: 'Health checks in .NET 10 — Postgres + Redis + Hangfire'
+  title: 'Health checks in .NET 10 - Postgres + Redis + Hangfire'
   description: 'How fullstackhero exposes /health/live and /health/ready endpoints with per-module database checks, Redis, Hangfire, and a tenant-migration health check ready for…'
   keywords: 'asp.net core health checks, kubernetes liveness readiness probe, health endpoint .net 10, redis health check, postgres health check'
 ---
 
-Two health endpoints ship out of the box: `GET /health/live` for liveness, `GET /health/ready` for readiness. Both are anonymous and exempt from rate limiting. The kit registers checks for every dependency the host needs to function — one database check per module `DbContext`, Valkey (a Redis-compatible, BSD-licensed Redis fork) when caching is enabled, Hangfire when jobs are enabled, and a per-tenant migration check that reports whether every tenant DB is on the latest schema.
+Two health endpoints ship out of the box: `GET /health/live` for liveness, `GET /health/ready` for readiness. Both are anonymous and exempt from rate limiting. The kit registers checks for every dependency the host needs to function - one database check per module `DbContext`, Valkey (a Redis-compatible, BSD-licensed Redis fork) when caching is enabled, Hangfire when jobs are enabled, and a per-tenant migration check that reports whether every tenant DB is on the latest schema.
 
 <Callout type="tip" title="Liveness vs readiness">
-Liveness asks "is the process alive?" — restart if it fails. Readiness asks "is the process ready to take traffic?" — stop sending requests if it fails. The kit's `/health/live` runs **zero** dependency checks (just proves the process responds); `/health/ready` runs **every** registered check.
+Liveness asks "is the process alive?" - restart if it fails. Readiness asks "is the process ready to take traffic?" - stop sending requests if it fails. The kit's `/health/live` runs **zero** dependency checks (just proves the process responds); `/health/ready` runs **every** registered check.
 </Callout>
 
 ## What's checked
@@ -28,7 +28,7 @@ Liveness asks "is the process alive?" — restart if it fails. Readiness asks "i
 | `hangfire` | Kit's `HangfireHealthCheck` | When `EnableJobs = true` |
 | `db:tenants-migrations` | Kit's `TenantMigrationsHealthCheck` (Multitenancy module) | Always (with the Multitenancy module) |
 
-There is no storage/MinIO health check — blob storage failures surface through the Files module's own error handling, not readiness.
+There is no storage/MinIO health check - blob storage failures surface through the Files module's own error handling, not readiness.
 
 ## How to wire probes
 
@@ -64,7 +64,7 @@ services:
 
 ### Cloud load balancers
 
-Point them at `/health/ready` — they'll only route traffic to instances that report ready.
+Point them at `/health/ready` - they'll only route traffic to instances that report ready.
 
 ## Response shape
 
@@ -97,7 +97,7 @@ Content-Type: application/json
 }
 ```
 
-When any check fails, the overall response is HTTP 503 — with the **same body shape**, so operators can see exactly which check failed while probe consumers key off the status code alone.
+When any check fails, the overall response is HTTP 503 - with the **same body shape**, so operators can see exactly which check failed while probe consumers key off the status code alone.
 
 ## Adding your own check
 
@@ -126,33 +126,33 @@ public sealed class CustomerApiHealthCheck(HttpClient http) : IHealthCheck
 services.AddHealthChecks().AddCheck<CustomerApiHealthCheck>("customer-api");
 ```
 
-Every check registered with `AddHealthChecks()` automatically participates in `/health/ready` — liveness runs no checks, so there's nothing to tag or filter. Keep slow checks (cross-region pings, third-party APIs) out of the registry or make them cheap; readiness latency is probe latency.
+Every check registered with `AddHealthChecks()` automatically participates in `/health/ready` - liveness runs no checks, so there's nothing to tag or filter. Keep slow checks (cross-region pings, third-party APIs) out of the registry or make them cheap; readiness latency is probe latency.
 
 ## Tenant migrations check
 
-`TenantMigrationsHealthCheck` is unusual — it iterates every tenant, sets that tenant's Finbuckle context, and asks EF Core for pending migrations. Per-tenant detail lands in the check's `data`:
+`TenantMigrationsHealthCheck` is unusual - it iterates every tenant, sets that tenant's Finbuckle context, and asks EF Core for pending migrations. Per-tenant detail lands in the check's `data`:
 
 ```json
 {
   "name": "db:tenants-migrations",
   "status": "Unhealthy",
-  "description": "Tenant schema is not at head — pending migrations for tenant(s): acme. Run FSH.Starter.DbMigrator to apply pending migrations.",
+  "description": "Tenant schema is not at head - pending migrations for tenant(s): acme. Run FSH.Starter.DbMigrator to apply pending migrations.",
   "details": {
     "acme": { "name": "Acme", "isActive": true, "hasPendingMigrations": true, "pendingMigrations": ["20260601_AddX"] }
   }
 }
 ```
 
-A tenant with pending migrations (or one whose probe throws) makes the check `Unhealthy`, which makes `/health/ready` return 503 — Kubernetes keeps the pod out of rotation until the standalone `FSH.Starter.DbMigrator` catches the schema up. That's deliberate: the DB is never migrated at API startup, so a pod running newer code against an older schema must not take traffic.
+A tenant with pending migrations (or one whose probe throws) makes the check `Unhealthy`, which makes `/health/ready` return 503 - Kubernetes keeps the pod out of rotation until the standalone `FSH.Starter.DbMigrator` catches the schema up. That's deliberate: the DB is never migrated at API startup, so a pod running newer code against an older schema must not take traffic.
 
 ## What health checks don't tell you
 
-- **Per-endpoint health** — `/health/ready` reports infrastructure state, not "is this specific endpoint working." Use synthetic monitoring (probing real endpoints with known payloads) for that.
-- **Latency** — health is binary; latency is a spectrum. Use the OpenTelemetry HTTP server metrics for latency SLOs.
-- **Partial tenant outages** — the migrations check covers schema drift, but a single tenant's connectivity problem in a tenant-per-database setup needs its own aggregation if your SLA covers per-tenant availability.
+- **Per-endpoint health** - `/health/ready` reports infrastructure state, not "is this specific endpoint working." Use synthetic monitoring (probing real endpoints with known payloads) for that.
+- **Latency** - health is binary; latency is a spectrum. Use the OpenTelemetry HTTP server metrics for latency SLOs.
+- **Partial tenant outages** - the migrations check covers schema drift, but a single tenant's connectivity problem in a tenant-per-database setup needs its own aggregation if your SLA covers per-tenant availability.
 
 ## Related
 
-- [Observability](/docs/cross-cutting-concerns/observability/) — for latency + error-rate signals.
-- [Deployment guide](/docs/deployment/) — how the probes are wired in the kit's docker-compose and Kubernetes manifests.
-- [Multitenancy module](/docs/modules/multitenancy/) — owns the per-tenant migration check.
+- [Observability](/docs/cross-cutting-concerns/observability/) - for latency + error-rate signals.
+- [Deployment guide](/docs/deployment/) - how the probes are wired in the kit's docker-compose and Kubernetes manifests.
+- [Multitenancy module](/docs/modules/multitenancy/) - owns the per-tenant migration check.

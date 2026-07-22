@@ -1,6 +1,6 @@
 ---
 /**
- * CategoryIndex — "chapter plate" card grid for the /docs/ hub.
+ * CategoryIndex - "chapter plate" card grid for the /docs/ hub.
  *
  * Usage (inside the root `docs/index.mdx`):
  *   <CategoryIndex />
@@ -16,7 +16,7 @@
  *   - Live page-count meta ("4 pages" / "In progress")
  *   - A footer arrow that nudges + tints on hover
  *
- * Hover choreography is unified — lift, border, watermark, icon, and
+ * Hover choreography is unified - lift, border, watermark, icon, and
  * arrow all transition on one cubic-bezier curve so the card feels
  * like a single object responding to focus rather than five elements.
  */
@@ -80,12 +80,12 @@ const cards = sections
     return (
       <li>
         <a href={card.href} class="fsh-cat-card group">
-          {/* Huge watermark numeral — pure design accent.
+          {/* Huge watermark numeral - pure design accent.
               Sits absolutely positioned bottom-right, clipped by the
               card's overflow-hidden. Scales subtly on hover. */}
           <span class="fsh-cat-watermark" aria-hidden="true" data-num={num}></span>
 
-          {/* Icon (alone — the numeral carries the chapter context) */}
+          {/* Icon (alone - the numeral carries the chapter context) */}
           <div class="relative">
             <span class="fsh-cat-icon">
               <Icon name={card.icon} class="h-[18px] w-[18px]" />
@@ -122,7 +122,7 @@ const cards = sections
 
 <style>
   /* ──────────────────────────────────────────────────────────────
-     Category card — "chapter plate".
+     Category card - "chapter plate".
      One transition curve across the whole card so the hover feels
      orchestrated, not noisy. All colours route through CSS tokens
      so the design adapts cleanly to light/dark.
@@ -162,7 +162,7 @@ const cards = sections
       0 12px 28px -16px color-mix(in oklab, var(--foreground) 20%, transparent);
   }
 
-  /* Subtle top inner highlight — feels like an actual physical card */
+  /* Subtle top inner highlight - feels like an actual physical card */
   .fsh-cat-card::before {
     content: "";
     position: absolute;
@@ -177,7 +177,7 @@ const cards = sections
     pointer-events: none;
   }
 
-  /* Watermark numeral — Outfit display, very low contrast.
+  /* Watermark numeral - Outfit display, very low contrast.
      Sits behind everything; clip-cropped at the corner. */
   .fsh-cat-watermark::before {
     content: attr(data-num);
@@ -234,7 +234,7 @@ const cards = sections
     color: var(--primary-soft);
   }
 
-  /* Title — body font, not display. Cleaner, less editorial-loud. */
+  /* Title - body font, not display. Cleaner, less editorial-loud. */
   .fsh-cat-title {
     font-family: var(--font-body);
     font-size: 16px;
@@ -244,7 +244,7 @@ const cards = sections
     line-height: 1.25;
   }
 
-  /* Description — line-clamped so any-length copy keeps cards
+  /* Description - line-clamped so any-length copy keeps cards
      at a consistent height. */
   .fsh-cat-desc {
     margin-top: 0.4rem;
@@ -269,7 +269,7 @@ const cards = sections
     border-top: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
   }
 
-  /* Page count — sentence case in the body font. No mono caps, no
+  /* Page count - sentence case in the body font. No mono caps, no
      tracking aggression. Reads as a quiet label, not a slug. */
   .fsh-cat-meta {
     font-family: var(--font-body);
@@ -302,7 +302,7 @@ const cards = sections
     color: var(--primary-soft);
   }
 
-  /* Focus ring for keyboard nav — uses brand ring token */
+  /* Focus ring for keyboard nav - uses brand ring token */
   .fsh-cat-card:focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 2px;

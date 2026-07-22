@@ -12,14 +12,14 @@ seo:
   keywords: '.NET 10 starter kit, fullstackhero, modular monolith, vertical slice architecture, multi-tenant SaaS, free .NET boilerplate'
 ---
 
-fullstackhero is an opinionated, production-first .NET 10 starter for building multi-tenant SaaS and enterprise APIs. You get the full source — BuildingBlocks, Modules, and a composition-root Host — wired through Minimal APIs, Mediator, and EF Core. No black-box NuGet packages: you own and can modify everything.
+fullstackhero is an opinionated, production-first .NET 10 starter for building multi-tenant SaaS and enterprise APIs. You get the full source - BuildingBlocks, Modules, and a composition-root Host - wired through Minimal APIs, Mediator, and EF Core. No black-box NuGet packages: you own and can modify everything.
 
 It's aimed at teams that want to ship features on day one without spending a sprint wiring identity, tenancy, auditing, caching, jobs, storage, observability, and API docs.
 
 ## Highlights
 
-- **Modular monolith, vertical slices.** Each module is a bounded context with its own DbContext, contracts, and feature folders. Communication across modules goes through `*.Contracts` projects only — runtime projects never reference each other.
-- **Multi-tenant from day one.** Finbuckle-powered tenancy across Identity and module DbContexts. Tenant resolution via claim, header, or query string. Per-tenant migrations and seeding run through a dedicated DbMigrator — the API never touches the schema at startup.
+- **Modular monolith, vertical slices.** Each module is a bounded context with its own DbContext, contracts, and feature folders. Communication across modules goes through `*.Contracts` projects only - runtime projects never reference each other.
+- **Multi-tenant from day one.** Finbuckle-powered tenancy across Identity and module DbContexts. Tenant resolution via claim, header, or query string. Per-tenant migrations and seeding run through a dedicated DbMigrator - the API never touches the schema at startup.
 - **Identity + permission-based auth.** ASP.NET Identity with JWT issue/refresh, roles, granular permissions enforced via `.RequirePermission()` on endpoints.
 - **Eventing built in.** Domain events on aggregates + integration events through Mediator. Outbox-friendly entity model.
 - **Webhooks with HMAC signing.** Tenant-scoped subscriptions, retries, and delivery logs.
@@ -31,7 +31,7 @@ It's aimed at teams that want to ship features on day one without spending a spr
 - **API docs.** OpenAPI + Scalar UI. Versioned routes via `Asp.Versioning` (`/api/v{version}/{module}`).
 - **Cloud-ready.** `.NET Aspire` AppHost brings up Postgres, Valkey (a Redis-compatible, BSD-licensed Redis fork), MinIO, the migrator, the API, and both React apps locally with one command. Production deploy via Docker Compose included.
 - **Two frontends.** React + Vite admin console and dashboard, both in `clients/`.
-- **CLI + template.** Scaffold a fresh, fully renamed project in one command with the `fsh` CLI (`FullStackHero.CLI`) or the `dotnet new fsh` template (`FullStackHero.NET.StarterKit`) — both on NuGet as stable 10.0.0. Or clone the repo / use the GitHub template.
+- **CLI + template.** Scaffold a fresh, fully renamed project in one command with the `fsh` CLI (`FullStackHero.CLI`) or the `dotnet new fsh` template (`FullStackHero.NET.StarterKit`) - both on NuGet as stable 10.0.0. Or clone the repo / use the GitHub template.
 
 ## High-level architecture
 
@@ -119,7 +119,7 @@ app.UseHeroMultiTenantDatabases();
 app.UseHeroPlatform(p => { p.MapModules = true; /* ... */ });
 ```
 
-The API never mutates data on startup. Demo data (acme/globex tenants, sample catalog/tickets/chat) is provisioned by `FSH.Starter.DbMigrator seed-demo`, which Aspire runs automatically on launch (the `fsh-starter-demo-seeder` resource) — so the demo logins work out of the box.
+The API never mutates data on startup. Demo data (acme/globex tenants, sample catalog/tickets/chat) is provisioned by `FSH.Starter.DbMigrator seed-demo`, which Aspire runs automatically on launch (the `fsh-starter-demo-seeder` resource) - so the demo logins work out of the box.
 
 ## Stack
 
@@ -130,7 +130,7 @@ The API never mutates data on startup. Demo data (acme/globex tenants, sample ca
 | Framework           | .NET 10 / C# latest                                                     |
 | Solution            | `.slnx` (XML) with central package management (`Directory.Packages.props`) |
 | Web                 | Minimal APIs, `Asp.Versioning.Http` 10                                  |
-| Mediator            | Mediator 3.0.2 (source generator — no reflection)                       |
+| Mediator            | Mediator 3.0.2 (source generator - no reflection)                       |
 | Validation          | FluentValidation 12                                                     |
 | ORM                 | EF Core 10                                                              |
 | Database            | PostgreSQL (Npgsql) by default; SQL Server provider available           |
@@ -163,7 +163,7 @@ The API never mutates data on startup. Demo data (acme/globex tenants, sample ca
 |------------------|------------------------------------------------------------------|
 | Unit             | xUnit, Shouldly, NSubstitute, AutoFixture                        |
 | Integration      | `Microsoft.AspNetCore.Mvc.Testing`, Testcontainers (Postgres / Valkey / Minio) |
-| Architecture     | NetArchTest — enforces module boundaries                         |
+| Architecture     | NetArchTest - enforces module boundaries                         |
 
 ### Distribution
 
@@ -176,8 +176,8 @@ The API never mutates data on startup. Demo data (acme/globex tenants, sample ca
 
 ## Where to go next
 
-- **[Prerequisites](/docs/getting-started/prerequisites/)** — what you need installed.
-- **[Quick Start](/docs/getting-started/quick-start/)** — run a project in 60 seconds.
-- **[Architecture](/docs/architecture/)** — modular monolith, VSA, module boundaries.
-- **[Modules](/docs/modules/)** — Identity, Multitenancy, Auditing, Webhooks.
-- **[Guides](/docs/guides/)** — task-oriented walkthroughs.
+- **[Prerequisites](/docs/getting-started/prerequisites/)** - what you need installed.
+- **[Quick Start](/docs/getting-started/quick-start/)** - run a project in 60 seconds.
+- **[Architecture](/docs/architecture/)** - modular monolith, VSA, module boundaries.
+- **[Modules](/docs/modules/)** - Identity, Multitenancy, Auditing, Webhooks.
+- **[Guides](/docs/guides/)** - task-oriented walkthroughs.

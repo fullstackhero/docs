@@ -1,14 +1,14 @@
 ---
 title: Two-factor authentication (TOTP)
 lastUpdated: 2026-06-11
-description: Opt-in TOTP enrolment for any user — shared secret + otpauth URI, verify, password-confirmed disable, with TOTP-required token issuance once enrolled.
+description: Opt-in TOTP enrolment for any user - shared secret + otpauth URI, verify, password-confirmed disable, with TOTP-required token issuance once enrolled.
 sidebar:
   label: Two-factor (TOTP)
   order: 4
 pageType: concept
 seo:
-  title: 'Two-factor authentication in .NET 10 — TOTP enrolment + QR'
-  description: 'How fullstackhero supports per-user TOTP-based two-factor authentication — enrol with a QR code, verify, disable. Once enrolled, token issuance requires…'
+  title: 'Two-factor authentication in .NET 10 - TOTP enrolment + QR'
+  description: 'How fullstackhero supports per-user TOTP-based two-factor authentication - enrol with a QR code, verify, disable. Once enrolled, token issuance requires…'
   keywords: 'totp dotnet, asp.net core 2fa, two factor authentication .net 10, authenticator app .net, qr code totp enrol'
 ---
 
@@ -47,7 +47,7 @@ The kit doesn't force 2FA. A reasonable production posture is to make TOTP **man
 
 ## Endpoints
 
-All under `/api/v1/identity`, all requiring an authenticated caller — TOTP is a per-user setting.
+All under `/api/v1/identity`, all requiring an authenticated caller - TOTP is a per-user setting.
 
 | Verb | Route | What |
 |---|---|---|
@@ -55,17 +55,17 @@ All under `/api/v1/identity`, all requiring an authenticated caller — TOTP is 
 | POST | `/2fa/verify` | Verify the first TOTP code; activate 2FA |
 | POST | `/2fa/disable` | Disable 2FA after confirming the current password; rotates the secret |
 
-Calling enroll again before verifying **rotates the secret** — a stale code from a prior incomplete enrolment can't silently succeed. The verify endpoint strips spaces from the code, so "123 456" works.
+Calling enroll again before verifying **rotates the secret** - a stale code from a prior incomplete enrolment can't silently succeed. The verify endpoint strips spaces from the code, so "123 456" works.
 
 ## What the kit does NOT ship
 
 - **SMS / email 2FA**. Only TOTP. SMS is widely-acknowledged-insecure (SIM-swap attacks); email mostly defeats the second-factor purpose since it shares the same compromised channel as password recovery.
-- **Backup / recovery codes**. The kit doesn't generate one-time backup codes. If a user loses their authenticator device, support has to reset 2FA manually (disable, then re-enrol). For production with non-technical users, this is the biggest gap to fill — implement 8-10 single-use recovery codes generated at enrolment time, hashed-and-stored, displayed to the user once.
+- **Backup / recovery codes**. The kit doesn't generate one-time backup codes. If a user loses their authenticator device, support has to reset 2FA manually (disable, then re-enrol). For production with non-technical users, this is the biggest gap to fill - implement 8-10 single-use recovery codes generated at enrolment time, hashed-and-stored, displayed to the user once.
 - **WebAuthn / passkeys.** No passkey support in v10. Roadmap.
 
 ## TOTP integration
 
-The kit uses ASP.NET Identity's built-in authenticator support — the shared secret is managed by `UserManager` token providers; you never write to it directly.
+The kit uses ASP.NET Identity's built-in authenticator support - the shared secret is managed by `UserManager` token providers; you never write to it directly.
 
 ```csharp
 // EnrollTwoFactorCommandHandler (simplified)
@@ -106,7 +106,7 @@ if (user.TwoFactorEnabled)
 }
 ```
 
-The error prefixes (`two_factor_required` / `two_factor_invalid`) are stable strings the React clients key off to show the code-entry step. The whole login — including 2FA attempts — sits behind the rate-limit `auth` policy, which is the throttle on TOTP brute-forcing. Failed TOTP codes do **not** increment the password-lockout counter; only failed passwords do.
+The error prefixes (`two_factor_required` / `two_factor_invalid`) are stable strings the React clients key off to show the code-entry step. The whole login - including 2FA attempts - sits behind the rate-limit `auth` policy, which is the throttle on TOTP brute-forcing. Failed TOTP codes do **not** increment the password-lockout counter; only failed passwords do.
 
 ## Operational considerations
 
@@ -122,10 +122,10 @@ The error prefixes (`two_factor_required` / `two_factor_invalid`) are stable str
   ```
 
   This isn't shipping in v10 but it's a ~200 LoC addition you'd add in your fork.
-- **Watch disable events.** A spike of 2FA disables on one account is a red flag (account takeover trying to remove the second factor). The disable endpoint requires the password precisely to raise that bar — alert on it anyway.
+- **Watch disable events.** A spike of 2FA disables on one account is a red flag (account takeover trying to remove the second factor). The disable endpoint requires the password precisely to raise that bar - alert on it anyway.
 
 ## Related
 
-- [Authentication](/docs/security/authentication/) — the login flow 2FA stacks onto.
-- [Identity module](/docs/modules/identity/) — full endpoint inventory.
-- [Production checklist](/docs/security/production-checklist/) — when to make 2FA mandatory.
+- [Authentication](/docs/security/authentication/) - the login flow 2FA stacks onto.
+- [Identity module](/docs/modules/identity/) - full endpoint inventory.
+- [Production checklist](/docs/security/production-checklist/) - when to make 2FA mandatory.

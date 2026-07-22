@@ -1,23 +1,23 @@
 ---
 title: Server-Sent Events
 lastUpdated: 2026-06-11
-description: Built-in SSE endpoints — token exchange + authenticated stream — with a connection manager for one-way pushes when SignalR is overkill.
+description: Built-in SSE endpoints - token exchange + authenticated stream - with a connection manager for one-way pushes when SignalR is overkill.
 sidebar:
   label: Server-Sent Events
   order: 8
 pageType: concept
 seo:
-  title: 'Server-Sent Events in .NET 10 — one-way streaming primitives'
-  description: 'How fullstackhero ships SSE endpoints with single-use token auth, a heartbeat, and a connection manager for one-way streaming — live feeds, gauges, status…'
+  title: 'Server-Sent Events in .NET 10 - one-way streaming primitives'
+  description: 'How fullstackhero ships SSE endpoints with single-use token auth, a heartbeat, and a connection manager for one-way streaming - live feeds, gauges, status…'
   keywords: 'asp.net core server-sent events, sse dotnet, one-way streaming .net 10, eventsource api'
 ---
 
-Server-Sent Events (SSE) are a small HTTP-streaming primitive: one connection, one direction, plain-text frames. The kit ships a complete SSE transport — a token-exchange endpoint, an authenticated stream endpoint, and a connection manager modules push events through — for the cases where SignalR is overkill: live feeds, usage gauges, status streams.
+Server-Sent Events (SSE) are a small HTTP-streaming primitive: one connection, one direction, plain-text frames. The kit ships a complete SSE transport - a token-exchange endpoint, an authenticated stream endpoint, and a connection manager modules push events through - for the cases where SignalR is overkill: live feeds, usage gauges, status streams.
 
-<Callout type="tip" title="SSE vs SignalR — when to use which">
+<Callout type="tip" title="SSE vs SignalR - when to use which">
 **Use SSE** when the server pushes to the client and the client doesn't push back. Smaller surface, no client library required, works through most proxies, lower memory footprint.
 <br /><br />
-**Use SignalR** when you need bidirectional messaging (typing indicators, presence, chat), automatic reconnection logic, or you already have it wired (the Chat + Notifications modules already use SignalR — adding SSE alongside is fine).
+**Use SignalR** when you need bidirectional messaging (typing indicators, presence, chat), automatic reconnection logic, or you already have it wired (the Chat + Notifications modules already use SignalR - adding SSE alongside is fine).
 </Callout>
 
 ## Opt in
@@ -38,16 +38,16 @@ The shipped host enables both.
 
 Why the two-step dance: browsers' `EventSource` (and plain `fetch` streaming) can't attach an `Authorization` header the way XHR can, and putting a long-lived JWT in a URL leaks it into logs and proxies. So the client exchanges its JWT for a **single-use token that expires in 30 seconds**, then opens the stream with it. The token is stored in `IDistributedCache` (key `sse:tok:{guid:N}`), deleted on first consume, and carries only the user id + tenant id. An invalid or reused token gets a 401.
 
-The token is checked **only at the stream handshake** — once the stream is open, its lifetime depends on the network/server, not the token. On reconnect the client simply requests a fresh token.
+The token is checked **only at the stream handshake** - once the stream is open, its lifetime depends on the network/server, not the token. On reconnect the client simply requests a fresh token.
 
 ## What the stream sends
 
-On connect, the endpoint sets `Content-Type: text/event-stream`, `Cache-Control: no-cache`, and `X-Accel-Buffering: no` (disables nginx buffering), then **immediately flushes a `:connected` comment frame**. That eager flush matters: Kestrel buffers response headers until the first body write, and without it the client's `fetch()` promise would sit pending until the first heartbeat — up to 15 seconds of "connecting…" on every reconnect.
+On connect, the endpoint sets `Content-Type: text/event-stream`, `Cache-Control: no-cache`, and `X-Accel-Buffering: no` (disables nginx buffering), then **immediately flushes a `:connected` comment frame**. That eager flush matters: Kestrel buffers response headers until the first body write, and without it the client's `fetch()` promise would sit pending until the first heartbeat - up to 15 seconds of "connecting…" on every reconnect.
 
 After that the loop interleaves:
 
-- **Events** — written in standard SSE framing (`id:` when set, `event:`, `data:` per line, blank line), flushed per event.
-- **Heartbeats** — a `:heartbeat` comment every 15 seconds (fixed interval) so intermediaries (corporate proxies, load balancers) don't kill idle-looking connections.
+- **Events** - written in standard SSE framing (`id:` when set, `event:`, `data:` per line, blank line), flushed per event.
+- **Heartbeats** - a `:heartbeat` comment every 15 seconds (fixed interval) so intermediaries (corporate proxies, load balancers) don't kill idle-looking connections.
 
 Two headers you might expect are deliberately absent: `Connection: keep-alive` is a hop-by-hop header that's forbidden on HTTP/2+, so Kestrel would strip it and warn on every connect.
 
@@ -64,11 +64,11 @@ connectionManager.TrySend(userId, new SseEvent("usage-updated", json));
 // tenant-wide
 connectionManager.Broadcast(tenantId, new SseEvent("maintenance-window", json));
 
-// everyone (cross-tenant — use sparingly)
+// everyone (cross-tenant - use sparingly)
 connectionManager.BroadcastAll(new SseEvent("platform-notice", json));
 ```
 
-Each connection is backed by a bounded channel (100 events, `DropOldest`) — a slow client silently loses its oldest undelivered events instead of exerting backpressure on the producer. Per-instance only: the manager holds in-process connections, so in a multi-instance deployment an event raised on instance A doesn't reach a client connected to instance B. For cross-instance fan-out, use SignalR (which has the Valkey backplane) or publish through your own pub/sub before calling the manager.
+Each connection is backed by a bounded channel (100 events, `DropOldest`) - a slow client silently loses its oldest undelivered events instead of exerting backpressure on the producer. Per-instance only: the manager holds in-process connections, so in a multi-instance deployment an event raised on instance A doesn't reach a client connected to instance B. For cross-instance fan-out, use SignalR (which has the Valkey backplane) or publish through your own pub/sub before calling the manager.
 
 ## Client side
 
@@ -88,23 +88,23 @@ for await (const ev of parseSseStream(reader)) {
 }
 ```
 
-When the stream drops, the loop requests a fresh token and reconnects with exponential backoff. Native `EventSource` also works if you don't need custom headers — point it at the stream URL with the token query parameter.
+When the stream drops, the loop requests a fresh token and reconnects with exponential backoff. Native `EventSource` also works if you don't need custom headers - point it at the stream URL with the token query parameter.
 
 ## What SSE doesn't do
 
 - **No bidirectional messaging.** Server → client only. If the client needs to send anything back, use a separate HTTP request or switch to SignalR.
-- **No native delivery guarantees.** Combined with the `DropOldest` channel, a slow or briefly-disconnected client can miss events. If you need catch-up, set `SseEvent.Id` and have the client send a "last seen" cursor on reconnect — that replay protocol is yours to build.
-- **No cross-instance fan-out** — see above.
+- **No native delivery guarantees.** Combined with the `DropOldest` channel, a slow or briefly-disconnected client can miss events. If you need catch-up, set `SseEvent.Id` and have the client send a "last seen" cursor on reconnect - that replay protocol is yours to build.
+- **No cross-instance fan-out** - see above.
 
 ## When to reach for SignalR instead
 
-- **Chat-like patterns** — bidirectional, presence, typing indicators, multi-channel.
-- **Need client-driven actions** — start / stop / pause / resume from the client.
-- **Multi-instance fan-out** — SignalR's Valkey backplane handles it; the SSE manager doesn't.
-- **You already have SignalR enabled** — each extra mechanism is a maintenance surface. Pick one per feature.
+- **Chat-like patterns** - bidirectional, presence, typing indicators, multi-channel.
+- **Need client-driven actions** - start / stop / pause / resume from the client.
+- **Multi-instance fan-out** - SignalR's Valkey backplane handles it; the SSE manager doesn't.
+- **You already have SignalR enabled** - each extra mechanism is a maintenance surface. Pick one per feature.
 
 ## Related
 
-- [Realtime (SignalR)](/docs/cross-cutting-concerns/realtime/) — bidirectional mode.
-- [Chat module](/docs/modules/chat/) — SignalR usage example.
-- [Web building block](/docs/building-blocks/web/) — `EnableSse` toggle, `SseConnectionManager`, `SseTokenService`.
+- [Realtime (SignalR)](/docs/cross-cutting-concerns/realtime/) - bidirectional mode.
+- [Chat module](/docs/modules/chat/) - SignalR usage example.
+- [Web building block](/docs/building-blocks/web/) - `EnableSse` toggle, `SseConnectionManager`, `SseTokenService`.

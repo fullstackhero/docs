@@ -7,12 +7,12 @@ sidebar:
   order: 3
 pageType: guide
 seo:
-  title: 'Architecture tests in .NET 10 — NetArchTest enforcing'
-  description: 'How fullstackhero uses NetArchTest and reflection to enforce architectural rules at build time — module boundaries, contracts purity, no circular references…'
+  title: 'Architecture tests in .NET 10 - NetArchTest enforcing'
+  description: 'How fullstackhero uses NetArchTest and reflection to enforce architectural rules at build time - module boundaries, contracts purity, no circular references…'
   keywords: 'netarchtest .net 10, architecture tests dotnet, module boundary enforcement, contracts purity check, no circular references, .net architecture rules'
 ---
 
-The architecture suite checks structural rules at build time. The kit ships **around 50 tests across 14 rule files** in `src/Tests/Architecture.Tests/` that enforce module boundaries, contracts purity, layering, naming conventions, and the domain conventions vertical slices rely on. Break a rule, fail the build. The suite mixes NetArchTest's fluent API with plain reflection and even `.csproj` parsing — whatever expresses the rule most directly.
+The architecture suite checks structural rules at build time. The kit ships **around 50 tests across 14 rule files** in `src/Tests/Architecture.Tests/` that enforce module boundaries, contracts purity, layering, naming conventions, and the domain conventions vertical slices rely on. Break a rule, fail the build. The suite mixes NetArchTest's fluent API with plain reflection and even `.csproj` parsing - whatever expresses the rule most directly.
 
 <Callout type="tip" title="Tests are the architecture documentation">
 Every architectural decision is also an assertion in `src/Tests/Architecture.Tests/`. Want to know whether modules can reference each other's runtime? Don't ask the architect; read `ModuleArchitectureTests.cs`. The rules and the documentation can't drift apart because the rules are the documentation.
@@ -22,12 +22,12 @@ Every architectural decision is also an assertion in `src/Tests/Architecture.Tes
 
 | Test file | Enforces |
 |---|---|
-| `ModuleArchitectureTests` | Module runtime projects never reference another module's runtime project (parses `.csproj` references — only `.Contracts` is allowed) |
+| `ModuleArchitectureTests` | Module runtime projects never reference another module's runtime project (parses `.csproj` references - only `.Contracts` is allowed) |
 | `ContractsPurityTests` | `*.Contracts` assemblies don't depend on EF Core, FluentValidation, Hangfire, or module implementations; no DbContext/repository types; commands and queries are records or sealed |
 | `BuildingBlocksIndependenceTests` | Building blocks don't depend on modules or hosts; Core is dependency-free; the blocks layer correctly among themselves |
-| `CircularReferenceTests` | No circular project references — across the solution, the modules, or the building blocks |
+| `CircularReferenceTests` | No circular project references - across the solution, the modules, or the building blocks |
 | `LayerDependencyTests` | Core doesn't depend on EF/ASP.NET; domain types don't reach into persistence or infrastructure |
-| `HandlerValidatorPairingTests` | Every command handler — and every paginated query handler — has a matching validator |
+| `HandlerValidatorPairingTests` | Every command handler - and every paginated query handler - has a matching validator |
 | `DomainEntityTests` | Domain events implement `IDomainEvent` and are sealed; entities implement `IEntity`; aggregate roots don't reference other aggregates directly; value objects are immutable |
 | `EndpointConventionTests` | Endpoint classes are static, live under `Features`, expose a `Map…` method that takes `IEndpointRouteBuilder` and returns `RouteHandlerBuilder`, contain no business logic, and follow the naming convention |
 | `ApiVersioningTests` | Every feature lives under a versioned namespace (`Features.v{N}`); `v1` never depends on higher versions; commands/queries sit in the same version as their handlers |
@@ -39,11 +39,11 @@ Every architectural decision is also an assertion in `src/Tests/Architecture.Tes
 
 ## How modules are discovered
 
-Most rules iterate `ModuleAssemblyDiscovery.GetModuleAssemblies()`, which scans the test output directory for `FSH.Modules.*.dll` (excluding `.Contracts`). Adding a new module to the suite only requires adding its project reference to `Architecture.Tests.csproj` — no rule file changes. A guard test fails if discovery ever comes back empty.
+Most rules iterate `ModuleAssemblyDiscovery.GetModuleAssemblies()`, which scans the test output directory for `FSH.Modules.*.dll` (excluding `.Contracts`). Adding a new module to the suite only requires adding its project reference to `Architecture.Tests.csproj` - no rule file changes. A guard test fails if discovery ever comes back empty.
 
 ## An example rule
 
-The module-boundary rule doesn't even need reflection — it reads each runtime module's `.csproj` and asserts no `ProjectReference` points at another module's runtime project:
+The module-boundary rule doesn't even need reflection - it reads each runtime module's `.csproj` and asserts no `ProjectReference` points at another module's runtime project:
 
 ```csharp
 // src/Tests/Architecture.Tests/ModuleArchitectureTests.cs
@@ -72,24 +72,24 @@ One Fact, every module under test, and the failure message names the offending p
 
 The rule the kit leans on most: every command handler must have a matching validator, and every query handler whose query has `PageNumber`/`PageSize` properties must too. The test reflects over `ICommandHandler<>`/`IQueryHandler<,>` implementors in every module assembly and looks for an `AbstractValidator<TCommand>`.
 
-Deliberate exceptions go in explicit allowlists at the top of the file (`KnownMissingCommandHandlers`, `KnownMissingQueryHandlers`) — so an exemption is a visible, reviewable code change rather than a silent gap.
+Deliberate exceptions go in explicit allowlists at the top of the file (`KnownMissingCommandHandlers`, `KnownMissingQueryHandlers`) - so an exemption is a visible, reviewable code change rather than a silent gap.
 
 ## Endpoint conventions
 
-Minimal-API endpoints in the kit are static classes under a `Features` namespace, exposing a `Map…` extension method on `IEndpointRouteBuilder` that returns `RouteHandlerBuilder`. `EndpointConventionTests` enforces all of it — shape, namespace, signature, naming, and a "no business logic in endpoints" rule. That's what keeps 165+ endpoint classes consistent; new endpoints that drift get caught by CI.
+Minimal-API endpoints in the kit are static classes under a `Features` namespace, exposing a `Map…` extension method on `IEndpointRouteBuilder` that returns `RouteHandlerBuilder`. `EndpointConventionTests` enforces all of it - shape, namespace, signature, naming, and a "no business logic in endpoints" rule. That's what keeps 165+ endpoint classes consistent; new endpoints that drift get caught by CI.
 
 ## Feature folder convention
 
-`ApiVersioningTests.Feature_Folders_Should_Follow_Version_Convention` requires every type under `Features` to live under `Features.v{N}`. This is why the kit has `Features/v1/Users/RegisterUser/` and not `Features/Users/RegisterUser/`. The version segment is mandatory; older versions stick around as `v1/` while you build `v2/` — and a companion rule guarantees `v1` never depends on `v2`.
+`ApiVersioningTests.Feature_Folders_Should_Follow_Version_Convention` requires every type under `Features` to live under `Features.v{N}`. This is why the kit has `Features/v1/Users/RegisterUser/` and not `Features/Users/RegisterUser/`. The version segment is mandatory; older versions stick around as `v1/` while you build `v2/` - and a companion rule guarantees `v1` never depends on `v2`.
 
 ## Running the architecture suite
 
 ```bash
-# Run just the architecture tests — fast, no containers
+# Run just the architecture tests - fast, no containers
 dotnet test src/Tests/Architecture.Tests/
 ```
 
-There's no infrastructure to spin up — assembly scanning + reflection is all the suite needs, so it runs in seconds.
+There's no infrastructure to spin up - assembly scanning + reflection is all the suite needs, so it runs in seconds.
 
 ## Adding a new rule
 
@@ -132,13 +132,13 @@ public sealed class MyNewRuleTests
 Three essentials, all visible in the shipped rules:
 
 - **XML doc comment** stating the rule and *why*. The comment is the readable specification; the assertion is the enforcement. Without the why, future contributors won't know whether the rule is still relevant.
-- **Specific failure message** — name the offending types.
+- **Specific failure message** - name the offending types.
 - **An explicit allowlist** if there are legitimate exceptions, so exemptions are code-reviewed, not invisible.
 
 ## What architecture tests don't enforce
 
 - **Runtime behaviour.** A class can satisfy every structural rule and still have a logic bug. Architecture tests are structural; behaviour belongs in unit / integration tests.
-- **Authorization.** "Every endpoint requires the right permission" is a runtime guarantee — the integration suite's authorization tests cover it end-to-end (401 without a token, 403 without the permission).
+- **Authorization.** "Every endpoint requires the right permission" is a runtime guarantee - the integration suite's authorization tests cover it end-to-end (401 without a token, 403 without the permission).
 - **Performance.** A rule that "no handler can be slow" can't be expressed; benchmarks belong in a separate suite (the kit doesn't ship benchmarks; you'd run BenchmarkDotNet against your fork).
 - **Security.** Architecture tests check "does this code obey the architectural invariants," not "is this code injection-vulnerable." Security testing is a separate effort (SAST tools, penetration tests).
 
@@ -146,11 +146,11 @@ Three essentials, all visible in the shipped rules:
 
 Architectural rules drift slowly. One PR adds a temporary cross-module reference "just for testing"; another developer copies the pattern; a year later, the modular monolith has cyclic dependencies. Architecture tests stop this in the first PR.
 
-These rules cost almost nothing — seconds per run, no infrastructure. Use them generously. Every rule you've ever had to enforce in code review is a rule you could encode here.
+These rules cost almost nothing - seconds per run, no infrastructure. Use them generously. Every rule you've ever had to enforce in code review is a rule you could encode here.
 
 ## Related
 
-- [Unit tests](/docs/testing/unit-tests/) — for behaviour.
-- [Integration tests](/docs/testing/integration-tests/) — for end-to-end round trips.
-- [Modular monolith](/docs/architecture/modular-monolith/) — the boundaries these tests enforce.
-- [Vertical slice architecture](/docs/architecture/vertical-slice/) — the slice shape these tests enforce.
+- [Unit tests](/docs/testing/unit-tests/) - for behaviour.
+- [Integration tests](/docs/testing/integration-tests/) - for end-to-end round trips.
+- [Modular monolith](/docs/architecture/modular-monolith/) - the boundaries these tests enforce.
+- [Vertical slice architecture](/docs/architecture/vertical-slice/) - the slice shape these tests enforce.

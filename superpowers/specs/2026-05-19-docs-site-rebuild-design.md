@@ -42,7 +42,7 @@ Brand primary changes from the blog's purple `#4c33d8` to green `#15803d`, with 
 | React islands | `@astrojs/react` + React 19 | only for `ThemeToggle`, `SearchModal` |
 | Fonts | Astro experimental fonts: Outfit + Figtree + JetBrains Mono | self-hosted via Google provider |
 | Sitemap | `@astrojs/sitemap` | includes `/`, `/docs/**`; excludes `sidebar.hidden` pages |
-| Reading-time | dropped (low value for reference content) | — |
+| Reading-time | dropped (low value for reference content) | - |
 | Modified-time | `remark-modified-time.mjs` copied from blog | drives "Last updated" footer on docs pages |
 | Package manager | npm | matches starter-kit repo (blog uses bun) |
 | Node | `>=20.0.0` | |
@@ -51,19 +51,19 @@ Brand primary changes from the blog's purple `#4c33d8` to green `#15803d`, with 
 
 Two surfaces sharing the same shell (Header, Footer, theme toggle, paper-grain body texture):
 
-**Marketing** — no sidebar:
+**Marketing** - no sidebar:
 
-- `/` — landing (hero, features, install snippet, CTAs to docs and GitHub)
+- `/` - landing (hero, features, install snippet, CTAs to docs and GitHub)
 
-**Docs** — sidebar + TOC visible:
+**Docs** - sidebar + TOC visible:
 
-- `/docs/` — docs home (welcome, three-pillar quick links)
-- `/docs/getting-started/` — install, first run, project tour, deploy targets
-- `/docs/concepts/` — architecture (modular monolith + VSA), modules & contracts, CQRS+Mediator, persistence, multitenancy, eventing, security
-- `/docs/modules/` — per-module deep dives (Identity, Multitenancy, Auditing)
-- `/docs/recipes/` — task-oriented how-tos (add a feature, add a module, write an integration test, configure storage, add a tenant)
-- `/docs/reference/` — config keys, CLI commands, permission constants, exception types
-- `/docs/contributing/` — short pointer to repo `CONTRIBUTING.md`
+- `/docs/` - docs home (welcome, three-pillar quick links)
+- `/docs/getting-started/` - install, first run, project tour, deploy targets
+- `/docs/concepts/` - architecture (modular monolith + VSA), modules & contracts, CQRS+Mediator, persistence, multitenancy, eventing, security
+- `/docs/modules/` - per-module deep dives (Identity, Multitenancy, Auditing)
+- `/docs/recipes/` - task-oriented how-tos (add a feature, add a module, write an integration test, configure storage, add a tenant)
+- `/docs/reference/` - config keys, CLI commands, permission constants, exception types
+- `/docs/contributing/` - short pointer to repo `CONTRIBUTING.md`
 
 Header nav: **Docs** (→ `/docs`), **GitHub** (external), search trigger, theme toggle, mobile drawer.
 
@@ -124,27 +124,27 @@ export const collections = { docs };
 
 **Redirects**: none. Clean slate URL-wise.
 
-# Design tokens — copy-verbatim, swap primary
+# Design tokens - copy-verbatim, swap primary
 
 Forked from `C:\Users\mukesh\repos\codewithmukesh\blog\src\styles\` on 2026-05-19. Each file carries a provenance comment at the top: `/* Forked from codewithmukesh/blog 2026-05-19. Keep in sync manually until shared package extracted. */`
 
 **Files copied verbatim** into `docs/src/styles/`:
 
-- `base.css` — light + dark token sets, table/blockquote rules, Catppuccin block.
-- `brand-typography.css` — type scale.
-- `prose.css` — long-form prose styling (this *is* the docs reading experience).
-- `globals.css` — `@theme inline` bridge, dark-mode primary routing, paper-grain `body::before`, scrollbar, selection, skip-link, `gradient-text`, `section-dots`, `magnetic-shimmer`, `brand-shadow`, view-transition theme flip.
-- `loader.css` — kept; cheap.
+- `base.css` - light + dark token sets, table/blockquote rules, Catppuccin block.
+- `brand-typography.css` - type scale.
+- `prose.css` - long-form prose styling (this *is* the docs reading experience).
+- `globals.css` - `@theme inline` bridge, dark-mode primary routing, paper-grain `body::before`, scrollbar, selection, skip-link, `gradient-text`, `section-dots`, `magnetic-shimmer`, `brand-shadow`, view-transition theme flip.
+- `loader.css` - kept; cheap.
 
 **Files modified after copy**:
 
-- `base.css` — `--primary`, `--primary-hover`, `--primary-soft`, `--ring` re-tinted green (see below). `:root` keeps the warm-paper neutrals untouched.
-- `brand-tokens.css` — `--gradient-brand` re-tinted green.
-- `globals.css` — strip the two `@plugin` lines (`tailwindcss-animate`, `@tailwindcss/forms`). Forms aren't used and the accordion keyframes are already defined inline in the `@theme inline` block. This avoids carrying two npm deps we don't need.
+- `base.css` - `--primary`, `--primary-hover`, `--primary-soft`, `--ring` re-tinted green (see below). `:root` keeps the warm-paper neutrals untouched.
+- `brand-tokens.css` - `--gradient-brand` re-tinted green.
+- `globals.css` - strip the two `@plugin` lines (`tailwindcss-animate`, `@tailwindcss/forms`). Forms aren't used and the accordion keyframes are already defined inline in the `@theme inline` block. This avoids carrying two npm deps we don't need.
 
 **Files skipped**:
 
-- `formkit.css` — no forms in v1.
+- `formkit.css` - no forms in v1.
 
 **Primary color tokens**:
 
@@ -156,47 +156,47 @@ Forked from `C:\Users\mukesh\repos\codewithmukesh\blog\src\styles\` on 2026-05-1
 | `--ring` | `#15803d` | `#15803d` | Focus rings. |
 | `--gradient-brand` | `linear-gradient(135deg, #15803d 0%, #16a34a 50%, #4ade80 100%)` | same | Brand-signature gradient. |
 
-**Astro config — Expressive Code overrides** (in `astro.config.mjs`): every hardcoded `#4c33d8` in the blog's EC config becomes `#15803d`; every `rgba(76, 51, 216, X)` becomes `rgba(21, 128, 61, X)`. Affected keys: `focusBorder`, `editorActiveTabIndicatorTopColor`, `inlineButtonBackground`, `inlineButtonBackgroundHover`, `inlineButtonForeground`, `markBackground`, `markBorderColor`. Tab/frame neutrals and Houston/github-light theme refs stay untouched.
+**Astro config - Expressive Code overrides** (in `astro.config.mjs`): every hardcoded `#4c33d8` in the blog's EC config becomes `#15803d`; every `rgba(76, 51, 216, X)` becomes `rgba(21, 128, 61, X)`. Affected keys: `focusBorder`, `editorActiveTabIndicatorTopColor`, `inlineButtonBackground`, `inlineButtonBackgroundHover`, `inlineButtonForeground`, `markBackground`, `markBorderColor`. Tab/frame neutrals and Houston/github-light theme refs stay untouched.
 
-**Astro config — fonts**: experimental fonts block copied verbatim (Outfit, Figtree, JetBrains Mono) with identical weights, subsets, fallbacks, and CSS variable names.
+**Astro config - fonts**: experimental fonts block copied verbatim (Outfit, Figtree, JetBrains Mono) with identical weights, subsets, fallbacks, and CSS variable names.
 
-**Astro config — image, prefetch, vite ssr/build, markdown** blocks copied verbatim where applicable; Cloudflare-specific aliases retained for React 19 SSR (`react-dom/server.edge`).
+**Astro config - image, prefetch, vite ssr/build, markdown** blocks copied verbatim where applicable; Cloudflare-specific aliases retained for React 19 SSR (`react-dom/server.edge`).
 
 # Layouts and components
 
 ## Layouts (`src/layouts/`)
 
-- `BaseLayout.astro` — root. Loads global CSS, fonts, theme-init script, paper-grain, view-transitions, `<html lang>`, head SEO meta. Used by every page.
-- `MarketingLayout.astro` — `BaseLayout` + Header + Footer; no sidebar. Used by `/`.
-- `DocsLayout.astro` — `BaseLayout` + Header + Sidebar + main + TOC + Footer. Used by `/docs/[...slug]`.
+- `BaseLayout.astro` - root. Loads global CSS, fonts, theme-init script, paper-grain, view-transitions, `<html lang>`, head SEO meta. Used by every page.
+- `MarketingLayout.astro` - `BaseLayout` + Header + Footer; no sidebar. Used by `/`.
+- `DocsLayout.astro` - `BaseLayout` + Header + Sidebar + main + TOC + Footer. Used by `/docs/[...slug]`.
 
 ## Shell components (`src/components/shell/`)
 
 Visual twins of blog header/footer; routes rewired for docs.
 
-- `Header.astro` — wordmark, nav (Docs / GitHub), search trigger, theme toggle, mobile drawer button. Header heights driven by `--spacing-header` / `--spacing-header-lg` from blog tokens.
-- `Footer.astro` — copyright, repo link, license link, link to `fullstackhero.net`.
-- `ThemeToggle.tsx` — React island, View Transitions API flip (copied verbatim from blog).
-- `MobileDrawer.astro` — same `fadeSlideUp` animation idiom from globals.css.
-- `SkipToContent.astro` — keyboard-only skip link.
+- `Header.astro` - wordmark, nav (Docs / GitHub), search trigger, theme toggle, mobile drawer button. Header heights driven by `--spacing-header` / `--spacing-header-lg` from blog tokens.
+- `Footer.astro` - copyright, repo link, license link, link to `fullstackhero.net`.
+- `ThemeToggle.tsx` - React island, View Transitions API flip (copied verbatim from blog).
+- `MobileDrawer.astro` - same `fadeSlideUp` animation idiom from globals.css.
+- `SkipToContent.astro` - keyboard-only skip link.
 
 ## Docs components (`src/components/docs/`)
 
-- `Sidebar.astro` — file-derived section tree, current-page highlight, collapsible sections, sticky on lg+, drawer on mobile.
-- `TableOfContents.astro` — built from page H2/H3 via Astro `headings` prop. Sticky on the right at xl+, hidden below xl.
-- `PageHeader.astro` — title, description, `pageType` badge, "Last updated".
-- `PrevNext.astro` — auto-computed prev/next within the same section.
-- `Breadcrumbs.astro` — derived from slug.
-- `SearchTrigger.astro` + `SearchModal.tsx` — Orama-powered, `Ctrl/Cmd+K` shortcut, styled to match blog modal idiom.
-- `Callout.astro` — `<Callout type="note|warning|tip|danger">`. Uses semantic tokens (`--accent`, `--warning`, `--destructive`, `--info`).
-- `CodeGroup.astro` — tabbed code blocks (e.g. PowerShell / Bash).
+- `Sidebar.astro` - file-derived section tree, current-page highlight, collapsible sections, sticky on lg+, drawer on mobile.
+- `TableOfContents.astro` - built from page H2/H3 via Astro `headings` prop. Sticky on the right at xl+, hidden below xl.
+- `PageHeader.astro` - title, description, `pageType` badge, "Last updated".
+- `PrevNext.astro` - auto-computed prev/next within the same section.
+- `Breadcrumbs.astro` - derived from slug.
+- `SearchTrigger.astro` + `SearchModal.tsx` - Orama-powered, `Ctrl/Cmd+K` shortcut, styled to match blog modal idiom.
+- `Callout.astro` - `<Callout type="note|warning|tip|danger">`. Uses semantic tokens (`--accent`, `--warning`, `--destructive`, `--info`).
+- `CodeGroup.astro` - tabbed code blocks (e.g. PowerShell / Bash).
 
 ## Landing components (`src/components/landing/`)
 
-- `Hero.astro` — gradient headline via `.gradient-text`, one-line pitch, primary CTA → `/docs/getting-started/install`, secondary CTA → GitHub. `brand-shadow` accent.
-- `FeatureGrid.astro` — `magnetic-shimmer` cards on hover.
-- `InstallSnippet.astro` — single Expressive Code block with copy button.
-- `FinalCta.astro` — repo + docs links.
+- `Hero.astro` - gradient headline via `.gradient-text`, one-line pitch, primary CTA → `/docs/getting-started/install`, secondary CTA → GitHub. `brand-shadow` accent.
+- `FeatureGrid.astro` - `magnetic-shimmer` cards on hover.
+- `InstallSnippet.astro` - single Expressive Code block with copy button.
+- `FinalCta.astro` - repo + docs links.
 
 ## MDX component map (`src/components/mdx.ts`)
 
@@ -209,8 +209,8 @@ Passed to `<Content components={...} />` on every docs page:
 
 ## Scripts (`src/scripts/`)
 
-- `theme-init.js` — inline `<head>` script reading `localStorage`, applies `.dark` before first paint (no flash).
-- `motion-reveal.ts` — IntersectionObserver hook for `[data-reveal]` (already styled in globals.css).
+- `theme-init.js` - inline `<head>` script reading `localStorage`, applies `.dark` before first paint (no flash).
+- `motion-reveal.ts` - IntersectionObserver hook for `[data-reveal]` (already styled in globals.css).
 
 # Directory layout (final)
 
@@ -297,7 +297,7 @@ docs/
 ```ts
 export default {
   url: 'https://docs.fullstackhero.net',
-  title: 'FullStackHero — .NET Starter Kit',
+  title: 'FullStackHero - .NET Starter Kit',
   description: 'Production-ready modular .NET starter kit. Modular monolith + VSA, multitenancy-first, identity built in.',
   repo: 'https://github.com/fullstackhero/dotnet-starter-kit',
   author: 'Mukesh Murugan',
@@ -317,14 +317,14 @@ npm run dev
 
 # Open items
 
-- Production URL — set to `https://docs.fullstackhero.net` by default. Change in `src/data/site.ts` if a different host is chosen.
+- Production URL - set to `https://docs.fullstackhero.net` by default. Change in `src/data/site.ts` if a different host is chosen.
 - Whether to wire PostHog later (deferred; intentionally out of v1 scope).
 - Initial MDX page bodies (covered by the implementation plan, not the design).
-- Shared-package extraction of design tokens between blog and docs (deferred — manual sync until the duplication becomes painful).
+- Shared-package extraction of design tokens between blog and docs (deferred - manual sync until the duplication becomes painful).
 
 # Risks
 
 - **Token drift** between blog and docs. Mitigation: provenance comment + periodic diff against blog `src/styles/`. If drift becomes a problem, extract a shared `@codewithmukesh/design-tokens` package.
 - **Expressive Code color override surface** is wide. Mitigation: every hardcoded purple is enumerated in this spec; lint test could grep for `#4c33d8` and `rgba(76, 51, 216` post-build to catch any missed instance.
-- **React 19 + Cloudflare SSR** — known footgun documented in blog's `astro.config.mjs` (`react-dom/server.edge` alias). The same alias is included here.
-- **Astro version target** — "latest" floats. We pin in `package.json` at install time and accept the floor of `^5.18.0` (or `^6.0.0` if 6.x is GA on install day).
+- **React 19 + Cloudflare SSR** - known footgun documented in blog's `astro.config.mjs` (`react-dom/server.edge` alias). The same alias is included here.
+- **Astro version target** - "latest" floats. We pin in `package.json` at install time and accept the floor of `^5.18.0` (or `^6.0.0` if 6.x is GA on install day).

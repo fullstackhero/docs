@@ -1,6 +1,6 @@
 ---
 /**
- * SectionIndex — chapter-plate card grid of child pages in a section.
+ * SectionIndex - chapter-plate card grid of child pages in a section.
  *
  * Usage (inside any section's `index.mdx`):
  *   <SectionIndex section="getting-started" />
@@ -10,7 +10,7 @@
  * description, and a unified hover sequence (lift / border tint /
  * watermark glow / arrow nudge on a single 320ms curve).
  *
- * No icon here — every card on a section page lives in the same
+ * No icon here - every card on a section page lives in the same
  * subject context, so iconography would be redundant noise.
  */
 import { getCollection } from 'astro:content';
@@ -51,10 +51,10 @@ const total = pages.length;
       return (
         <li>
           <a href={href} class="fsh-sec-card group">
-            {/* Watermark numeral — pure editorial accent */}
+            {/* Watermark numeral - pure editorial accent */}
             <span class="fsh-sec-watermark" aria-hidden="true" data-num={num}></span>
 
-            {/* Pagination eyebrow: 01 / 04 — gives context within the section */}
+            {/* Pagination eyebrow: 01 / 04 - gives context within the section */}
             <div class="relative">
               <span class="fsh-sec-eyebrow">
                 <span class="fsh-sec-eyebrow-cur">{num}</span>
@@ -71,7 +71,7 @@ const total = pages.length;
               )}
             </div>
 
-            {/* Footer — "Read" + arrow */}
+            {/* Footer - "Read" + arrow */}
             <div class="fsh-sec-footer">
               <span class="fsh-sec-meta">Read</span>
               <span class="fsh-sec-arrow" aria-hidden="true">
@@ -99,7 +99,7 @@ const total = pages.length;
 
 <style>
   /* ──────────────────────────────────────────────────────────────
-     Section card — companion to <CategoryIndex>'s chapter plate.
+     Section card - companion to <CategoryIndex>'s chapter plate.
      ────────────────────────────────────────────────────────────── */
 
   .fsh-sec-card {
@@ -150,7 +150,7 @@ const total = pages.length;
     pointer-events: none;
   }
 
-  /* Watermark numeral — bottom-right, clipped at the corner */
+  /* Watermark numeral - bottom-right, clipped at the corner */
   .fsh-sec-watermark::before {
     content: attr(data-num);
   }
@@ -179,7 +179,7 @@ const total = pages.length;
     color: color-mix(in oklab, var(--primary-soft) 12%, transparent);
   }
 
-  /* Pagination eyebrow — 01 / 04 */
+  /* Pagination eyebrow - 01 / 04 */
   .fsh-sec-eyebrow {
     display: inline-flex;
     align-items: baseline;
@@ -201,7 +201,7 @@ const total = pages.length;
     color: var(--muted-foreground);
   }
 
-  /* Title — body font for clarity at small card sizes */
+  /* Title - body font for clarity at small card sizes */
   .fsh-sec-title {
     font-family: var(--font-body);
     font-size: 17px;
@@ -211,7 +211,7 @@ const total = pages.length;
     line-height: 1.25;
   }
 
-  /* Description — 3-line clamp, balanced for the larger card */
+  /* Description - 3-line clamp, balanced for the larger card */
   .fsh-sec-desc {
     margin-top: 0.5rem;
     font-size: 13.5px;

@@ -7,7 +7,7 @@ sidebar:
   order: 5
 pageType: concept
 seo:
-  title: 'HMAC-signed webhooks in .NET 10 — payload integrity'
+  title: 'HMAC-signed webhooks in .NET 10 - payload integrity'
   description: 'How fullstackhero signs outbound webhook payloads with HMAC-SHA256, attaches a fresh delivery id per attempt, and the complete C# subscriber-side…'
   keywords: 'webhook hmac sha256 dotnet, webhook signing .net 10, x-webhook-signature header, webhook payload verification, fixedtimecompare hmac'
 ---
@@ -15,12 +15,12 @@ seo:
 Every outbound webhook delivery from the kit can be signed with HMAC-SHA256. Subscribers verify the signature against the same shared secret to confirm the payload came from you and wasn't tampered with in transit. Each attempt carries a fresh `X-Webhook-Delivery-Id` so receivers can dedupe retries.
 
 <Callout type="tip" title="Always set a secret">
-Subscriptions created without a `secret` are delivered **unsigned** — the signature header is simply omitted. If your tenants' systems should be able to verify deliveries, force the secret to be non-empty in your `CreateWebhookSubscriptionCommand` validator.
+Subscriptions created without a `secret` are delivered **unsigned** - the signature header is simply omitted. If your tenants' systems should be able to verify deliveries, force the secret to be non-empty in your `CreateWebhookSubscriptionCommand` validator.
 </Callout>
 
 ## Secrets are encrypted at rest
 
-The signing secret is the HMAC key, so it must be recoverable — a one-way hash would make signing impossible. The kit therefore encrypts it with ASP.NET Data Protection (`WebhookSecretProtector`, purpose string `FSH.Webhooks.SubscriptionSecret.v1`) when the subscription is created, and decrypts it only at dispatch time:
+The signing secret is the HMAC key, so it must be recoverable - a one-way hash would make signing impossible. The kit therefore encrypts it with ASP.NET Data Protection (`WebhookSecretProtector`, purpose string `FSH.Webhooks.SubscriptionSecret.v1`) when the subscription is created, and decrypts it only at dispatch time:
 
 ```csharp
 // CreateWebhookSubscriptionCommandHandler
@@ -28,7 +28,7 @@ var protectedSecret = secretProtector.Protect(command.Secret);
 var subscription = WebhookSubscription.Create(command.Url, command.Events, protectedSecret);
 ```
 
-A database leak alone doesn't expose signing secrets — the attacker would also need your [Data Protection key ring](/docs/security/data-protection/). This is also why multi-instance hosts must share the key ring (Valkey-backed persistence): a secret encrypted on one node must decrypt on another.
+A database leak alone doesn't expose signing secrets - the attacker would also need your [Data Protection key ring](/docs/security/data-protection/). This is also why multi-instance hosts must share the key ring (Valkey-backed persistence): a secret encrypted on one node must decrypt on another.
 
 ## Headers on every delivery
 
@@ -68,7 +68,7 @@ if (!string.IsNullOrEmpty(signingSecret))
 }
 ```
 
-The header value is always `sha256=` + lowercase hex digest. No surrounding whitespace, no Base64 alternative — one format, stick to it.
+The header value is always `sha256=` + lowercase hex digest. No surrounding whitespace, no Base64 alternative - one format, stick to it.
 
 ## Subscriber-side verification (.NET)
 
@@ -90,7 +90,7 @@ public static bool VerifyWebhook(string body, string signatureHeader, string sec
     var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(body));
     var actual = Convert.ToHexStringLower(hash);
 
-    // Timing-safe equality — critical to prevent timing-side-channel leaks
+    // Timing-safe equality - critical to prevent timing-side-channel leaks
     return CryptographicOperations.FixedTimeEquals(
         Encoding.ASCII.GetBytes(expected),
         Encoding.ASCII.GetBytes(actual));
@@ -137,24 +137,24 @@ Critical detail: hash the **raw bytes** of the request body, not the parsed JSON
 2. Treat any delivery whose id is already in the table as already-processed (idempotency).
 3. Expire entries older than ~24 hours.
 
-That handles **retries and network-layer duplicates** cleanly — the kit retries failed deliveries up to 4 times (30s / 2m / 10m / 1h backoff), and each attempt's id is distinct.
+That handles **retries and network-layer duplicates** cleanly - the kit retries failed deliveries up to 4 times (30s / 2m / 10m / 1h backoff), and each attempt's id is distinct.
 
-Be clear about what it does *not* handle: the delivery id is a header, **outside the signed body**, so id-dedup is not a defence against a deliberate attacker replaying a captured payload with a fresh id. For real replay defence, include a timestamp inside the signed payload and reject anything older than N minutes. The kit doesn't ship that by default — for most integrations, TLS plus signature verification plus id-dedup is the right cost/benefit.
+Be clear about what it does *not* handle: the delivery id is a header, **outside the signed body**, so id-dedup is not a defence against a deliberate attacker replaying a captured payload with a fresh id. For real replay defence, include a timestamp inside the signed payload and reject anything older than N minutes. The kit doesn't ship that by default - for most integrations, TLS plus signature verification plus id-dedup is the right cost/benefit.
 
 ## What signing doesn't protect against
 
 - **Compromised secrets.** If the shared secret leaks, anyone can sign payloads. Rotate by deleting the subscription and recreating it with a fresh secret (there's no in-place secret update); communicate the rotation to tenants out-of-band.
 - **A malicious tenant attacking themselves.** The signing protects the channel between you and the subscriber. It says nothing about whether the subscriber's own systems are trustworthy.
-- **TLS downgrade.** Always use HTTPS endpoints in subscriptions (the URL validator accepts http and https — enforce https in production). The signature doesn't substitute for transport encryption — anyone watching the wire can still read the payload, even if they can't tamper with it.
+- **TLS downgrade.** Always use HTTPS endpoints in subscriptions (the URL validator accepts http and https - enforce https in production). The signature doesn't substitute for transport encryption - anyone watching the wire can still read the payload, even if they can't tamper with it.
 
 ## Operational tips
 
 - **Log every signature failure** on your receiving side. A pattern of failures means either the subscriber's secret is out of sync or someone's probing.
-- **Don't return rich error messages on signature mismatch.** A simple 401 — no "expected X, got Y" — denies an attacker the oracle they'd need to reverse-engineer the signing scheme.
+- **Don't return rich error messages on signature mismatch.** A simple 401 - no "expected X, got Y" - denies an attacker the oracle they'd need to reverse-engineer the signing scheme.
 - **Make secrets long.** 32+ random bytes (`openssl rand -hex 32`). Short secrets are guessable through offline brute force against captured signed payloads.
 
 ## Related
 
-- [Webhooks module](/docs/modules/webhooks/) — the dispatcher + subscription lifecycle.
-- [Data protection](/docs/security/data-protection/) — the key ring that encrypts subscription secrets at rest.
-- [HTTP resilience](/docs/cross-cutting-concerns/http-resilience/) — caller-side retry policy.
+- [Webhooks module](/docs/modules/webhooks/) - the dispatcher + subscription lifecycle.
+- [Data protection](/docs/security/data-protection/) - the key ring that encrypts subscription secrets at rest.
+- [HTTP resilience](/docs/cross-cutting-concerns/http-resilience/) - caller-side retry policy.

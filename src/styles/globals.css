@@ -72,9 +72,9 @@
   --z-index-overlay: 60;
   --z-index-toast: 100;
 
-  /* Header height tokens — keep nav height predictable to prevent CLS */
-  --spacing-header: 3rem;      /* 48px — mobile */
-  --spacing-header-lg: 3.5rem; /* 56px — desktop (lg+) */
+  /* Header height tokens - keep nav height predictable to prevent CLS */
+  --spacing-header: 3rem;      /* 48px - mobile */
+  --spacing-header-lg: 3.5rem; /* 56px - desktop (lg+) */
 
   @keyframes accordion-down {
     from { height: 0; }
@@ -98,7 +98,7 @@
     border-color: var(--border);
   }
 
-  /* Dark-mode primary text — paired-token routing.
+  /* Dark-mode primary text - paired-token routing.
      The --primary token in dark mode is tuned (#15803d / green-700) so
      white text on a primary-colored button passes WCAG AA. As a CONSEQUENCE,
      --primary as text on a dark surface fails contrast. Reroute text-primary
@@ -139,7 +139,7 @@
     scrollbar-gutter: stable;
   }
 
-  /* Theme transition — View Transitions API does a single GPU-composited
+  /* Theme transition - View Transitions API does a single GPU-composited
      cross-fade between the old and new root snapshot when the theme flips.
      One animation, no per-element transition cascade, no layout thrash.
      Browsers without support (older Safari/Firefox) get an instant flip,
@@ -162,7 +162,7 @@
     }
   }
 
-  /* Subtle paper grain — kept dim; multiply blend on warm paper. */
+  /* Subtle paper grain - kept dim; multiply blend on warm paper. */
   body::before {
     content: "";
     position: fixed;
@@ -178,7 +178,7 @@
     opacity: 0;
   }
 
-  /* Cursor — pointer for interactive elements */
+  /* Cursor - pointer for interactive elements */
   button:not(:disabled),
   select:not(:disabled),
   summary,
@@ -199,7 +199,7 @@
     cursor: not-allowed;
   }
 
-  /* Scrollbar — thin, warm */
+  /* Scrollbar - thin, warm */
   * {
     scrollbar-width: thin;
     scrollbar-color: var(--border-strong) transparent;
@@ -214,7 +214,7 @@
     background-color: var(--muted-foreground);
   }
 
-  /* Selection — primary highlight. Uses inherit on color so syntax-
+  /* Selection - primary highlight. Uses inherit on color so syntax-
      highlighted text inside <pre>/<code> stays its native colour
      instead of being overwritten with --foreground (which becomes
      unreadable on the contrasting code-block background). */
@@ -241,7 +241,7 @@
     border: 0;
   }
 
-  /* Skip-to-content link — visible only when focused (keyboard nav). */
+  /* Skip-to-content link - visible only when focused (keyboard nav). */
   .skip-to-content {
     position: fixed;
     top: 0.5rem;
@@ -266,13 +266,13 @@
   .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
   .no-scrollbar::-webkit-scrollbar { display: none; }
 
-  /* `not-prose` opt-out — reverses prose-specific styling for component
+  /* `not-prose` opt-out - reverses prose-specific styling for component
      subtrees rendered inside a .prose container (e.g. card grids in
      MDX section-index pages). Without this, the prose's star li::before
      marker and underlined :where(a) links leak into the cards.
 
      IMPORTANT: most usages put `.not-prose` directly ON the <ul>, not on
-     an ancestor — so the selectors must accept both placements. The
+     an ancestor - so the selectors must accept both placements. The
      `:where()` wrapper keeps specificity low without sacrificing reach. */
   :where(.not-prose) li::before,
   :where(.not-prose) li::after {
@@ -292,7 +292,7 @@
     text-decoration: none !important;
   }
 
-  /* Edge-fade — signals scrollability without a visible scrollbar.
+  /* Edge-fade - signals scrollability without a visible scrollbar.
      Used on scroll containers with `no-scrollbar`. Top fade only kicks
      in once the user has scrolled; bottom fade is constant while there
      is overflow below. Uses CSS mask so the fade is purely visual. */
@@ -313,7 +313,7 @@
     );
   }
 
-  /* Section reveal — used by motion-driven inView observer in BaseLayout */
+  /* Section reveal - used by motion-driven inView observer in BaseLayout */
   [data-reveal] {
     opacity: 0;
     transform: translateY(14px);
@@ -326,14 +326,14 @@
     transform: translateY(0);
   }
 
-  /* "Live" indicator pulse — used in tags, badges */
+  /* "Live" indicator pulse - used in tags, badges */
   @keyframes dss-pulse-dot {
     0%, 100% { opacity: 1; transform: scale(1); }
     50%      { opacity: 0.7; transform: scale(0.92); }
   }
   .pulse-dot { animation: dss-pulse-dot 1.6s ease-in-out infinite; }
 
-  /* Anchor target highlight — uses a pseudo-element overlay animated via
+  /* Anchor target highlight - uses a pseudo-element overlay animated via
      opacity (GPU-composited) instead of animating background-color on the
      element itself (paint-only, flagged by Lighthouse as a non-composited
      animation). The overlay sits behind content with z-index: -1 so it
@@ -378,7 +378,7 @@
    SHARED DESIGN SYSTEM UTILITIES
    ═══════════════════════════════════════════════════════ */
 
-/* Brand-signature gradient text — static gradient, no animation. */
+/* Brand-signature gradient text - static gradient, no animation. */
 .gradient-text {
   background: var(--gradient-brand);
   -webkit-background-clip: text;

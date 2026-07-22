@@ -7,12 +7,12 @@ sidebar:
   order: 5
 pageType: concept
 seo:
-  title: 'Feature flags in .NET 10 — Microsoft.FeatureManagement'
-  description: 'How fullstackhero wires Microsoft.FeatureManagement.AspNetCore with a custom TenantFeatureFilter so flags can be enabled per tenant — for staged rollouts…'
+  title: 'Feature flags in .NET 10 - Microsoft.FeatureManagement'
+  description: 'How fullstackhero wires Microsoft.FeatureManagement.AspNetCore with a custom TenantFeatureFilter so flags can be enabled per tenant - for staged rollouts…'
   keywords: 'microsoft featuremanagement .net 10, feature flag tenant override, asp.net core feature toggle, staged rollout dotnet'
 ---
 
-`Microsoft.FeatureManagement.AspNetCore` is the kit's feature-flag system. The kit ships a custom `TenantFeatureFilter` so flags can be enabled for specific tenants — useful for staged rollouts, beta cohorts, kill switches per customer, and per-environment toggles without code changes.
+`Microsoft.FeatureManagement.AspNetCore` is the kit's feature-flag system. The kit ships a custom `TenantFeatureFilter` so flags can be enabled for specific tenants - useful for staged rollouts, beta cohorts, kill switches per customer, and per-environment toggles without code changes.
 
 <Callout type="tip" title="Use flags for risky deploys, not as permanent config">
 A feature flag's job is to ship a risky change behind a switch you can flip if it goes wrong. Once the feature is stable, **remove the flag**. Flags that linger forever become a different (worse) kind of dead code than the alternative they were meant to replace.
@@ -24,7 +24,7 @@ A feature flag's job is to ship a risky change behind a switch you can flip if i
 builder.AddHeroPlatform(o => o.EnableFeatureFlags = true);
 ```
 
-`AddHeroPlatform` registers `Microsoft.FeatureManagement` services plus `TenantFeatureFilter` so per-tenant evaluation works. Feature flags are **off by default** — the shipped host (`FSH.Starter.Api/Program.cs`) doesn't enable them, so flip the toggle before declaring any flags.
+`AddHeroPlatform` registers `Microsoft.FeatureManagement` services plus `TenantFeatureFilter` so per-tenant evaluation works. Feature flags are **off by default** - the shipped host (`FSH.Starter.Api/Program.cs`) doesn't enable them, so flip the toggle before declaring any flags.
 
 ## Declaring flags
 
@@ -36,7 +36,7 @@ Flags live in `appsettings.json` under `FeatureManagement`. Three example shapes
     // 1. simple on/off
     "BetaCheckoutFlow": true,
 
-    // 2. tenant-scoped — only enabled for listed tenants
+    // 2. tenant-scoped - only enabled for listed tenants
     "BetaProductImagesV2": {
       "EnabledFor": [
         { "Name": "Tenant", "Parameters": { "AllowedTenants": ["acme", "globex"] } }
@@ -54,7 +54,7 @@ Flags live in `appsettings.json` under `FeatureManagement`. Three example shapes
 }
 ```
 
-The `Tenant` filter is the kit's `TenantFeatureFilter` (alias `Tenant`, parameter `AllowedTenants`, case-insensitive tenant-id match); the percentage filter is built into `Microsoft.FeatureManagement`. You can stack filters — they OR together by default (any filter passing enables the flag).
+The `Tenant` filter is the kit's `TenantFeatureFilter` (alias `Tenant`, parameter `AllowedTenants`, case-insensitive tenant-id match); the percentage filter is built into `Microsoft.FeatureManagement`. You can stack filters - they OR together by default (any filter passing enables the flag).
 
 ## Checking a flag
 
@@ -91,7 +91,7 @@ endpoints.MapGet("/catalog/products/recommended", handler)
          .RequireFeature("RecommendationsEndpoint");
 ```
 
-When the flag is off, the endpoint returns **404 Not Found** — to callers, a gated-off endpoint doesn't exist. Use this for shipping new endpoints behind a flag without exposing them broadly.
+When the flag is off, the endpoint returns **404 Not Found** - to callers, a gated-off endpoint doesn't exist. Use this for shipping new endpoints behind a flag without exposing them broadly.
 
 ## Common patterns
 
@@ -138,22 +138,22 @@ Set to `false` in an incident to instantly disable the SignalR push path without
 
 In **configuration**. The kit doesn't ship a database-backed flag store. That's deliberate: editing JSON config is cheap, auditable through git history, and doesn't require a separate management UI.
 
-Related but separate: billing/quota plans carry an `ActiveFeatureFlags` limit (`QuotaResource.ActiveFeatureFlags` — see `QuotaOptions:Plans` and the admin plan form). That's a metering dimension for plan design; nothing currently enforces it against your `FeatureManagement` definitions.
+Related but separate: billing/quota plans carry an `ActiveFeatureFlags` limit (`QuotaResource.ActiveFeatureFlags` - see `QuotaOptions:Plans` and the admin plan form). That's a metering dimension for plan design; nothing currently enforces it against your `FeatureManagement` definitions.
 
-If you outgrow JSON — you need runtime flag toggles without redeploy, or per-user (not per-tenant) flags — wire a custom `IFeatureDefinitionProvider` against your store of choice (Redis, EF Core, ConfigCat, LaunchDarkly). The kit's `TenantFeatureFilter` pattern is the template for custom filters.
+If you outgrow JSON - you need runtime flag toggles without redeploy, or per-user (not per-tenant) flags - wire a custom `IFeatureDefinitionProvider` against your store of choice (Redis, EF Core, ConfigCat, LaunchDarkly). The kit's `TenantFeatureFilter` pattern is the template for custom filters.
 
 ## Removing a flag
 
 When a flag has been on globally for a while and the alternative is gone:
 
 1. Delete the flag definition from `appsettings.json`.
-2. Remove the `IFeatureManager.IsEnabledAsync` call in the handler — collapse the conditional to the always-on branch.
+2. Remove the `IFeatureManager.IsEnabledAsync` call in the handler - collapse the conditional to the always-on branch.
 3. Delete the dead alternative path.
 
 Don't skip step 3. Lingering "old" branches are technical debt and a security risk (un-tested code that might still be reachable).
 
 ## Related
 
-- [Multitenancy module](/docs/modules/multitenancy/) — the tenant resolution that `TenantFeatureFilter` reads.
-- [Production checklist](/docs/security/) — flag hygiene before a major release.
-- [Web building block](/docs/building-blocks/web/) — `EnableFeatureFlags` toggle.
+- [Multitenancy module](/docs/modules/multitenancy/) - the tenant resolution that `TenantFeatureFilter` reads.
+- [Production checklist](/docs/security/) - flag hygiene before a major release.
+- [Web building block](/docs/building-blocks/web/) - `EnableFeatureFlags` toggle.

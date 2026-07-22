@@ -1,24 +1,24 @@
 ---
 title: Add a module
 lastUpdated: 2026-06-11
-description: End-to-end recipe for creating a new bounded-context module — the two-project layout, IModule and FshModule registration, BaseDbContext, migrations, and the four wire points people miss.
+description: End-to-end recipe for creating a new bounded-context module - the two-project layout, IModule and FshModule registration, BaseDbContext, migrations, and the four wire points people miss.
 sidebar:
   label: Add a module
   order: 2
 pageType: recipe
 seo:
-  title: 'Add a module to fullstackhero — bounded context recipe'
-  description: 'Step-by-step guide to adding a new module to the fullstackhero .NET starter kit — runtime + Contracts projects, FshModule registration, BaseDbContext, EF…'
+  title: 'Add a module to fullstackhero - bounded context recipe'
+  description: 'Step-by-step guide to adding a new module to the fullstackhero .NET starter kit - runtime + Contracts projects, FshModule registration, BaseDbContext, EF…'
   keywords: 'add module modular monolith, .net bounded context recipe, fullstackhero new module, mediator assembly registration, ef core per-module migrations'
 ---
 
-A module is a bounded context: a runtime project (internal — handlers, endpoints, domain, data) plus a `.Contracts` project (its only public API — commands, queries, DTOs, events, permissions). Other modules may reference the Contracts project, never the runtime project. That boundary is enforced by architecture tests, so wiring it wrong fails loudly.
+A module is a bounded context: a runtime project (internal - handlers, endpoints, domain, data) plus a `.Contracts` project (its only public API - commands, queries, DTOs, events, permissions). Other modules may reference the Contracts project, never the runtime project. That boundary is enforced by architecture tests, so wiring it wrong fails loudly.
 
-What does **not** fail loudly is registration. A module must be wired in **four** places across two `Program.cs` files, and missing any one of them produces a host that boots green and a module that silently doesn't work. That's the part this guide exists for — everything else is mechanical.
+What does **not** fail loudly is registration. A module must be wired in **four** places across two `Program.cs` files, and missing any one of them produces a host that boots green and a module that silently doesn't work. That's the part this guide exists for - everything else is mechanical.
 
-Before you start: if you're adding a feature to an *existing* module, this is the wrong page — see [Add a feature](/docs/guides/add-a-feature/). And if you're working with an AI coding agent, the repo ships a scaffolding recipe at `.agents/skills/add-module/` that encodes everything below; pointing your agent at it is the fastest route.
+Before you start: if you're adding a feature to an *existing* module, this is the wrong page - see [Add a feature](/docs/guides/add-a-feature/). And if you're working with an AI coding agent, the repo ships a scaffolding recipe at `.agents/skills/add-module/` that encodes everything below; pointing your agent at it is the fastest route.
 
-This guide builds a fictional `Inventory` module and uses the real `Notifications` module (`src/Modules/Notifications/`) as the reference implementation throughout — it's the smallest complete module in the kit.
+This guide builds a fictional `Inventory` module and uses the real `Notifications` module (`src/Modules/Notifications/`) as the reference implementation throughout - it's the smallest complete module in the kit.
 
 ## 1. Create the two projects
 
@@ -36,7 +36,7 @@ src/Modules/Inventory/
     └── v1/                        ← Commands/, Queries/, DTOs/
 ```
 
-Don't hand-write the `.csproj` files — copy them from an existing module and rename. The Notifications pair shows the shape:
+Don't hand-write the `.csproj` files - copy them from an existing module and rename. The Notifications pair shows the shape:
 
 ```xml
 <!-- Modules.Inventory/Modules.Inventory.csproj -->
@@ -69,7 +69,7 @@ Don't hand-write the `.csproj` files — copy them from an existing module and r
 </ItemGroup>
 ```
 
-The Contracts project stays deliberately thin: `Mediator.Abstractions` plus shared contracts (`Shared`, and `Eventing.Abstractions` if it publishes integration events). No EF Core, no FluentValidation, no module internals — `ContractsPurityTests` checks all of that.
+The Contracts project stays deliberately thin: `Mediator.Abstractions` plus shared contracts (`Shared`, and `Eventing.Abstractions` if it publishes integration events). No EF Core, no FluentValidation, no module internals - `ContractsPurityTests` checks all of that.
 
 Add a marker class to the Contracts project. It exists purely so `Program.cs` can point the Mediator source generator at the assembly:
 
@@ -90,7 +90,7 @@ dotnet sln src/FSH.Starter.slnx add src/Modules/Inventory/Modules.Inventory/Modu
 dotnet sln src/FSH.Starter.slnx add src/Modules/Inventory/Modules.Inventory.Contracts/Modules.Inventory.Contracts.csproj
 ```
 
-Then make the runtime project reachable from both hosts. Reference it from `src/Host/FSH.Starter.Migrations.PostgreSQL/FSH.Starter.Migrations.PostgreSQL.csproj` — both `FSH.Starter.Api` and `FSH.Starter.DbMigrator` reference the Migrations project, so your module flows to them transitively. Most existing modules are *also* referenced directly from both host `.csproj` files; the direct reference costs nothing and makes the dependency explicit, so follow suit.
+Then make the runtime project reachable from both hosts. Reference it from `src/Host/FSH.Starter.Migrations.PostgreSQL/FSH.Starter.Migrations.PostgreSQL.csproj` - both `FSH.Starter.Api` and `FSH.Starter.DbMigrator` reference the Migrations project, so your module flows to them transitively. Most existing modules are *also* referenced directly from both host `.csproj` files; the direct reference costs nothing and makes the dependency explicit, so follow suit.
 
 ## 3. Implement `IModule` and declare it with `[FshModule]`
 
@@ -113,7 +113,7 @@ using FSH.Framework.Web.Modules;
 | Files | 350 | | Notifications | 750 |
 | Webhooks | 400 | | Chat | 800 |
 
-Pick something after the modules yours depends on — `900` is a safe default for a new leaf module. Order matters more than it looks: Notifications sits at 750 *deliberately* so its integration-event handlers register before Chat (800) starts publishing.
+Pick something after the modules yours depends on - `900` is a safe default for a new leaf module. Order matters more than it looks: Notifications sits at 750 *deliberately* so its integration-event handlers register before Chat (800) starts publishing.
 
 The module class itself, condensed from `NotificationsModule.cs`:
 
@@ -153,9 +153,9 @@ public sealed class InventoryModule : IModule
 }
 ```
 
-`IModule` also has a `ConfigureMiddleware(IApplicationBuilder app)` member with a no-op default implementation — only override it if your module needs request middleware (it runs *after* `UseAuthentication`, so claims are available). Validators need no per-module registration: `ModuleLoader.AddModules` calls `AddValidatorsFromAssemblies` over the whole `moduleAssemblies` array.
+`IModule` also has a `ConfigureMiddleware(IApplicationBuilder app)` member with a no-op default implementation - only override it if your module needs request middleware (it runs *after* `UseAuthentication`, so claims are available). Validators need no per-module registration: `ModuleLoader.AddModules` calls `AddValidatorsFromAssemblies` over the whole `moduleAssemblies` array.
 
-If the module publishes or consumes integration events, also add `AddEventingForDbContext<InventoryDbContext>()` and `AddIntegrationEventHandlers(typeof(InventoryModule).Assembly)` — see the eventing rules in `.agents/rules/eventing.md`.
+If the module publishes or consumes integration events, also add `AddEventingForDbContext<InventoryDbContext>()` and `AddIntegrationEventHandlers(typeof(InventoryModule).Assembly)` - see the eventing rules in `.agents/rules/eventing.md`.
 
 ## 4. Permissions
 
@@ -181,7 +181,7 @@ public static class InventoryPermissions
 }
 ```
 
-## 5. DbContext — subclass `BaseDbContext`, call `base.OnModelCreating` last
+## 5. DbContext - subclass `BaseDbContext`, call `base.OnModelCreating` last
 
 Every module gets its own schema and its own DbContext extending `BaseDbContext`. Tenant isolation is **default-on**: `BaseDbContext.OnModelCreating` auto-applies the tenant query filter (and soft-delete filter) to every entity it sees, so your subclass must call it **last**, after all entity configuration, or late-configured entities escape the filter. Verbatim from `NotificationsDbContext.cs`, renamed:
 
@@ -206,22 +206,22 @@ public sealed class InventoryDbContext : BaseDbContext
         ArgumentNullException.ThrowIfNull(modelBuilder);
         modelBuilder.HasDefaultSchema(Schema);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(InventoryDbContext).Assembly);
-        base.OnModelCreating(modelBuilder);   // MUST be last — applies tenant + soft-delete filters
+        base.OnModelCreating(modelBuilder);   // MUST be last - applies tenant + soft-delete filters
     }
 }
 ```
 
-If an entity genuinely must span tenants, mark it `IGlobalEntity` to opt out — that's the only sanctioned escape hatch, and `TenantIsolationTests` checks every entity is one or the other.
+If an entity genuinely must span tenants, mark it `IGlobalEntity` to opt out - that's the only sanctioned escape hatch, and `TenantIsolationTests` checks every entity is one or the other.
 
 ## 6. Register in all four places
 
 This is the step people miss, and every miss is silent.
 
 <Callout type="warning" title="Four wire points, two files, zero error messages">
-A new module must be registered in **four** places: the Mediator `o.Assemblies` list and the `moduleAssemblies` array in `src/Host/FSH.Starter.Api/Program.cs`, **and the identical pair** in `src/Host/FSH.Starter.DbMigrator/Program.cs`. Miss the Mediator markers and the host boots fine, endpoints map, and `mediator.Send` fails at runtime because the source generator never scanned your assemblies — handlers are silently undiscovered. Miss the `moduleAssemblies` entry and the module simply never loads. Miss the DbMigrator pair and `apply`/`seed` silently skips your module — its migrations never run, its schema never exists.
+A new module must be registered in **four** places: the Mediator `o.Assemblies` list and the `moduleAssemblies` array in `src/Host/FSH.Starter.Api/Program.cs`, **and the identical pair** in `src/Host/FSH.Starter.DbMigrator/Program.cs`. Miss the Mediator markers and the host boots fine, endpoints map, and `mediator.Send` fails at runtime because the source generator never scanned your assemblies - handlers are silently undiscovered. Miss the `moduleAssemblies` entry and the module simply never loads. Miss the DbMigrator pair and `apply`/`seed` silently skips your module - its migrations never run, its schema never exists.
 </Callout>
 
-The Mediator list needs **two** markers per module — one type from the Contracts assembly and one from the runtime assembly, because commands live in Contracts and handlers live in the runtime project. From the real `FSH.Starter.Api/Program.cs`, condensed:
+The Mediator list needs **two** markers per module - one type from the Contracts assembly and one from the runtime assembly, because commands live in Contracts and handlers live in the runtime project. From the real `FSH.Starter.Api/Program.cs`, condensed:
 
 ```csharp
 builder.Services.AddMediator(o =>
@@ -245,15 +245,15 @@ var moduleAssemblies = new Assembly[]
 };
 ```
 
-(Some older entries use a real command type instead of a dedicated marker class — either works; any type from the right assembly does. New modules use the marker convention.)
+(Some older entries use a real command type instead of a dedicated marker class - either works; any type from the right assembly does. New modules use the marker convention.)
 
-Now open `src/Host/FSH.Starter.DbMigrator/Program.cs` and make the **same two edits**. The migrator mirrors the API's Mediator registration and module list on purpose — its comment says why: module `IDbInitializer`s depend on services the module wiring provides, and the per-tenant migration pass only iterates modules it loaded.
+Now open `src/Host/FSH.Starter.DbMigrator/Program.cs` and make the **same two edits**. The migrator mirrors the API's Mediator registration and module list on purpose - its comment says why: module `IDbInitializer`s depend on services the module wiring provides, and the per-tenant migration pass only iterates modules it loaded.
 
 The fastest sanity check after wiring: build, run, hit one of your endpoints, and confirm the handler actually executes.
 
 ## 7. Migrations
 
-All EF migrations live in **one** project — `src/Host/FSH.Starter.Migrations.PostgreSQL` — foldered per module, each folder with its own model snapshot:
+All EF migrations live in **one** project - `src/Host/FSH.Starter.Migrations.PostgreSQL` - foldered per module, each folder with its own model snapshot:
 
 ```text
 src/Host/FSH.Starter.Migrations.PostgreSQL/
@@ -265,7 +265,7 @@ src/Host/FSH.Starter.Migrations.PostgreSQL/
 └── …
 ```
 
-Add an `Inventory/` folder (and a matching `<Folder Include="Inventory\" />` entry in the Migrations `.csproj`, like the existing ones), make sure the runtime project is referenced from the Migrations project (step 2), then create the initial migration. **Build first** — `dotnet ef migrations add` reads the compiled snapshot, so generating against a stale build silently drops your latest model changes. The same footgun applies in reverse: `migrations remove` rewrites the snapshot, so only ever remove the latest migration and rebuild before the next `add`.
+Add an `Inventory/` folder (and a matching `<Folder Include="Inventory\" />` entry in the Migrations `.csproj`, like the existing ones), make sure the runtime project is referenced from the Migrations project (step 2), then create the initial migration. **Build first** - `dotnet ef migrations add` reads the compiled snapshot, so generating against a stale build silently drops your latest model changes. The same footgun applies in reverse: `migrations remove` rewrites the snapshot, so only ever remove the latest migration and rebuild before the next `add`.
 
 ```bash
 dotnet tool restore                    # dotnet-ef is pinned in .config/dotnet-tools.json
@@ -278,7 +278,7 @@ dotnet ef migrations add InitialInventory \
   --output-dir Inventory
 ```
 
-All three of `--project`, `--startup-project`, and `--context` are required — there are ten DbContexts in that project, and `--output-dir` is what lands the files in your module's folder. Apply through the DbMigrator (the database is *not* migrated at API startup):
+All three of `--project`, `--startup-project`, and `--context` are required - there are ten DbContexts in that project, and `--output-dir` is what lands the files in your module's folder. Apply through the DbMigrator (the database is *not* migrated at API startup):
 
 ```bash
 dotnet run --project src/Host/FSH.Starter.DbMigrator -- list-pending   # preview
@@ -287,15 +287,15 @@ dotnet run --project src/Host/FSH.Starter.DbMigrator -- apply
 
 More on the migrator's verbs and deployment story in [database migrations](/docs/deployment/database-migrations/).
 
-## 8. Tests — and what fails if you wired it wrong
+## 8. Tests - and what fails if you wired it wrong
 
-Add a per-module unit test project following the existing convention: `src/Tests/Inventory.Tests` (see `Catalog.Tests`, `Billing.Tests`, `Chat.Tests` for the shape), and add it to the solution. If your handlers test internal types, the runtime module grants `[assembly: InternalsVisibleTo("Inventory.Tests")]` in its `AssemblyInfo.cs` — Notifications does exactly this.
+Add a per-module unit test project following the existing convention: `src/Tests/Inventory.Tests` (see `Catalog.Tests`, `Billing.Tests`, `Chat.Tests` for the shape), and add it to the solution. If your handlers test internal types, the runtime module grants `[assembly: InternalsVisibleTo("Inventory.Tests")]` in its `AssemblyInfo.cs` - Notifications does exactly this.
 
 `src/Tests/Architecture.Tests` is the safety net for this whole guide. The rules that bite module authors:
 
 | Test | Catches |
 |---|---|
-| `ModuleArchitectureTests.Modules_Should_Not_Depend_On_Other_Modules` | A `<ProjectReference>` from your runtime project to another module's runtime project (csproj scan — only `.Contracts` references are allowed) |
+| `ModuleArchitectureTests.Modules_Should_Not_Depend_On_Other_Modules` | A `<ProjectReference>` from your runtime project to another module's runtime project (csproj scan - only `.Contracts` references are allowed) |
 | `ContractsPurityTests.*` | EF Core, FluentValidation, Hangfire, DbContexts, or module internals leaking into your Contracts project |
 | `HandlerValidatorPairingTests.CommandHandlers_Should_Have_Corresponding_Validators` | A command handler without a `{Command}Validator` |
 | `HandlerValidatorPairingTests.QueryHandlers_With_Pagination_Should_Have_Validators` | A paginated query handler without a validator |
@@ -305,29 +305,29 @@ Add a per-module unit test project following the existing convention: `src/Tests
 Run the full gauntlet:
 
 ```bash
-dotnet build src/FSH.Starter.slnx                  # TreatWarningsAsErrors — 0 warnings
+dotnet build src/FSH.Starter.slnx                  # TreatWarningsAsErrors - 0 warnings
 dotnet test src/Tests/Architecture.Tests
 dotnet test src/FSH.Starter.slnx                   # integration tests require Docker
 ```
 
 ## Checklist
 
-1. Two projects under `src/Modules/Inventory/` — csproj copied from an existing module, runtime references Contracts + BuildingBlocks, Contracts stays thin.
+1. Two projects under `src/Modules/Inventory/` - csproj copied from an existing module, runtime references Contracts + BuildingBlocks, Contracts stays thin.
 2. `InventoryContractsMarker` class in the Contracts project.
 3. Both projects added to `src/FSH.Starter.slnx`; runtime referenced from `FSH.Starter.Migrations.PostgreSQL` (and directly from both hosts, matching existing modules).
-4. `[assembly: FshModule(typeof(InventoryModule), 900)]` — assembly-level, positional order.
-5. `InventoryModule : IModule` — `PermissionConstants.Register`, `AddHeroDbContext`, `IDbInitializer`, health check, versioned endpoint group.
+4. `[assembly: FshModule(typeof(InventoryModule), 900)]` - assembly-level, positional order.
+5. `InventoryModule : IModule` - `PermissionConstants.Register`, `AddHeroDbContext`, `IDbInitializer`, health check, versioned endpoint group.
 6. `InventoryPermissions` in `Contracts/Authorization` with an `All` list.
-7. `InventoryDbContext : BaseDbContext` — 4-arg ctor, `HasDefaultSchema`, `base.OnModelCreating` **last**.
-8. **Registered in all four places** — Mediator pair + `moduleAssemblies` in `FSH.Starter.Api/Program.cs` *and* `FSH.Starter.DbMigrator/Program.cs`.
+7. `InventoryDbContext : BaseDbContext` - 4-arg ctor, `HasDefaultSchema`, `base.OnModelCreating` **last**.
+8. **Registered in all four places** - Mediator pair + `moduleAssemblies` in `FSH.Starter.Api/Program.cs` *and* `FSH.Starter.DbMigrator/Program.cs`.
 9. `Inventory/` migrations folder + initial migration (`--context InventoryDbContext --output-dir Inventory`), applied via DbMigrator.
 10. `Inventory.Tests` project; build + `Architecture.Tests` + full suite green.
-11. Hit an endpoint and confirm a handler actually runs — the four-wire-points check no test performs for you.
+11. Hit an endpoint and confirm a handler actually runs - the four-wire-points check no test performs for you.
 
 ## Related
 
-- [Architecture: modular monolith](/docs/architecture/modular-monolith/) — why modules are shaped this way.
-- [Architecture: dependency injection](/docs/architecture/dependency-injection/) — `ModuleLoader`, platform composition, lifetimes.
-- [Deployment: database migrations](/docs/deployment/database-migrations/) — the DbMigrator in CI/CD.
-- [Add a feature](/docs/guides/add-a-feature/) — the slice-level recipe once your module exists.
-- AI route: point your coding agent at `.agents/skills/add-module/SKILL.md` in the repo — it encodes this entire recipe as a scaffolding script.
+- [Architecture: modular monolith](/docs/architecture/modular-monolith/) - why modules are shaped this way.
+- [Architecture: dependency injection](/docs/architecture/dependency-injection/) - `ModuleLoader`, platform composition, lifetimes.
+- [Deployment: database migrations](/docs/deployment/database-migrations/) - the DbMigrator in CI/CD.
+- [Add a feature](/docs/guides/add-a-feature/) - the slice-level recipe once your module exists.
+- AI route: point your coding agent at `.agents/skills/add-module/SKILL.md` in the repo - it encodes this entire recipe as a scaffolding script.

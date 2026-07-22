@@ -1,4 +1,4 @@
-# Docs site — editorial alignment with `codewithmukesh/blog`
+# Docs site - editorial alignment with `codewithmukesh/blog`
 
 **Date:** 2026-05-19
 **Status:** Approved, ready for implementation plan
@@ -9,9 +9,9 @@
 
 ## Background
 
-The FSH docs site at `docs/` was scaffolded by forking tokens and typography from `codewithmukesh/blog`, then rebranding the primary color to green (`#15803d`). Typography, tokens, and the header are direct ports and look the part. However the actual UI surface above the token layer — buttons, cards, callouts, eyebrows, section rhythm, animated affordances — was reinvented inline per section instead of being ported as primitives. The result: typography reads right, but the overall surface feels like a different site.
+The FSH docs site at `docs/` was scaffolded by forking tokens and typography from `codewithmukesh/blog`, then rebranding the primary color to green (`#15803d`). Typography, tokens, and the header are direct ports and look the part. However the actual UI surface above the token layer - buttons, cards, callouts, eyebrows, section rhythm, animated affordances - was reinvented inline per section instead of being ported as primitives. The result: typography reads right, but the overall surface feels like a different site.
 
-The owner wants the docs site to feel like a sibling to the blog — same primitives, same eyebrow rhythm, same animation vocabulary, same prose details — while keeping green as the brand color.
+The owner wants the docs site to feel like a sibling to the blog - same primitives, same eyebrow rhythm, same animation vocabulary, same prose details - while keeping green as the brand color.
 
 ## Goals
 
@@ -23,23 +23,23 @@ The owner wants the docs site to feel like a sibling to the blog — same primit
 
 ## Non-goals
 
-- Switching primary color from green back to purple — green is the intentional FSH brand.
+- Switching primary color from green back to purple - green is the intentional FSH brand.
 - Building a `/styleguide` or `/brand` page (useful but separate scope).
-- Polishing the docs reading experience (Sidebar, TOC, MDX prose surface) — separate pass.
+- Polishing the docs reading experience (Sidebar, TOC, MDX prose surface) - separate pass.
 - Lifting the blog hero's performative animations (animated terminal, stat-card EQ-tick dance). The docs hero is install-and-CTA-focused, not a marketing performance.
-- Adding new landing sections — keeping the existing six.
+- Adding new landing sections - keeping the existing six.
 - Pulling in primitives the docs landing has no use for (TextField, Textarea, Select, Checkbox, Radio, Switch). Reconsider when docs adds forms.
 
 ## Already aligned (no work)
 
 These are direct forks from the blog and don't need changes:
 
-- `src/styles/brand-tokens.css` — green gradient retoned, rest identical.
-- `src/styles/brand-typography.css` — Outfit / Figtree / JetBrains Mono via Astro Fonts API.
-- `src/styles/globals.css` — `section-dots`, `section-dots-subtle`, `magnetic-shimmer` (CSS only), `brand-shadow`, `gradient-text`, `pulse-dot`, `data-reveal`, mobile-nav animations, view-transitions.
-- `src/styles/prose.css` — typography + spacing tokens match (one drift to fix: list marker, see below).
-- `components/shell/Header.astro` — direct port (sticky, scroll-aware backdrop, liquid hover indicator, mobile drawer). One small fix: GitHub button uses `bg-primary` — replace with `<Button variant="primary">` once primitives land.
-- `components/shell/ThemeToggle.astro`, `components/shell/Footer.astro` — direct ports.
+- `src/styles/brand-tokens.css` - green gradient retoned, rest identical.
+- `src/styles/brand-typography.css` - Outfit / Figtree / JetBrains Mono via Astro Fonts API.
+- `src/styles/globals.css` - `section-dots`, `section-dots-subtle`, `magnetic-shimmer` (CSS only), `brand-shadow`, `gradient-text`, `pulse-dot`, `data-reveal`, mobile-nav animations, view-transitions.
+- `src/styles/prose.css` - typography + spacing tokens match (one drift to fix: list marker, see below).
+- `components/shell/Header.astro` - direct port (sticky, scroll-aware backdrop, liquid hover indicator, mobile drawer). One small fix: GitHub button uses `bg-primary` - replace with `<Button variant="primary">` once primitives land.
+- `components/shell/ThemeToggle.astro`, `components/shell/Footer.astro` - direct ports.
 
 ## Components to port
 
@@ -55,7 +55,7 @@ New files under `docs/src/components/brand/`, ported verbatim from `codewithmuke
 
 Plus one new file authored in docs (not in blog):
 
-- `components/landing/SectionEyebrow.astro` — small wrapper rendering `01 · The problem` (mono, uppercase, tabular-nums, primary-tinted number). Props: `n` (string), default slot for the label.
+- `components/landing/SectionEyebrow.astro` - small wrapper rendering `01 · The problem` (mono, uppercase, tabular-nums, primary-tinted number). Props: `n` (string), default slot for the label.
 
 ## Patterns to port
 
@@ -73,7 +73,7 @@ After primitives and patterns land, walk through the landing sections.
 
 | Section | Changes |
 |---|---|
-| `Hero.astro` | Eyebrow → `<Pill>` with pulse-dot. CTAs → `<Button variant="primary">` (now ink-on-paper) + `<Button variant="secondary">`. No eyebrow number — hero is its own thing. |
+| `Hero.astro` | Eyebrow → `<Pill>` with pulse-dot. CTAs → `<Button variant="primary">` (now ink-on-paper) + `<Button variant="secondary">`. No eyebrow number - hero is its own thing. |
 | `CodeFirst.astro` | Eyebrow → `<SectionEyebrow n="01">Vertical Slice Architecture</SectionEyebrow>`. Wrap editor in `<AnimatedIde>`. |
 | `WhatsIncluded.astro` | `<SectionEyebrow n="02">What's included</SectionEyebrow>`. Each grid item uses a lightweight `<Card variant="bare">` (or kept as `<li>` if Card doesn't fit; finalize during implementation). |
 | `ModuleShowcase.astro` | `<SectionEyebrow n="03">The three modules</SectionEyebrow>`. Each module card → `<Card data-magnetic-card>` (attribute already in markup; script will pick it up once wired). |
@@ -89,7 +89,7 @@ After primitives and patterns land, walk through the landing sections.
 
 Low-risk first; each step independently committable.
 
-1. Port primitives (`Button`, `Card`, `Callout`, `Pill`, `Kbd`) — additions only, zero usage change.
+1. Port primitives (`Button`, `Card`, `Callout`, `Pill`, `Kbd`) - additions only, zero usage change.
 2. Author `SectionEyebrow` and apply to each section.
 3. Port magnetic-cards script and verify `ModuleShowcase` cards tilt.
 4. Port `AnimatedIde` wrapper and wrap the `CodeFirst` editor.
@@ -103,13 +103,13 @@ Low-risk first; each step independently committable.
 
 - **Color contrast on ink-on-paper buttons in dark mode.** The blog has tuned tokens for this; verify visually that the swapped primary buttons still pass WCAG AA.
 - **Magnetic-cards script + Astro view transitions.** The script needs to re-bind after `astro:after-swap` like the Header script does. Verify on client-side navigation.
-- **ExpressiveCode theme port.** Houston theme's purple accents need consistent green substitutions — not just one hex. List every hardcoded `#4c33d8` (or related) in the blog config block and substitute.
+- **ExpressiveCode theme port.** Houston theme's purple accents need consistent green substitutions - not just one hex. List every hardcoded `#4c33d8` (or related) in the blog config block and substitute.
 - **`<Card variant="bare">` for WhatsIncluded.** Current markup is `<li>` with top border. If Card primitive doesn't have a "bare" variant, leave as `<li>` and don't force it.
-- **Existing `components/docs/Callout.astro`** — once the brand Callout lands, decide whether to delete the docs-local one or have it re-export the brand one. Imports across MDX content need updating either way.
+- **Existing `components/docs/Callout.astro`** - once the brand Callout lands, decide whether to delete the docs-local one or have it re-export the brand one. Imports across MDX content need updating either way.
 
 ## Acceptance
 
 - All six landing sections render through the brand primitives.
 - `npx tsc -b` and `npx astro build` are green in `docs/`.
 - Visual walk-through in light + dark + mobile shows: ink-on-paper CTAs, numbered eyebrows, tilting module cards, animated CodeFirst editor on hover, themed code blocks, star list markers.
-- No regression on the docs reading surface (`/docs/*` pages still render correctly — they only consume `Header`, `Footer`, and prose).
+- No regression on the docs reading surface (`/docs/*` pages still render correctly - they only consume `Header`, `Footer`, and prose).

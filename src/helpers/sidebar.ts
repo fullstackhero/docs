@@ -40,7 +40,7 @@ function isIndexEntry(id: string, dir: string): boolean {
   // Match both so the overview is always pulled out as `indexHref` (rendered
   // first as "Overview") instead of falling into the page list. Without the
   // bare-dir case, every section's overview leaked into the list and sorted
-  // by its `order` — e.g. Frontend showing second under "Admin console".
+  // by its `order` - e.g. Frontend showing second under "Admin console".
   return norm === dir || norm === `${dir}/index`;
 }
 

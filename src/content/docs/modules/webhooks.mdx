@@ -7,7 +7,7 @@ sidebar:
   order: 7
 pageType: reference
 seo:
-  title: 'HMAC-Signed Webhooks in .NET 10 — tenant subscriptions'
+  title: 'HMAC-Signed Webhooks in .NET 10 - tenant subscriptions'
   description: 'Tenant-scoped webhook subscriptions in .NET 10: open-generic event fan-out, HMAC-SHA256 signed delivery, and Hangfire retry with a delivery audit log.'
   keywords: '.net webhook delivery, hmac signed webhooks dotnet, hangfire webhook retry, tenant scoped webhooks, open generic event handler'
 ---
@@ -15,20 +15,20 @@ seo:
 The Webhooks module turns every integration event your kit publishes into an outbound HTTP delivery to subscribed tenants. Tenants register a URL + an event list (with `*` wildcard support), the module fans events using an open-generic `IIntegrationEventHandler<>`, signs payloads with HMAC-SHA256, and delivers via Hangfire jobs with exponential-backoff retry and a delivery log for audit. Around **1,100 lines of code in the runtime project**.
 
 <Callout type="tip" title="Webhooks-as-a-feature, for free">
-You publish integration events anyway (Chat does, Identity does, Files does). The Webhooks module is the configuration layer that lets *your tenants* opt into those events being delivered to their systems — no per-event wiring on your side.
+You publish integration events anyway (Chat does, Identity does, Files does). The Webhooks module is the configuration layer that lets *your tenants* opt into those events being delivered to their systems - no per-event wiring on your side.
 </Callout>
 
 ## What ships in v10
 
-- **Tenant-scoped subscriptions** — each `WebhookSubscription` row belongs to a tenant and stores `Url`, `EventsCsv` (comma-separated list with `*` wildcard support), `SecretHash` (the HMAC signing secret, **encrypted at rest** — see below), `IsActive`.
-- **Signing secret encrypted at rest** — the secret is the HMAC key, so it must stay recoverable (a one-way hash would make signing impossible). It is encrypted with ASP.NET Data Protection (`IWebhookSecretProtector`) on create and decrypted only at sign time, so a database breach never exposes plaintext secrets.
-- **Permission-gated endpoints** — `Webhooks.View` / `Create` / `Delete` / `Test` (previously authentication-only).
-- **Open-generic event handler** — one `WebhookFanoutHandler<TEvent>` registered for every `IIntegrationEvent`; no per-event setup needed. When a new module publishes a new event, existing subscriptions automatically receive it.
-- **Tenant context restoration** — the fanout handler explicitly restores the tenant context before querying subscriptions, so Finbuckle's global query filter sees the right tenant. (This is the single most important gotcha — see below.)
-- **HMAC-SHA256 payload signing** — when `SecretHash` is set, every delivery includes `X-Webhook-Signature: sha256={hex}` so subscribers can verify authenticity.
-- **Hangfire delivery jobs** with `[AutomaticRetry]` — 5 attempts total, exponential backoff (30 s, 2 min, 10 min, 1 h).
-- **Transient vs permanent error classification** — 5xx, 408, 429 retried; other 4xx permanent.
-- **Delivery log** — every attempt (success or failure) appends a `WebhookDelivery` row with status code, duration, error.
+- **Tenant-scoped subscriptions** - each `WebhookSubscription` row belongs to a tenant and stores `Url`, `EventsCsv` (comma-separated list with `*` wildcard support), `SecretHash` (the HMAC signing secret, **encrypted at rest** - see below), `IsActive`.
+- **Signing secret encrypted at rest** - the secret is the HMAC key, so it must stay recoverable (a one-way hash would make signing impossible). It is encrypted with ASP.NET Data Protection (`IWebhookSecretProtector`) on create and decrypted only at sign time, so a database breach never exposes plaintext secrets.
+- **Permission-gated endpoints** - `Webhooks.View` / `Create` / `Delete` / `Test` (previously authentication-only).
+- **Open-generic event handler** - one `WebhookFanoutHandler<TEvent>` registered for every `IIntegrationEvent`; no per-event setup needed. When a new module publishes a new event, existing subscriptions automatically receive it.
+- **Tenant context restoration** - the fanout handler explicitly restores the tenant context before querying subscriptions, so Finbuckle's global query filter sees the right tenant. (This is the single most important gotcha - see below.)
+- **HMAC-SHA256 payload signing** - when `SecretHash` is set, every delivery includes `X-Webhook-Signature: sha256={hex}` so subscribers can verify authenticity.
+- **Hangfire delivery jobs** with `[AutomaticRetry]` - 5 attempts total, exponential backoff (30 s, 2 min, 10 min, 1 h).
+- **Transient vs permanent error classification** - 5xx, 408, 429 retried; other 4xx permanent.
+- **Delivery log** - every attempt (success or failure) appends a `WebhookDelivery` row with status code, duration, error.
 - **Five permission-gated endpoints** for tenants to manage subscriptions and read the delivery log.
 - **HTTP resilience** via a named `HttpClient` "Webhooks" using `Microsoft.Extensions.Http.Resilience` (Polly v8).
 
@@ -37,7 +37,7 @@ You publish integration events anyway (Chat does, Identity does, Files does). Th
 ```
 src/Modules/Webhooks/
 ├── Modules.Webhooks/                            ~1,100 LoC
-│   ├── WebhooksModule.cs                        IModule — order 400
+│   ├── WebhooksModule.cs                        IModule - order 400
 │   ├── Domain/
 │   │   ├── WebhookSubscription.cs               Tenant-scoped, IsActive flag
 │   │   └── WebhookDelivery.cs                   Per-attempt row, immutable
@@ -53,7 +53,7 @@ src/Modules/Webhooks/
 └── Modules.Webhooks.Contracts/                  Commands, queries, DTOs
 ```
 
-The module loads at order `400` — after Files (`350`), before Catalog (`600`). Its `WebhookDbContext` is tenant-aware so subscriptions and delivery logs are isolated per tenant.
+The module loads at order `400` - after Files (`350`), before Catalog (`600`). Its `WebhookDbContext` is tenant-aware so subscriptions and delivery logs are isolated per tenant.
 
 ## The open-generic fan-out
 
@@ -155,7 +155,7 @@ public sealed class WebhookDispatchJob
         if (response.IsSuccessStatusCode) return;
         if (IsTransient((int)response.StatusCode))
             throw new WebhookDeliveryFailedException(/* … */);   // throw → Hangfire retries
-        // Permanent client error (4xx other than 408/429) — log it, give up, no exception.
+        // Permanent client error (4xx other than 408/429) - log it, give up, no exception.
     }
 
     private static bool IsTransient(int statusCode) =>
@@ -163,7 +163,7 @@ public sealed class WebhookDispatchJob
 }
 ```
 
-`IsTransient` decides between 5xx / 408 / 429 (throw → retry) and other 4xx (give up quietly). Network errors, DNS failures, and timeouts count as transient too. Each attempt — successful or failed — appends a `WebhookDelivery` row to the log with its own attempt number.
+`IsTransient` decides between 5xx / 408 / 429 (throw → retry) and other 4xx (give up quietly). Network errors, DNS failures, and timeouts count as transient too. Each attempt - successful or failed - appends a `WebhookDelivery` row to the log with its own attempt number.
 
 ## Public API
 
@@ -187,7 +187,7 @@ Every endpoint is gated by a `Webhooks.*` permission (defined in `Modules.Webhoo
 | `Webhooks.Test` | Send a one-off test delivery |
 
 <Callout type="warning" title="Grant the new permissions after upgrading">
-Before this release the endpoints were authentication-only — any signed-in user could manage every webhook in their tenant. They now require explicit `Webhooks.*` permissions, so add them to the roles that should manage webhooks or those users will get `403`.
+Before this release the endpoints were authentication-only - any signed-in user could manage every webhook in their tenant. They now require explicit `Webhooks.*` permissions, so add them to the roles that should manage webhooks or those users will get `403`.
 </Callout>
 
 ## Endpoints
@@ -206,7 +206,7 @@ Before this release the endpoints were authentication-only — any signed-in use
 |---|---|
 | `Content-Type` | `application/json` |
 | `X-Webhook-Event` | The event type name (e.g. `ProductRepricedIntegrationEvent`) |
-| `X-Webhook-Delivery-Id` | The `WebhookDelivery` row id — fresh per attempt, so receivers can dedupe |
+| `X-Webhook-Delivery-Id` | The `WebhookDelivery` row id - fresh per attempt, so receivers can dedupe |
 | `X-Webhook-Signature` | `sha256={hex}` (only if `SecretHash` is set on the subscription) |
 
 Subscribers verify the signature by HMAC-SHA256-hashing the raw request body with the same secret and comparing.
@@ -244,10 +244,10 @@ The kit doesn't auto-purge the `WebhookDelivery` table. For high-volume tenants,
 
 ## Tests
 
-The module ships unit tests in `src/Tests/Webhooks.Tests/` (domain, validators, the fan-out handler, payload signer, and the secret protector — encryption round-trips and never stores plaintext) and end-to-end coverage in `src/Tests/Integration.Tests/Tests/Webhooks/` (subscription CRUD, signed delivery, dispatch outcomes/retry, pagination, and cross-tenant isolation) using a controllable in-process HTTP receiver.
+The module ships unit tests in `src/Tests/Webhooks.Tests/` (domain, validators, the fan-out handler, payload signer, and the secret protector - encryption round-trips and never stores plaintext) and end-to-end coverage in `src/Tests/Integration.Tests/Tests/Webhooks/` (subscription CRUD, signed delivery, dispatch outcomes/retry, pagination, and cross-tenant isolation) using a controllable in-process HTTP receiver.
 
 ## Related
 
-- [Eventing building block](/docs/building-blocks/eventing/) — `IIntegrationEvent`, `IEventBus`, and the open-generic handler registration pattern.
-- [Multitenancy module](/docs/modules/multitenancy/) — the tenant context restore the fanout handler depends on.
-- [Cross-cutting concerns](/docs/cross-cutting-concerns/) — Hangfire retry policy, HttpClient resilience, idempotency.
+- [Eventing building block](/docs/building-blocks/eventing/) - `IIntegrationEvent`, `IEventBus`, and the open-generic handler registration pattern.
+- [Multitenancy module](/docs/modules/multitenancy/) - the tenant context restore the fanout handler depends on.
+- [Cross-cutting concerns](/docs/cross-cutting-concerns/) - Hangfire retry policy, HttpClient resilience, idempotency.

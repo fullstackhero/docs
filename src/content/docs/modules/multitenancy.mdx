@@ -7,7 +7,7 @@ sidebar:
   order: 2
 pageType: reference
 seo:
-  title: 'Multitenancy in .NET 10 — Finbuckle + EF Core query filter'
+  title: 'Multitenancy in .NET 10 - Finbuckle + EF Core query filter'
   description: 'How the Multitenancy module wires Finbuckle.MultiTenant 10 with claim/header/query strategies, distributed-cache-backed tenant lookups, per-tenant…'
   keywords: 'finbuckle multitenant example, multitenant .net template, ef core tenant query filter, distributed cache tenant store, tenant provisioning .net'
 ---
@@ -20,24 +20,24 @@ Once this module is loaded (order 200), every other module's `DbContext` is tena
 
 ## What ships in v10
 
-- **Three-tier tenant resolution** — claim, header (`tenant` is the primary), query string (`?tenant=`). Finbuckle resolves first match wins.
-- **DistributedCacheStore** in front of the EF Core store — a resolved tenant is cached for 60 minutes to keep request hot-paths off the DB.
-- **EFCoreStore** as the source of truth — tenants live in `TenantDbContext` with `AppTenantInfo` as the record.
-- **Per-tenant connection strings** — each `AppTenantInfo` can carry its own DB connection, set on creation.
-- **`IGlobalEntity` opt-out** — entities that need to live across tenants (plans, impersonation grants, outbox messages) mark this interface and skip the tenant filter.
-- **Root-operator header override** — SuperAdmin can scope a single request to another tenant via the `tenant` header for admin operations like cross-tenant user search; runs as post-auth middleware (the Finbuckle strategies see anonymous principals).
-- **Provisioning state machine** — multi-step tenant creation (Database → Migrations → Seeding → CacheWarm). Steps are persisted; failures are resumable via `RetryTenantProvisioning`.
-- **Tenant lifecycle with plans** — `CreateTenantCommand` takes an optional `PlanKey` (falls back to `Billing:DefaultPlanKey`) and publishes `TenantSubscribedIntegrationEvent`; `RenewTenant` extends `ValidUpto` by the plan term and publishes `TenantRenewedIntegrationEvent` — the Billing module reacts to both with subscriptions + invoices. `AdjustTenantValidity` is the operator override that *may* backdate (the internal `SetValidity` used by renewal is forward-only and throws on backdating).
-- **Active/expiry enforcement as post-auth guards** — Finbuckle happily resolves inactive or expired tenants; two middleware guards (registered in `IModule.ConfigureMiddleware`) reject requests for deactivated tenants and enforce `ValidUpto` with a configurable grace window (`Billing:GraceWindowDays`, default 7). Inside the window, responses carry an `X-Subscription-Grace` header with days left.
-- **Daily expiry scan** — the `tenant-expiry-scan` Hangfire job (02:00 UTC) publishes nearing-expiry / entered-grace / expired events, deduped per tenant per validity window via `TenantExpiryNotice`.
-- **Tenant themes** — full light + dark palettes, brand assets, typography, layout knobs. The frontend reads these to render per-tenant branding.
+- **Three-tier tenant resolution** - claim, header (`tenant` is the primary), query string (`?tenant=`). Finbuckle resolves first match wins.
+- **DistributedCacheStore** in front of the EF Core store - a resolved tenant is cached for 60 minutes to keep request hot-paths off the DB.
+- **EFCoreStore** as the source of truth - tenants live in `TenantDbContext` with `AppTenantInfo` as the record.
+- **Per-tenant connection strings** - each `AppTenantInfo` can carry its own DB connection, set on creation.
+- **`IGlobalEntity` opt-out** - entities that need to live across tenants (plans, impersonation grants, outbox messages) mark this interface and skip the tenant filter.
+- **Root-operator header override** - SuperAdmin can scope a single request to another tenant via the `tenant` header for admin operations like cross-tenant user search; runs as post-auth middleware (the Finbuckle strategies see anonymous principals).
+- **Provisioning state machine** - multi-step tenant creation (Database → Migrations → Seeding → CacheWarm). Steps are persisted; failures are resumable via `RetryTenantProvisioning`.
+- **Tenant lifecycle with plans** - `CreateTenantCommand` takes an optional `PlanKey` (falls back to `Billing:DefaultPlanKey`) and publishes `TenantSubscribedIntegrationEvent`; `RenewTenant` extends `ValidUpto` by the plan term and publishes `TenantRenewedIntegrationEvent` - the Billing module reacts to both with subscriptions + invoices. `AdjustTenantValidity` is the operator override that *may* backdate (the internal `SetValidity` used by renewal is forward-only and throws on backdating).
+- **Active/expiry enforcement as post-auth guards** - Finbuckle happily resolves inactive or expired tenants; two middleware guards (registered in `IModule.ConfigureMiddleware`) reject requests for deactivated tenants and enforce `ValidUpto` with a configurable grace window (`Billing:GraceWindowDays`, default 7). Inside the window, responses carry an `X-Subscription-Grace` header with days left.
+- **Daily expiry scan** - the `tenant-expiry-scan` Hangfire job (02:00 UTC) publishes nearing-expiry / entered-grace / expired events, deduped per tenant per validity window via `TenantExpiryNotice`.
+- **Tenant themes** - full light + dark palettes, brand assets, typography, layout knobs. The frontend reads these to render per-tenant branding.
 
 ## Architecture at a glance
 
 ```
 src/Modules/Multitenancy/
 ├── Modules.Multitenancy/                        ~3,200 LoC, 58 files
-│   ├── MultitenancyModule.cs                    IModule entry — order 200
+│   ├── MultitenancyModule.cs                    IModule entry - order 200
 │   ├── TenantBillingOptions.cs                  "Billing" config section binding
 │   ├── Domain/
 │   │   ├── TenantTheme.cs                       Per-tenant theme row
@@ -66,20 +66,20 @@ The Finbuckle strategy chain runs on every request, before authentication. The k
 ```csharp
 // MultitenancyModule.cs (simplified)
 builder.Services.AddMultiTenant<AppTenantInfo>()
-    .WithClaimStrategy(ClaimConstants.Tenant)       // 1. claim — no-op pre-auth
-    .WithHeaderStrategy(MultitenancyConstants.Identifier) // 2. "tenant" header — primary
+    .WithClaimStrategy(ClaimConstants.Tenant)       // 1. claim - no-op pre-auth
+    .WithHeaderStrategy(MultitenancyConstants.Identifier) // 2. "tenant" header - primary
     .WithDelegateStrategy(ResolveTenantFromQuery)   // 3. ?tenant= query string fallback
     .WithDistributedCacheStore(TimeSpan.FromMinutes(60))
     .WithStore<EFCoreStore<TenantDbContext, AppTenantInfo>>(ServiceLifetime.Scoped);
 ```
 
 <Callout type="warning" title="ClaimStrategy is pre-auth, by design">
-Finbuckle's strategy chain runs before `UseAuthentication`, so the claim strategy sees an anonymous principal on every request — it's effectively a no-op in normal flow. The **header strategy is the real primary resolver**. The claim strategy is there for the cross-tenant impersonation case where a downstream pipeline can re-resolve with claims.
+Finbuckle's strategy chain runs before `UseAuthentication`, so the claim strategy sees an anonymous principal on every request - it's effectively a no-op in normal flow. The **header strategy is the real primary resolver**. The claim strategy is there for the cross-tenant impersonation case where a downstream pipeline can re-resolve with claims.
 </Callout>
 
 The **root-operator header override** is what lets a SuperAdmin (whose JWT carries `tenant=root`) scope a single request to another tenant. It runs as post-auth middleware via `IModule.ConfigureMiddleware`, checks that the caller is in the root tenant, reads the `tenant` header on the request, looks up the target, and replaces the multi-tenant context on the `HttpContext`.
 
-Two details worth knowing about the cache layer: a tenant resolved from the EF store is written through to the distributed cache on resolution (`OnTenantResolveCompleted`), and every tenant write path (`activation`, `renew`, `adjust-validity`, theme) refreshes the cached entry immediately — otherwise flips would lag up to the 60-minute TTL.
+Two details worth knowing about the cache layer: a tenant resolved from the EF store is written through to the distributed cache on resolution (`OnTenantResolveCompleted`), and every tenant write path (`activation`, `renew`, `adjust-validity`, theme) refreshes the cached entry immediately - otherwise flips would lag up to the 60-minute TTL.
 
 ## Public API
 
@@ -94,9 +94,9 @@ The Contracts assembly exposes the surface the host and admin app talk to.
 | `GetTenantStatusQuery(tenantId)` | Fetch a single tenant's status |
 | `ChangeTenantActivationCommand(tenantId, isActive)` | Toggle active |
 | `RenewTenantCommand(tenantId, planKey?)` | Extend `ValidUpto` by the plan term (forward-only), publishes `TenantRenewedIntegrationEvent` |
-| `AdjustTenantValidityCommand(tenantId, validUpto)` | Operator override — may move the date backward (immediate expiry, corrections) |
+| `AdjustTenantValidityCommand(tenantId, validUpto)` | Operator override - may move the date backward (immediate expiry, corrections) |
 
-`GetMyTenantStatus` has no command type — the endpoint reads the resolved tenant context directly and returns the caller's own status.
+`GetMyTenantStatus` has no command type - the endpoint reads the resolved tenant context directly and returns the caller's own status.
 
 ### Provisioning
 
@@ -108,7 +108,7 @@ The Contracts assembly exposes the surface the host and admin app talk to.
 
 ### Themes
 
-Theme types are scoped to the *caller's* tenant context (no tenant id parameter — operators target a tenant via the root header override):
+Theme types are scoped to the *caller's* tenant context (no tenant id parameter - operators target a tenant via the root header override):
 
 | Type | Purpose |
 |---|---|
@@ -138,7 +138,7 @@ All under `/api/v1/tenants`. Permissions are from `MultitenancyPermissions.Tenan
 
 ## Provisioning state machine
 
-`CreateTenantCommand` returns immediately. The handler writes the `AppTenantInfo` row, writes a `TenantProvisioning` record with four ordered steps — `Database`, `Migrations`, `Seeding`, `CacheWarm` — buffers the admin password in `ITenantInitialPasswordBuffer` (singleton), and queues a Hangfire `TenantProvisioningJob`.
+`CreateTenantCommand` returns immediately. The handler writes the `AppTenantInfo` row, writes a `TenantProvisioning` record with four ordered steps - `Database`, `Migrations`, `Seeding`, `CacheWarm` - buffers the admin password in `ITenantInitialPasswordBuffer` (singleton), and queues a Hangfire `TenantProvisioningJob`.
 
 The job picks up the work, walks each step idempotently, and updates the persisted state. If any step throws, the step is marked `Failed`, the overall state is `Failed`, and the buffered admin password is left in place. `RetryTenantProvisioning` resumes from the first failed step.
 
@@ -201,7 +201,7 @@ Implement `IHasTenant` on the entity (already done if it inherits `BaseEntity`),
 Use `IgnoreQueryFilters()` deliberately, then re-filter explicitly to whatever scope you want:
 
 ```csharp
-// Pattern from the kit's audit query — verified safe pattern
+// Pattern from the kit's audit query - verified safe pattern
 var audits = await db.AuditRecords
     .IgnoreQueryFilters()
     .Where(a => allowedTenantIds.Contains(a.TenantId.Value))
@@ -217,6 +217,6 @@ The [multitenancy deep-dive](/docs/architecture/multitenancy-deep-dive/) covers 
 
 ## Related
 
-- [Identity module](/docs/modules/identity/) — the per-tenant user store this module's tenancy underlies.
-- [Architecture: multitenancy deep-dive](/docs/architecture/multitenancy-deep-dive/) — `IGlobalEntity`, named filters, isolation tests.
-- [Persistence building block](/docs/building-blocks/persistence/) — `BaseDbContext`, the auto-applied global filter.
+- [Identity module](/docs/modules/identity/) - the per-tenant user store this module's tenancy underlies.
+- [Architecture: multitenancy deep-dive](/docs/architecture/multitenancy-deep-dive/) - `IGlobalEntity`, named filters, isolation tests.
+- [Persistence building block](/docs/building-blocks/persistence/) - `BaseDbContext`, the auto-applied global filter.

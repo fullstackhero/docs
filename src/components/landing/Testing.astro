@@ -1,15 +1,15 @@
 ---
 /**
- * Testing — section 05, the proof.
+ * Testing - section 05, the proof.
  *
  * A four-pillar scoreboard over a faux-terminal showing a green run. The
  * selling point this section exists to make: integration tests execute against
- * a REAL PostgreSQL (+ Valkey) in Docker via Testcontainers — no mocks, no
- * in-memory fakes — and both React apps get full Playwright E2E coverage.
+ * a REAL PostgreSQL (+ Valkey) in Docker via Testcontainers - no mocks, no
+ * in-memory fakes - and both React apps get full Playwright E2E coverage.
  *
  * Counts are real, verified against the repo (1,484 backend [Fact]/[Theory] =
  * 774 unit · 661 integration · 49 architecture; 214 Playwright E2E). Keep them
- * honest if the suite grows — these are claims on a marketing page.
+ * honest if the suite grows - these are claims on a marketing page.
  */
 import { Icon } from 'astro-icon/components';
 import SectionEyebrow from './SectionEyebrow.astro';
@@ -28,7 +28,7 @@ const pillars: Pillar[] = [
     icon: 'lucide:flask-conical',
     value: '770', unit: '+',
     label: 'Unit',
-    desc: 'Domain rules, validators, and handlers — pure, isolated, millisecond-fast.',
+    desc: 'Domain rules, validators, and handlers - pure, isolated, millisecond-fast.',
   },
   {
     icon: 'lucide:container',
@@ -41,19 +41,19 @@ const pillars: Pillar[] = [
     icon: 'lucide:app-window',
     value: '214',
     label: 'End-to-end',
-    desc: 'Real browser flows across both React apps — admin and dashboard — in Playwright.',
+    desc: 'Real browser flows across both React apps - admin and dashboard - in Playwright.',
   },
   {
     icon: 'lucide:waypoints',
     value: '49',
     label: 'Architecture',
-    desc: 'Module boundaries and conventions enforced by NetArchTest — they can’t silently regress.',
+    desc: 'Module boundaries and conventions enforced by NetArchTest - they can’t silently regress.',
   },
 ];
 ---
 
 <section class="relative isolate overflow-hidden border-t border-border" id="testing">
-  {/* Ambient green glow — thematic "all passing", distinct from the sections around it */}
+  {/* Ambient green glow - thematic "all passing", distinct from the sections around it */}
   <div
     aria-hidden="true"
     class="pointer-events-none absolute inset-0 -z-10"
@@ -65,7 +65,7 @@ const pillars: Pillar[] = [
 
     <div class="max-w-2xl">
       <h2 class="text-balance font-display font-semibold tracking-[-0.035em] text-[30px] leading-[1.04] sm:text-[44px] md:text-[52px]">
-        <span class="font-light text-muted-foreground">Not a demo —</span>
+        <span class="font-light text-muted-foreground">Not a demo -</span>
         <span class="mt-1 block">
           <span class="relative inline-block text-foreground">
             <span class="relative z-[1] font-bold">a tested foundation.</span>
@@ -81,7 +81,7 @@ const pillars: Pillar[] = [
         Nearly <span class="font-semibold text-foreground">1,700 automated tests</span> ship green on every commit.
         Unit tests for the domain, integration tests that run against a
         <span class="font-semibold text-foreground">real PostgreSQL in Docker via Testcontainers</span>
-        — not mocks, not in-memory fakes — and full browser end-to-end coverage of both React apps.
+        - not mocks, not in-memory fakes - and full browser end-to-end coverage of both React apps.
       </p>
     </div>
 
@@ -121,7 +121,7 @@ const pillars: Pillar[] = [
           <span class="h-2.5 w-2.5 rounded-full bg-foreground/15"></span>
           <span class="h-2.5 w-2.5 rounded-full bg-foreground/15"></span>
         </span>
-        <span class="font-mono text-[11px] text-muted-foreground">dotnet-starter-kit — tests</span>
+        <span class="font-mono text-[11px] text-muted-foreground">dotnet-starter-kit - tests</span>
         <span class="ml-auto inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/[0.06] px-2.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">
           <span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true"></span>
           CI passing
@@ -129,18 +129,18 @@ const pillars: Pillar[] = [
       </div>
 
       <pre class="overflow-x-auto p-5 font-mono text-[12px] leading-[1.75] tabular-nums sm:p-6 sm:text-[12.5px]"><code><span class="text-primary">$</span> dotnet test
-<span class="text-muted-foreground/80">  ⟳  Testcontainers — postgres:17 · valkey  ready</span>
+<span class="text-muted-foreground/80">  ⟳  Testcontainers - postgres:17 · valkey  ready</span>
 <span class="text-primary">  ✓</span>  unit ........................  <span class="text-foreground">774 passed</span>
 <span class="text-primary">  ✓</span>  integration <span class="text-muted-foreground/70">(real Postgres)</span> .  <span class="text-foreground">661 passed</span>
 <span class="text-primary">  ✓</span>  architecture <span class="text-muted-foreground/70">(NetArchTest)</span> .   <span class="text-foreground">49 passed</span>
 <span class="font-semibold text-primary">  Passed!  1,484 / 1,484  ·  0 failed</span>
 
 <span class="text-primary">$</span> npx playwright test
-<span class="text-primary">  ✓</span>  e2e — admin + dashboard .....  <span class="text-foreground">214 passed</span>
+<span class="text-primary">  ✓</span>  e2e - admin + dashboard .....  <span class="text-foreground">214 passed</span>
 <span class="font-semibold text-primary">  all green ✓</span></code></pre>
     </div>
 
-    {/* Section-level explore link — mirrors WhatsIncluded / FAQ */}
+    {/* Section-level explore link - mirrors WhatsIncluded / FAQ */}
     <div class="mt-10 flex justify-center">
       <a
         href="/docs/testing/"

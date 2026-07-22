@@ -1,14 +1,14 @@
 ---
 title: Frontend architecture
 lastUpdated: 2026-06-11
-description: Shared patterns across the admin + dashboard apps — folder layout, API client, route guards, realtime context, error handling, ProblemDetails parsing.
+description: Shared patterns across the admin + dashboard apps - folder layout, API client, route guards, realtime context, error handling, ProblemDetails parsing.
 sidebar:
   label: Architecture
   order: 3
 pageType: concept
 seo:
   title: 'React + Vite architecture in fullstackhero'
-  description: 'Shared frontend patterns across the admin + dashboard apps — folder layout, typed API client, route guards, JWT auth context, realtime context…'
+  description: 'Shared frontend patterns across the admin + dashboard apps - folder layout, typed API client, route guards, JWT auth context, realtime context…'
   keywords: 'react vite architecture, tanstack query patterns, jwt auth react, react permission guard, problem details react'
 ---
 
@@ -34,11 +34,11 @@ clients/{app}/
     ├── App.tsx               Top-level provider stack + RouterProvider
     ├── routes.tsx            createBrowserRouter config (lazy routes)
     ├── env.ts                Runtime config loader + typed accessor
-    ├── api/                  One file per backend module — typed apiFetch wrappers
+    ├── api/                  One file per backend module - typed apiFetch wrappers
     ├── auth/                 JWT, token store, auth context, route guards, inactivity
     ├── components/           Shared components (layout, primitives, theme)
     ├── hooks/                Shared hooks (e.g. use-file-upload)
-    ├── lib/                  Shared helpers — api-client, query-client, cn
+    ├── lib/                  Shared helpers - api-client, query-client, cn
     ├── pages/                One folder (or file) per feature area
     ├── realtime/             SignalR context + hooks
     └── styles/               Global CSS + Tailwind base
@@ -64,18 +64,18 @@ The dashboard adds `sse/` (Server-Sent Events context for the activity feed).
 Order matters:
 
 1. Before any of this renders, `main.tsx` top-level-awaits `loadRuntimeConfig()` so `/config.json` is in memory before the first component reads `env.*`.
-2. `ThemeProvider` outermost — light/dark/appearance applies even to the login screen.
+2. `ThemeProvider` outermost - light/dark/appearance applies even to the login screen.
 3. `QueryClientProvider` so every child can use TanStack Query.
-4. `AuthProvider` — contexts below depend on the token store + signed-in user.
+4. `AuthProvider` - contexts below depend on the token store + signed-in user.
 5. Admin mounts its `RealtimeProvider` here; the dashboard mounts `RealtimeProvider` + `SseProvider` inside the authenticated `AppShell` instead, so public pages never open (or download) the realtime stack.
 6. The router + `Toaster` come last.
 
 ## The API client
 
-`clients/{app}/src/lib/api-client.ts` exports `apiFetch<T>()` — a hand-written wrapper over the browser's `fetch`. No Axios, no generated client; the typed request/response shapes live next to each module's functions in `src/api/`.
+`clients/{app}/src/lib/api-client.ts` exports `apiFetch<T>()` - a hand-written wrapper over the browser's `fetch`. No Axios, no generated client; the typed request/response shapes live next to each module's functions in `src/api/`.
 
 ```ts
-// Simplified — the real thing is ~160 lines
+// Simplified - the real thing is ~160 lines
 export async function apiFetch<T>(path: string, init: RequestInitEx = {}): Promise<T> {
   const headers = new Headers(init.headers);
   headers.set("Authorization", `Bearer ${tokenStore.getAccessToken()}`);
@@ -84,7 +84,7 @@ export async function apiFetch<T>(path: string, init: RequestInitEx = {}): Promi
   let response = await fetch(`${env.apiBase}${path}`, { ...init, headers, signal });
 
   if (response.status === 401 && tokenStore.getRefreshToken()) {
-    await refreshAccessToken();          // single-flight — concurrent 401s share one refresh
+    await refreshAccessToken();          // single-flight - concurrent 401s share one refresh
     response = await fetch(/* retry original request with the fresh token */);
   }
 
@@ -101,8 +101,8 @@ What it handles for every call:
 
 - **Auth + tenant headers** from the token store (callers can override `tenant` per request, or pass `skipAuth` for anonymous endpoints like login).
 - **401 → single-flight refresh → retry.** Concurrent 401s share one in-flight refresh promise; if the refresh fails, tokens are cleared and the UI flips to `/login`.
-- **Timeouts** — a 30-second default via `AbortSignal.timeout`, merged with any caller-supplied signal.
-- **Typed errors** — non-2xx responses throw `ApiRequestError`, which carries the HTTP status plus the parsed ProblemDetails payload.
+- **Timeouts** - a 30-second default via `AbortSignal.timeout`, merged with any caller-supplied signal.
+- **Typed errors** - non-2xx responses throw `ApiRequestError`, which carries the HTTP status plus the parsed ProblemDetails payload.
 
 React components can branch on it:
 
@@ -119,7 +119,7 @@ For validation errors (400 with an `errors` field), render the field errors inli
 ```tsx
 if (mutation.isError && mutation.error instanceof ApiRequestError) {
   const fieldErrors = mutation.error.problem?.errors ?? {};
-  // fieldErrors.Sku?: string[] — render next to the input
+  // fieldErrors.Sku?: string[] - render next to the input
 }
 ```
 
@@ -160,12 +160,12 @@ const createMut = useMutation({
 });
 ```
 
-The `queryKey` is the canonical cache key. The kit uses arrays with one filter object per key entry — TanStack Query handles the hashing.
+The `queryKey` is the canonical cache key. The kit uses arrays with one filter object per key entry - TanStack Query handles the hashing.
 
 For mutations that touch multiple resource caches (e.g. deleting a user that affects roles + groups), invalidate them all in `onSuccess`.
 
 <Callout type="warning" title="Pass per-call data through mutate(arg), not closed-over state">
-TanStack Query reads the mutation options at **execute time**. If `onMutate` (or anything else) `setState`s a value that `mutationFn` closes over, the request can fire with the post-setState value — a race that bites exactly when you batch state updates before mutating. The kit's rule: everything a mutation needs travels as the argument to `mutate(arg)` / `mutationFn(arg)`; component state is never read inside the mutation callbacks.
+TanStack Query reads the mutation options at **execute time**. If `onMutate` (or anything else) `setState`s a value that `mutationFn` closes over, the request can fire with the post-setState value - a race that bites exactly when you batch state updates before mutating. The kit's rule: everything a mutation needs travels as the argument to `mutate(arg)` / `mutationFn(arg)`; component state is never read inside the mutation callbacks.
 </Callout>
 
 ## Route guards
@@ -174,14 +174,14 @@ Two layers:
 
 ```tsx
 // Both apps: ProtectedRoute wraps the whole authenticated tree.
-// "Are you signed in?" — if not, redirect to /login.
+// "Are you signed in?" - if not, redirect to /login.
 {
   element: <ProtectedRoute />,
   children: [{ element: <AppShell />, children: [/* all app routes */] }],
 }
 
 // Admin only: RouteGuard wraps individual route elements.
-// "Do you hold these permissions?" — if not, render <ForbiddenView>.
+// "Do you hold these permissions?" - if not, render <ForbiddenView>.
 {
   path: "tenants",
   element: (
@@ -192,11 +192,11 @@ Two layers:
 }
 ```
 
-The guard mirrors the exact permission the server endpoint enforces — the constants in `src/lib/permissions.ts` track the server registries. The dashboard doesn't wrap routes; it gates navigation entries and in-page actions against the fetched permission list instead (e.g. the recycle-bin tabs + nav entry only render for users holding a restore/view-trash permission). Either way the server stays the real enforcement layer; the client gating is UX.
+The guard mirrors the exact permission the server endpoint enforces - the constants in `src/lib/permissions.ts` track the server registries. The dashboard doesn't wrap routes; it gates navigation entries and in-page actions against the fetched permission list instead (e.g. the recycle-bin tabs + nav entry only render for users holding a restore/view-trash permission). Either way the server stays the real enforcement layer; the client gating is UX.
 
 ## Realtime context
 
-`src/realtime/realtime-context.tsx` (in both apps) owns one shared SignalR connection to `/api/v1/realtime/hub`. Components never see the raw `HubConnection` — the context exposes a small surface:
+`src/realtime/realtime-context.tsx` (in both apps) owns one shared SignalR connection to `/api/v1/realtime/hub`. Components never see the raw `HubConnection` - the context exposes a small surface:
 
 ```tsx
 type RealtimeContextValue = {
@@ -214,11 +214,11 @@ useRealtimeEvent<NotificationDto>("NotificationCreated", (n) => { /* ... */ });
 Implementation details worth knowing:
 
 - The `@microsoft/signalr` package is **dynamically imported** on first connect, so pages without a realtime consumer never download it (~37 KB gzip).
-- The provider subscribes to the token store — login, refresh-token rotation, and impersonation swaps all rebuild the connection with the fresh token.
+- The provider subscribes to the token store - login, refresh-token rotation, and impersonation swaps all rebuild the connection with the fresh token.
 - Reconnects use SignalR's automatic-reconnect backoff plus an outer retry loop with jitter, capped at 60 s.
 - Transport is auto-negotiated (WebSockets → SSE → long-polling) for proxy-hostile networks.
 
-One connection per user session; every subscriber attaches via `on(event, handler)` and the returned function detaches it. The dashboard's chat page is the canonical user — see the [dashboard page](/docs/frontend/dashboard/#chat--the-realtime-showcase).
+One connection per user session; every subscriber attaches via `on(event, handler)` and the returned function detaches it. The dashboard's chat page is the canonical user - see the [dashboard page](/docs/frontend/dashboard/#chat--the-realtime-showcase).
 
 ## Error handling
 
@@ -261,18 +261,18 @@ In dev, Vite serves `public/config.json`; in production, the Nginx container ren
 
 ### Inactivity auto sign-out
 
-Both apps auto-sign-out idle sessions: admin after 10 minutes, dashboard after 20, each with a 60-second warning countdown — all four numbers configurable per deploy in `config.json`. The last-activity timestamp is shared across tabs via the `fsh.lastActivity` localStorage key so activity in any tab keeps the whole session alive.
+Both apps auto-sign-out idle sessions: admin after 10 minutes, dashboard after 20, each with a 60-second warning countdown - all four numbers configurable per deploy in `config.json`. The last-activity timestamp is shared across tabs via the `fsh.lastActivity` localStorage key so activity in any tab keeps the whole session alive.
 
 ## What both apps don't do
 
 - **No Redux / Zustand / global state manager.** TanStack Query is the server state; React's `useState` / `useReducer` is the local state. Avoid pulling in a global store unless you have a genuine cross-page client-state need.
 - **No CSS-in-JS.** Tailwind utilities + a global stylesheet (plus the odd per-feature CSS file, like chat's). The kit's design language stays consistent through utility classes.
-- **No API client codegen.** The `src/api/` wrappers are written by hand against the OpenAPI doc — fewer moving parts than a generator, and the types only cover what the UI actually uses.
+- **No API client codegen.** The `src/api/` wrappers are written by hand against the OpenAPI doc - fewer moving parts than a generator, and the types only cover what the UI actually uses.
 - **No microfrontends.** Both apps are single-bundle SPAs (with per-route lazy chunks). Module federation is appealing in slide decks; it's a real maintenance tax in practice.
 
 ## Related
 
-- [Admin console](/docs/frontend/admin/) — operator-facing surface.
-- [Tenant dashboard](/docs/frontend/dashboard/) — end-user surface.
-- [Theming](/docs/frontend/theming/) — per-tenant brand customisation.
-- [Local development](/docs/frontend/development/) — running, building, deploying.
+- [Admin console](/docs/frontend/admin/) - operator-facing surface.
+- [Tenant dashboard](/docs/frontend/dashboard/) - end-user surface.
+- [Theming](/docs/frontend/theming/) - per-tenant brand customisation.
+- [Local development](/docs/frontend/development/) - running, building, deploying.

@@ -1,22 +1,22 @@
 ---
 title: Admin console
 lastUpdated: 2026-06-11
-description: The operator-facing React + Vite app at clients/admin — users, roles, tenants, impersonation, audits, billing, webhooks, health, notifications.
+description: The operator-facing React + Vite app at clients/admin - users, roles, tenants, impersonation, audits, billing, webhooks, health, notifications.
 sidebar:
   label: Admin console
   order: 1
 pageType: guide
 seo:
-  title: 'Admin console in fullstackhero — React + Vite operator app'
-  description: 'The clients/admin app is fullstackhero''s operator console — users, roles, tenants, impersonation, audits, billing, webhooks, health, notifications.'
+  title: 'Admin console in fullstackhero - React + Vite operator app'
+  description: 'The clients/admin app is fullstackhero''s operator console - users, roles, tenants, impersonation, audits, billing, webhooks, health, notifications.'
   keywords: 'react admin console .net, fullstackhero admin app, operator dashboard react, impersonation ui react'
 ---
 
-`clients/admin` is the operator-facing app. It's where support engineers reset passwords, ops sees the audit trail, billing reviews tenant invoices, and SuperAdmins start impersonation sessions. It's not customer-facing — it has no per-tenant theming; the chrome stays in the kit's own palette (operators still get a light/dark toggle).
+`clients/admin` is the operator-facing app. It's where support engineers reset passwords, ops sees the audit trail, billing reviews tenant invoices, and SuperAdmins start impersonation sessions. It's not customer-facing - it has no per-tenant theming; the chrome stays in the kit's own palette (operators still get a light/dark toggle).
 
 <Screenshot src="/screenshots/admin/overview-dashboard.png"
             alt="Admin console overview dashboard"
-            caption="The admin console after sign-in — sidebar nav + main work area + notifications bell." />
+            caption="The admin console after sign-in - sidebar nav + main work area + notifications bell." />
 
 ## Tech stack
 
@@ -27,7 +27,7 @@ seo:
 | TypeScript | 5.x | Type safety |
 | TanStack Query | 5.x | Server-state cache + mutations |
 | React Router | 7.x | Routing + protected routes |
-| react-hook-form + zod | 7.x / 3.x | Forms + schema validation (admin only — the dashboard doesn't use them) |
+| react-hook-form + zod | 7.x / 3.x | Forms + schema validation (admin only - the dashboard doesn't use them) |
 | @microsoft/signalr | 10.x | Realtime connection to the kit's hub |
 | Tailwind CSS | 4.x | Styling (shadcn-style, with CVA) |
 | Radix UI | 1.x–2.x | Headless primitives (Dialog, DropdownMenu, etc.) |
@@ -44,7 +44,7 @@ clients/admin/src/pages/
 ├── auth/           Forgot / reset password, email confirmation
 ├── billing/        Plans + invoices (list + detail)
 ├── health/         System health probes
-├── impersonation/  Grant list — active + historical, revoke
+├── impersonation/  Grant list - active + historical, revoke
 ├── notifications/  Inbox, mark-read, real-time push
 ├── roles/          Role CRUD + permission editor
 ├── settings/       Profile, security (2FA), sessions, appearance
@@ -61,14 +61,14 @@ The route definitions live in `clients/admin/src/routes.tsx`; pages beyond the s
 
 `clients/admin/src/auth/` owns the auth surface:
 
-- `auth-context.tsx` — React context providing the signed-in user, `login`, `logout`, and `refreshPermissions`.
-- `api.ts` — `issueToken()` wraps the login endpoint.
-- `token-store.ts` — wraps localStorage for access + refresh tokens and the active tenant.
-- `jwt.ts` — base64url decode + claim parsing (no library needed for read-only access).
-- `protected-route.tsx` — route guard that requires authentication; redirects to `/login` if not.
-- `route-guard.tsx` — permission-aware wrapper; renders `<ForbiddenView>` if the user lacks the required permissions.
-- `use-auth.ts` — hook for accessing the context from components.
-- `inactivity.ts` + `use-inactivity-timeout.ts` — idle auto sign-out (see below).
+- `auth-context.tsx` - React context providing the signed-in user, `login`, `logout`, and `refreshPermissions`.
+- `api.ts` - `issueToken()` wraps the login endpoint.
+- `token-store.ts` - wraps localStorage for access + refresh tokens and the active tenant.
+- `jwt.ts` - base64url decode + claim parsing (no library needed for read-only access).
+- `protected-route.tsx` - route guard that requires authentication; redirects to `/login` if not.
+- `route-guard.tsx` - permission-aware wrapper; renders `<ForbiddenView>` if the user lacks the required permissions.
+- `use-auth.ts` - hook for accessing the context from components.
+- `inactivity.ts` + `use-inactivity-timeout.ts` - idle auto sign-out (see below).
 
 Login flow:
 
@@ -108,7 +108,7 @@ return (
 );
 ```
 
-The JWT only carries role names — effective permissions are resolved server-side and fetched from `GET /api/v1/identity/permissions` after sign-in, then cached on the auth context. If the user gains a permission server-side (an admin updates their role), `refreshPermissions()` picks it up without a re-login. The permission string constants live in `clients/admin/src/lib/permissions.ts`, mirroring the server registries.
+The JWT only carries role names - effective permissions are resolved server-side and fetched from `GET /api/v1/identity/permissions` after sign-in, then cached on the auth context. If the user gains a permission server-side (an admin updates their role), `refreshPermissions()` picks it up without a re-login. The permission string constants live in `clients/admin/src/lib/permissions.ts`, mirroring the server registries.
 
 For whole-route gating, wrap the route's element in `<RouteGuard>`:
 
@@ -127,7 +127,7 @@ Unauthorised users see a `<ForbiddenView />` instead of the route content. While
 
 ## API integration
 
-`clients/admin/src/api/` carries one file per backend module. Each file exposes typed functions wrapping the relevant endpoints with `apiFetch` — the kit's hand-written `fetch` wrapper (no codegen, no Axios):
+`clients/admin/src/api/` carries one file per backend module. Each file exposes typed functions wrapping the relevant endpoints with `apiFetch` - the kit's hand-written `fetch` wrapper (no codegen, no Axios):
 
 ```ts
 // clients/admin/src/api/impersonation.ts
@@ -153,12 +153,12 @@ const startMut = useMutation({
 `apiFetch` (`clients/admin/src/lib/api-client.ts`):
 
 - Adds the `Authorization: Bearer ...` header from the token store.
-- Adds the `tenant` header (the stored tenant, or the configured default) — callers can override it to scope a request to a specific tenant, which the admin's branding editor uses.
+- Adds the `tenant` header (the stored tenant, or the configured default) - callers can override it to scope a request to a specific tenant, which the admin's branding editor uses.
 - Handles 401 by running a **single-flight** token refresh and retrying the original request once; if refresh fails, the session is cleared.
 - Applies a 30-second default timeout via `AbortSignal`, merged with any caller-supplied signal.
 - Surfaces ProblemDetails responses as a typed `ApiRequestError` (status + title + detail + field `errors`) that React Query can render in the UI.
 
-## Realtime — notifications
+## Realtime - notifications
 
 `clients/admin/src/realtime/realtime-context.tsx` opens one shared SignalR connection to `/api/v1/realtime/hub` after sign-in (the SignalR client is dynamically imported so unauthenticated pages never download it). Components subscribe through a hook instead of touching the connection directly:
 
@@ -171,7 +171,7 @@ useRealtimeEvent<NotificationDto>("NotificationCreated", (notification) => {
 });
 ```
 
-The admin console only wires `NotificationCreated` today — the dashboard's variant of the same context carries the chat + presence traffic. A bell icon in the top bar shows unread count + a popover with the recent items.
+The admin console only wires `NotificationCreated` today - the dashboard's variant of the same context carries the chat + presence traffic. A bell icon in the top bar shows unread count + a popover with the recent items.
 
 ## The impersonation flow in the UI
 
@@ -180,17 +180,17 @@ This is the admin console's most-asked-about feature. Full walkthrough lives in 
 1. Find the user via **Users → search**.
 2. Open the user detail page; click **Impersonate**.
 3. Fill duration + reason; click **Start**.
-4. A new tab opens at the tenant dashboard, authenticated as the impersonated user. The short-lived token is handed off via the URL hash — the admin app never installs it locally.
+4. A new tab opens at the tenant dashboard, authenticated as the impersonated user. The short-lived token is handed off via the URL hash - the admin app never installs it locally.
 5. Use the dashboard exactly as the user would.
 6. Return to admin; **revoke the grant** (from the Impersonation page or the inline active-grants card) to end the session server-side. The dashboard tab loses the session on its next API call and lands on a graceful "impersonation ended" page.
 
 <Screenshot src="/screenshots/admin/users-detail-impersonate-button.png"
             alt="User detail page with the Impersonate action"
-            caption="The Impersonate button is gated by Identity.Impersonation.Start — most operators won't see it." />
+            caption="The Impersonate button is gated by Identity.Impersonation.Start - most operators won't see it." />
 
 ## Tenant branding editor
 
-The tenant detail page carries a branding card where root operators edit a tenant's `TenantTheme` — the light + dark colour palettes and brand asset URLs (logo, dark logo, favicon). Typography and layout fields exist on the server-side DTO but are intentionally left out of the v1 editor. The admin console itself stays themed in the kit's own palette (no per-tenant chrome for operator tools).
+The tenant detail page carries a branding card where root operators edit a tenant's `TenantTheme` - the light + dark colour palettes and brand asset URLs (logo, dark logo, favicon). Typography and layout fields exist on the server-side DTO but are intentionally left out of the v1 editor. The admin console itself stays themed in the kit's own palette (no per-tenant chrome for operator tools).
 
 See [Theming](/docs/frontend/theming/) for the full palette + asset surface.
 
@@ -214,7 +214,7 @@ Permission assignment per role, grouped by resource with per-action toggles and 
 
 ### Webhooks
 
-Subscription list with delivery log per subscription — every attempt, response code, error message.
+Subscription list with delivery log per subscription - every attempt, response code, error message.
 
 ## Local development
 
@@ -224,9 +224,9 @@ npm install
 npm run dev               # http://localhost:5173 with HMR
 ```
 
-The Vite dev server proxies `/api`, `/health`, `/openapi`, and `/scalar` to the backend — `http://localhost:5030` by default, overridable with a `VITE_API_BASE_URL` env var (this var only steers the **dev proxy target**; it is never baked into a build). Runtime configuration — API base URL, default tenant, inactivity timings — comes from `public/config.json`, fetched once at boot before React mounts.
+The Vite dev server proxies `/api`, `/health`, `/openapi`, and `/scalar` to the backend - `http://localhost:5030` by default, overridable with a `VITE_API_BASE_URL` env var (this var only steers the **dev proxy target**; it is never baked into a build). Runtime configuration - API base URL, default tenant, inactivity timings - comes from `public/config.json`, fetched once at boot before React mounts.
 
-The kit's Aspire AppHost wires all of this automatically when you run `dotnet run --project src/Host/FSH.Starter.AppHost` — the API, admin, and dashboard all come up together.
+The kit's Aspire AppHost wires all of this automatically when you run `dotnet run --project src/Host/FSH.Starter.AppHost` - the API, admin, and dashboard all come up together.
 
 ## Build + deploy
 
@@ -234,11 +234,11 @@ The kit's Aspire AppHost wires all of this automatically when you run `dotnet ru
 npm run build              # tsc -b + vite build → dist/ contains static assets
 ```
 
-The `dist/` folder is a static site — drop it on any static host (Nginx, Vercel, Netlify, S3+CloudFront). `clients/admin/Dockerfile` ships an Nginx-based container that serves the built assets and renders `/config.json` from environment variables (`FSH_API_URL`, `FSH_DEFAULT_TENANT`, `FSH_DASHBOARD_URL`) via `envsubst` at startup — one image, every environment. See [Local development](/docs/frontend/development/).
+The `dist/` folder is a static site - drop it on any static host (Nginx, Vercel, Netlify, S3+CloudFront). `clients/admin/Dockerfile` ships an Nginx-based container that serves the built assets and renders `/config.json` from environment variables (`FSH_API_URL`, `FSH_DEFAULT_TENANT`, `FSH_DASHBOARD_URL`) via `envsubst` at startup - one image, every environment. See [Local development](/docs/frontend/development/).
 
 ## Related
 
-- [Tenant dashboard](/docs/frontend/dashboard/) — the end-user-facing companion.
-- [Frontend architecture](/docs/frontend/architecture/) — shared patterns.
-- [Operator impersonation guide](/docs/guides/operator-impersonation/) — end-to-end UI walkthrough.
-- [Identity module](/docs/modules/identity/) — the API the admin console wraps.
+- [Tenant dashboard](/docs/frontend/dashboard/) - the end-user-facing companion.
+- [Frontend architecture](/docs/frontend/architecture/) - shared patterns.
+- [Operator impersonation guide](/docs/guides/operator-impersonation/) - end-to-end UI walkthrough.
+- [Identity module](/docs/modules/identity/) - the API the admin console wraps.

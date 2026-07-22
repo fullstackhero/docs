@@ -17,7 +17,7 @@ interface Props {
   seoTitle?: string;
   /** Block search-engine indexing for this page (drafts, legal, etc.). */
   noindex?: boolean;
-  /** Open Graph object type — docs pages pass "article". */
+  /** Open Graph object type - docs pages pass "article". */
   ogType?: 'website' | 'article';
   /** ISO timestamp for article:modified_time. */
   modifiedTime?: string;
@@ -43,7 +43,7 @@ const currentSection = currentSectionDir
         <Sidebar />
       </aside>
       <main id="main" class="min-w-0 py-6 lg:py-12">
-        {/* Mobile docs nav trigger — opens slide-up sheet (hidden on lg+) */}
+        {/* Mobile docs nav trigger - opens slide-up sheet (hidden on lg+) */}
         <div class="mb-6 lg:hidden">
           <button
             type="button"
@@ -90,7 +90,7 @@ const currentSection = currentSectionDir
     </div>
   </div>
 
-  {/* Mobile docs sheet — slide-up bottom sheet with the full sidebar */}
+  {/* Mobile docs sheet - slide-up bottom sheet with the full sidebar */}
   <div
     id="docs-mobile-sheet"
     class="docs-mobile-sheet fixed inset-0 z-modal pointer-events-none lg:hidden"
@@ -137,14 +137,14 @@ const currentSection = currentSectionDir
 
   <Footer />
 
-  {/* Page view beacon — POSTs current slug, renders count into PageHeader. */}
+  {/* Page view beacon - POSTs current slug, renders count into PageHeader. */}
   <script>
     import '../scripts/views-counter';
   </script>
 </BaseLayout>
 
 <style>
-  /* Slide-up bottom sheet — modern app affordance.
+  /* Slide-up bottom sheet - modern app affordance.
      The panel translates from below-viewport to flush-bottom, scrim fades
      in alongside. inert + pointer-events gates the closed state from any
      accidental focus / scroll capture. */
@@ -174,7 +174,7 @@ const currentSection = currentSectionDir
 
 <script>
   // Slide-up sheet wiring: open/close, ESC, scrim, link-click auto-close,
-  // body scroll lock. Idempotent — survives Astro view-transitions.
+  // body scroll lock. Idempotent - survives Astro view-transitions.
   (() => {
     const init = () => {
       const sheet = document.querySelector<HTMLElement>('[data-docs-mobile-sheet]');

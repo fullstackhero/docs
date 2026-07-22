@@ -23,7 +23,7 @@ function formatCount(n: number): string {
   }
 }
 
-// easeOutCubic — fast at first, soft landing. Feels like the number is
+// easeOutCubic - fast at first, soft landing. Feels like the number is
 // "settling in" rather than ticking up linearly.
 function easeOutCubic(t: number): number {
   return 1 - Math.pow(1 - t, 3);
@@ -65,7 +65,7 @@ async function sendBeacon(): Promise<void> {
 
     // Reveal first so the CSS transition can play; then animate the digits
     // in parallel. Two-step is intentional: the chip glides in while the
-    // number counts up — composed, not stacked.
+    // number counts up - composed, not stacked.
     wrap.dataset.state = 'ready';
     // If a sibling opted in as a separator (the landing trust strip prefixes
     // the readout with a "·"), reveal it in lockstep so a slow/failed beacon
@@ -77,13 +77,13 @@ async function sendBeacon(): Promise<void> {
     }
     // Reserve exactly the final number's width before counting up, so the
     // digits grow in place (no per-frame reflow of the centred strip) without
-    // over-reserving — a small count like "1" stays tight to the digit instead
+    // over-reserving - a small count like "1" stays tight to the digit instead
     // of leaving a gap. No-op where the target isn't a sized box (the inline
     // docs chip span, where min-width doesn't apply).
     target.style.minWidth = `${formatCount(data.views).length}ch`;
     animateCount(target, data.views);
   } catch {
-    // Network failure is silent — the chip stays in `pending` state and
+    // Network failure is silent - the chip stays in `pending` state and
     // never appears. (No flash, no broken layout.)
   }
 }

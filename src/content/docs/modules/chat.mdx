@@ -1,13 +1,13 @@
 ---
 title: Chat module
 lastUpdated: 2026-06-11
-description: Slack-style messaging — named channels, 1:1 + group DMs, @mentions, thread replies, reactions, message pinning, full-text search, typing indicators, and SignalR realtime over Valkey.
+description: Slack-style messaging - named channels, 1:1 + group DMs, @mentions, thread replies, reactions, message pinning, full-text search, typing indicators, and SignalR realtime over Valkey.
 sidebar:
   label: Chat
   order: 5
 pageType: reference
 seo:
-  title: 'Realtime Chat in .NET 10 — SignalR + Redis backplane'
+  title: 'Realtime Chat in .NET 10 - SignalR + Redis backplane'
   description: 'How the Chat module ships Slack-style channels and DMs with @mentions, thread replies, reactions, message pinning, full-text search, typing indicators, and…'
   keywords: '.net signalr chat module, realtime chat .net 10, mention notifications dotnet, signalr redis backplane, dotnet messaging module'
 ---
@@ -20,28 +20,28 @@ Anything else that needs realtime broadcast (live cursors, presence, collaborati
 
 ## What ships in v10
 
-- **Three channel kinds** — `Channel` (named, Slack-style), `DirectMessage` (1:1, idempotent via sorted `DirectKey`), `GroupMessage` (3+ users).
-- **Channel membership** with two roles — `Admin`, `Member`.
-- **Lossless archive + restore** — `DELETE /channels/{id}` archives (soft-deletes) a channel by flipping the flag instead of an EF `Remove()`, so `ChannelMember` rows survive; `POST /channels/{id}/restore` brings it back with memberships intact.
+- **Three channel kinds** - `Channel` (named, Slack-style), `DirectMessage` (1:1, idempotent via sorted `DirectKey`), `GroupMessage` (3+ users).
+- **Channel membership** with two roles - `Admin`, `Member`.
+- **Lossless archive + restore** - `DELETE /channels/{id}` archives (soft-deletes) a channel by flipping the flag instead of an EF `Remove()`, so `ChannelMember` rows survive; `POST /channels/{id}/restore` brings it back with memberships intact.
 - **Messages** with attachments, mentions, reactions; soft-deletable to a tombstone (`[deleted]`) so threads stay coherent.
 - **Thread replies** via `ParentMessageId`; `ReplyCount` tracked on the parent for UI badges.
-- **Pinning** — at most one pin per pin call, idempotent; `IsPinned` + `PinnedByUserId` + `PinnedAtUtc` on the message.
+- **Pinning** - at most one pin per pin call, idempotent; `IsPinned` + `PinnedByUserId` + `PinnedAtUtc` on the message.
 - **Emoji reactions** with a unique `(MessageId, UserId, Emoji)` constraint preventing duplicates.
 - **@mentions** parsed server-side by `IMentionResolver`; each resolved user is published as a `MentionedInChannelIntegrationEvent` for the Notifications module to consume.
 - **Full-text search** across messages via PostgreSQL `tsvector` and a GIN index on a generated `BodyTsv` column.
 - **Typing indicator** with a 3-second per (channel, user) throttle in distributed cache.
 - **SignalR realtime** over a Valkey backplane (`AppHub` in `BuildingBlocks/Web/Realtime`); on connect every user joins `user:{id}`, `tenant:{tenantId}`, and every channel they belong to as `channel:{id}`. Channels created or joined *after* connect are joined on demand via the hub's `JoinChannel` method.
-- **Presence** — an in-memory `IPresenceTracker` broadcasts `PresenceChanged` to the tenant group on first connect / last disconnect; `GET /api/v1/realtime/presence?userIds=` serves the initial snapshot.
+- **Presence** - an in-memory `IPresenceTracker` broadcasts `PresenceChanged` to the tenant group on first connect / last disconnect; `GET /api/v1/realtime/presence?userIds=` serves the initial snapshot.
 - **22 endpoints** under `/api/v1/chat/...` plus the realtime hub at `/api/v1/realtime/hub`.
 - **File attachments** through the Files module's `ChatChannelFileAccessPolicy` (channel members can attach and read; only the uploader can delete).
-- **7 permissions** — `Chat.Channels` View / Create / ManageAll and `Chat.Messages` Send / EditOwn / DeleteOwn / DeleteAny.
+- **7 permissions** - `Chat.Channels` View / Create / ManageAll and `Chat.Messages` Send / EditOwn / DeleteOwn / DeleteAny.
 
 ## Architecture at a glance
 
 ```
 src/Modules/Chat/
 ├── Modules.Chat/                                ~3,400 LoC
-│   ├── ChatModule.cs                            IModule — order 800 (after Notifications 750)
+│   ├── ChatModule.cs                            IModule - order 800 (after Notifications 750)
 │   ├── Domain/
 │   │   ├── ChatChannel.cs                       AggregateRoot, ISoftDeletable (archive/restore)
 │   │   ├── ChannelMember.cs                     Membership row, Admin | Member
@@ -61,7 +61,7 @@ src/Modules/Chat/
 └── Modules.Chat.Contracts/                      Commands, queries, integration events
 ```
 
-The module loads at order `800`, **after** Notifications (`750`) — the consumer of Chat's mention events sits at a lower order than the producer. (Handler discovery itself is order-independent: integration-event handlers are assembly-scanned into DI at startup; the ordering keeps the dependency direction obvious.)
+The module loads at order `800`, **after** Notifications (`750`) - the consumer of Chat's mention events sits at a lower order than the producer. (Handler discovery itself is order-independent: integration-event handlers are assembly-scanned into DI at startup; the ordering keeps the dependency direction obvious.)
 
 ## The channel + message aggregates
 
@@ -98,11 +98,11 @@ public sealed class ChatChannel : AggregateRoot<Guid>, ISoftDeletable
 }
 ```
 
-`DirectKey` is the idempotency trick: a unique index on `DirectKey` makes "find or create a DM between A and B" a single round trip with no race window. (User ids are strings throughout Chat — they come straight off the JWT.)
+`DirectKey` is the idempotency trick: a unique index on `DirectKey` makes "find or create a DM between A and B" a single round trip with no race window. (User ids are strings throughout Chat - they come straight off the JWT.)
 
-Archiving is an explicit state flip, not an EF `Remove()` — removing the aggregate would cascade-delete the `ChannelMember` rows, so a later restore would come back memberless. `Archive(deletedByUserId)` just sets the soft-delete flag and `Restore()` clears it, which is what makes channel restore lossless.
+Archiving is an explicit state flip, not an EF `Remove()` - removing the aggregate would cascade-delete the `ChannelMember` rows, so a later restore would come back memberless. `Archive(deletedByUserId)` just sets the soft-delete flag and `Restore()` clears it, which is what makes channel restore lossless.
 
-`Message` is similar but does not implement `ISoftDeletable` — deleted messages are tombstones so reply chains keep working:
+`Message` is similar but does not implement `ISoftDeletable` - deleted messages are tombstones so reply chains keep working:
 
 ```csharp
 public void SoftDelete(string deletingUserId, bool isModerator)
@@ -123,8 +123,8 @@ public void SoftDelete(string deletingUserId, bool isModerator)
 
 The kit's `AppHub` is in `BuildingBlocks/Web/Realtime/AppHub.cs`, mapped at `/api/v1/realtime/hub`. On connect it joins the user to:
 
-- `user:{userId}` — for personal events (notification pushes, channel-added)
-- `tenant:{tenantId}` — scopes presence broadcasts to one tenant
+- `user:{userId}` - for personal events (notification pushes, channel-added)
+- `tenant:{tenantId}` - scopes presence broadcasts to one tenant
 - `channel:{channelId}` for every channel the user belongs to at connect time
 
 The hub exposes two client-callable methods. `Typing(channelId)` broadcasts a typing indicator, throttled to once per 3 s per (channel, user) via the distributed cache:
@@ -146,7 +146,7 @@ public async Task Typing(Guid channelId)
 }
 ```
 
-`JoinChannel(channelId)` joins the `channel:{id}` group on demand, gated by the same membership check. Connect-time pre-join only covers channels that existed (and that the user was a member of) when the socket opened — a DM created or a membership granted *after* connect would never receive broadcasts until a page reload. Clients call `JoinChannel` when they open a conversation and on reconnect; re-joining is a no-op.
+`JoinChannel(channelId)` joins the `channel:{id}` group on demand, gated by the same membership check. Connect-time pre-join only covers channels that existed (and that the user was a member of) when the socket opened - a DM created or a membership granted *after* connect would never receive broadcasts until a page reload. Clients call `JoinChannel` when they open a conversation and on reconnect; re-joining is a no-op.
 
 The throttle prevents the chatty per-keystroke pattern from saturating channels. Other realtime events (`ChatMessageCreated`, `ChatMessageEdited`, `ChatMessageDeleted`, `ChatMessagePinned`/`ChatMessageUnpinned`, `ChatReactionChanged`, `ChatChannelAdded`/`ChatChannelRemoved`, `ChatChannelMemberAdded`/`ChatChannelMemberRemoved`, `ChatChannelRead`, `NotificationCreated`, `PresenceChanged`) are broadcast from handlers post-SaveChanges.
 
@@ -160,7 +160,7 @@ Full surface in `Modules.Chat.Contracts/`. Highlights:
 
 ### Messages
 
-`SendMessageCommand(channelId, body?, parentMessageId?, attachments)` — `body` is optional because attachment-only messages are allowed. `EditMessageCommand`, `DeleteMessageCommand`, `PinMessageCommand`, `UnpinMessageCommand`, plus `ListChannelMessagesQuery`, `ListMessageRepliesQuery`, `GetPinnedMessagesQuery`, `SearchMessagesQuery`.
+`SendMessageCommand(channelId, body?, parentMessageId?, attachments)` - `body` is optional because attachment-only messages are allowed. `EditMessageCommand`, `DeleteMessageCommand`, `PinMessageCommand`, `UnpinMessageCommand`, plus `ListChannelMessagesQuery`, `ListMessageRepliesQuery`, `GetPinnedMessagesQuery`, `SearchMessagesQuery`.
 
 ### Reactions
 
@@ -199,8 +199,8 @@ Full surface in `Modules.Chat.Contracts/`. Highlights:
 
 The flow lives in `SendMessageCommandHandler` and is split across two small services:
 
-1. `MentionParser.Parse(body)` — a `[GeneratedRegex(@"(?<!\w)@([A-Za-z0-9._-]+)")]` pulls `@username` tokens with their positions.
-2. `IMentionResolver.ResolveUserIdsAsync(usernames)` — maps usernames to active user ids via the Identity contracts' `IUserService` (case-insensitive; unknown names are dropped).
+1. `MentionParser.Parse(body)` - a `[GeneratedRegex(@"(?<!\w)@([A-Za-z0-9._-]+)")]` pulls `@username` tokens with their positions.
+2. `IMentionResolver.ResolveUserIdsAsync(usernames)` - maps usernames to active user ids via the Identity contracts' `IUserService` (case-insensitive; unknown names are dropped).
 3. Each resolved *other* user becomes a position-tracked `MessageMention` row on the message, and the handler publishes a `MentionedInChannelIntegrationEvent` per mention via `IEventBus`:
 
 ```csharp
@@ -217,8 +217,8 @@ The Notifications module's `MentionedInChannelIntegrationEventHandler` writes a 
 
 The module reads no `IOptions<T>` directly. Configuration that matters lives in adjacent blocks:
 
-- **SignalR / Valkey backplane** — set `CachingOptions:Redis` to point at your Valkey. The `AddHeroRealtime` registration calls `AddStackExchangeRedis(...)` automatically (channel prefix `fsh-signalr`); leave it empty and the hub runs in single-host mode, which is what tests and bare-bones dev use.
-- **Files attachments** — `ChatChannelFileAccessPolicy` is registered automatically during `ConfigureServices`. Uploads go through `/api/v1/files/upload-url` with `OwnerType=ChatChannel` and `OwnerId={channelId}`.
+- **SignalR / Valkey backplane** - set `CachingOptions:Redis` to point at your Valkey. The `AddHeroRealtime` registration calls `AddStackExchangeRedis(...)` automatically (channel prefix `fsh-signalr`); leave it empty and the hub runs in single-host mode, which is what tests and bare-bones dev use.
+- **Files attachments** - `ChatChannelFileAccessPolicy` is registered automatically during `ConfigureServices`. Uploads go through `/api/v1/files/upload-url` with `OwnerType=ChatChannel` and `OwnerId={channelId}`.
 
 ## How to extend
 
@@ -243,11 +243,11 @@ Add the rule to `AddReactionCommandValidator` (every command handler already has
 
 ## Tests
 
-- Domain tests at `src/Tests/Chat.Tests/` — channel invariants (DM membership, DirectKey), message state (edit by author, soft-delete tombstone), pin idempotency, reaction toggling.
+- Domain tests at `src/Tests/Chat.Tests/` - channel invariants (DM membership, DirectKey), message state (edit by author, soft-delete tombstone), pin idempotency, reaction toggling.
 - Integration tests under `src/Tests/Integration.Tests/Tests/Chat/` exercise REST + SignalR via Testcontainers (long-polling forced since TestServer has no WebSockets): channels, messages, threads + reactions, pinning, search, typing indicators, `JoinChannel`, presence, realtime event broadcasts, mention→notification, channel file access, and tenant isolation.
 
 ## Related
 
-- [Notifications module](/docs/modules/notifications/) — receives `MentionedInChannelIntegrationEvent`.
-- [Files module](/docs/modules/files/) — chat attachments through `ChatChannelFileAccessPolicy`.
-- [Cross-cutting concerns](/docs/cross-cutting-concerns/) — SignalR, Valkey backplane, Hangfire.
+- [Notifications module](/docs/modules/notifications/) - receives `MentionedInChannelIntegrationEvent`.
+- [Files module](/docs/modules/files/) - chat attachments through `ChatChannelFileAccessPolicy`.
+- [Cross-cutting concerns](/docs/cross-cutting-concerns/) - SignalR, Valkey backplane, Hangfire.

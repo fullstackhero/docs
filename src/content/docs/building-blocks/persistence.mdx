@@ -22,32 +22,32 @@ Make your module's DbContext inherit `BaseDbContext`, call `base.OnModelCreating
 
 ### Extensions
 
-- **`AddHeroDatabaseOptions(services, configuration)`** — binds `DatabaseOptions` with validate-on-start, registers `AuditableEntitySaveChangesInterceptor` + `DomainEventsInterceptor` as `ISaveChangesInterceptor`, `TimeProvider.System`, and a startup logger that prints the active provider.
-- **`AddHeroDbContext<TContext>(services)`** — registers a DbContext via `ConfigureHeroDatabase` (provider switching from `DatabaseOptions`) with every registered `ISaveChangesInterceptor` attached.
+- **`AddHeroDatabaseOptions(services, configuration)`** - binds `DatabaseOptions` with validate-on-start, registers `AuditableEntitySaveChangesInterceptor` + `DomainEventsInterceptor` as `ISaveChangesInterceptor`, `TimeProvider.System`, and a startup logger that prints the active provider.
+- **`AddHeroDbContext<TContext>(services)`** - registers a DbContext via `ConfigureHeroDatabase` (provider switching from `DatabaseOptions`) with every registered `ISaveChangesInterceptor` attached.
 
 ### Base type
 
-- **`BaseDbContext`** — extends Finbuckle's `MultiTenantDbContext`. In `OnModelCreating` it appends the named `SoftDelete` query filter to every `ISoftDeletable` entity, then calls `ApplyTenantIsolationByDefault()` which marks **every** entity `IsMultiTenant()` unless it implements `IGlobalEntity` — tenant isolation is default-ON, opt-out only. In `SaveChangesAsync` it sets `TenantNotSetMode.Overwrite` so unsaved entities without an explicit tenant inherit the current one. It also honours a per-tenant `ConnectionString` from `AppTenantInfo` in `OnConfiguring`.
+- **`BaseDbContext`** - extends Finbuckle's `MultiTenantDbContext`. In `OnModelCreating` it appends the named `SoftDelete` query filter to every `ISoftDeletable` entity, then calls `ApplyTenantIsolationByDefault()` which marks **every** entity `IsMultiTenant()` unless it implements `IGlobalEntity` - tenant isolation is default-ON, opt-out only. In `SaveChangesAsync` it sets `TenantNotSetMode.Overwrite` so unsaved entities without an explicit tenant inherit the current one. It also honours a per-tenant `ConnectionString` from `AppTenantInfo` in `OnConfiguring`.
 
 ### Specification pattern
 
-- **`Specification<T>`** — composable query base with protected `Where()`, `Include()` / `Include(string)`, `OrderBy()` / `OrderByDescending()` / `ThenBy()` / `ThenByDescending()`, and `ApplySortingOverride()` (whitelist-mapped client sort expressions like `"Name,-CreatedOn"` — no reflection). `AsNoTracking` is on by default. Multi-`Where` combines via expression-tree AND.
-- **`SpecificationOfTResult` (`Specification<T, TResult>`)** — projection variant with a `Select` expression.
-- **`SpecificationExtensions.ApplySpecification(...)`** — turns a spec (entity or projected) into an `IQueryable`.
+- **`Specification<T>`** - composable query base with protected `Where()`, `Include()` / `Include(string)`, `OrderBy()` / `OrderByDescending()` / `ThenBy()` / `ThenByDescending()`, and `ApplySortingOverride()` (whitelist-mapped client sort expressions like `"Name,-CreatedOn"` - no reflection). `AsNoTracking` is on by default. Multi-`Where` combines via expression-tree AND.
+- **`SpecificationOfTResult` (`Specification<T, TResult>`)** - projection variant with a `Select` expression.
+- **`SpecificationExtensions.ApplySpecification(...)`** - turns a spec (entity or projected) into an `IQueryable`.
 
 ### Interceptors
 
-- **`AuditableEntitySaveChangesInterceptor`** — fills in `CreatedOnUtc`/`CreatedBy` (Added) and `LastModifiedOnUtc`/`LastModifiedBy` (Modified, including owned-entity changes) from `ICurrentUser` + `TimeProvider`. It also **converts hard deletes into soft deletes**: an `ISoftDeletable` entry in Deleted state is flipped to Modified with `IsDeleted`/`DeletedOnUtc`/`DeletedBy` set (and cascade-deleted owned references restored so the UPDATE doesn't null their columns).
-- **`DomainEventsInterceptor`** — after `SaveChangesAsync` succeeds, collects events from tracked `IHasDomainEvents` entities (clearing each list), then publishes each through Mediator. Handler failures are logged, not rethrown — the save is already committed; use the outbox for guaranteed delivery.
+- **`AuditableEntitySaveChangesInterceptor`** - fills in `CreatedOnUtc`/`CreatedBy` (Added) and `LastModifiedOnUtc`/`LastModifiedBy` (Modified, including owned-entity changes) from `ICurrentUser` + `TimeProvider`. It also **converts hard deletes into soft deletes**: an `ISoftDeletable` entry in Deleted state is flipped to Modified with `IsDeleted`/`DeletedOnUtc`/`DeletedBy` set (and cascade-deleted owned references restored so the UPDATE doesn't null their columns).
+- **`DomainEventsInterceptor`** - after `SaveChangesAsync` succeeds, collects events from tracked `IHasDomainEvents` entities (clearing each list), then publishes each through Mediator. Handler failures are logged, not rethrown - the save is already committed; use the outbox for guaranteed delivery.
 
 ### Model-builder helpers
 
-- **`ApplyTenantIsolationByDefault(modelBuilder)`** — marks every keyed, non-owned entity that isn't `IGlobalEntity` (and isn't already explicitly marked) as `IsMultiTenant().AdjustUniqueIndexes()`. Must run after `ApplyConfigurationsFromAssembly` so unique indexes exist to widen.
-- **`AppendGlobalQueryFilter<TInterface>(modelBuilder, filterName, expr)`** — registers a **named** filter on every entity implementing `TInterface`; named filters compose with Finbuckle's anonymous tenant filter via AND.
+- **`ApplyTenantIsolationByDefault(modelBuilder)`** - marks every keyed, non-owned entity that isn't `IGlobalEntity` (and isn't already explicitly marked) as `IsMultiTenant().AdjustUniqueIndexes()`. Must run after `ApplyConfigurationsFromAssembly` so unique indexes exist to widen.
+- **`AppendGlobalQueryFilter<TInterface>(modelBuilder, filterName, expr)`** - registers a **named** filter on every entity implementing `TInterface`; named filters compose with Finbuckle's anonymous tenant filter via AND.
 
 ### Options
 
-- **`DatabaseOptions`** (lives in `FSH.Framework.Shared`) — `Provider` (`POSTGRESQL` default or `MSSQL`, matched case-insensitively), `ConnectionString`, `MigrationsAssembly`. An empty connection string fails validation at startup.
+- **`DatabaseOptions`** (lives in `FSH.Framework.Shared`) - `Provider` (`POSTGRESQL` default or `MSSQL`, matched case-insensitively), `ConnectionString`, `MigrationsAssembly`. An empty connection string fails validation at startup.
 
 ## How modules consume it
 
@@ -70,7 +70,7 @@ public sealed class CatalogDbContext : BaseDbContext
     {
         modelBuilder.HasDefaultSchema(Schema);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(CatalogDbContext).Assembly);
-        base.OnModelCreating(modelBuilder);   // CRITICAL — must be last
+        base.OnModelCreating(modelBuilder);   // CRITICAL - must be last
     }
 }
 
@@ -78,7 +78,7 @@ public sealed class CatalogDbContext : BaseDbContext
 builder.Services.AddHeroDbContext<CatalogDbContext>();
 ```
 
-Anywhere you need a tenant-scoped query, just `await db.Products.ToListAsync(ct)` — the filter is applied transparently.
+Anywhere you need a tenant-scoped query, just `await db.Products.ToListAsync(ct)` - the filter is applied transparently.
 
 For composable queries:
 
@@ -142,16 +142,16 @@ modelBuilder.Entity<MyEntity>().HasQueryFilter("ActiveOnly", e => e.IsActive);
 db.MyEntities.IgnoreQueryFilters(["ActiveOnly"])
 ```
 
-The kit already uses this pattern for soft delete: the filter is registered under the stable name `QueryFilters.SoftDelete`, so trash views and restore handlers call `IgnoreQueryFilters([QueryFilters.SoftDelete])` and the tenant filter stays in force. Bare `IgnoreQueryFilters()` strips **everything** — including tenant isolation — so reserve it for root-gated cross-tenant queries and re-filter explicitly.
+The kit already uses this pattern for soft delete: the filter is registered under the stable name `QueryFilters.SoftDelete`, so trash views and restore handlers call `IgnoreQueryFilters([QueryFilters.SoftDelete])` and the tenant filter stays in force. Bare `IgnoreQueryFilters()` strips **everything** - including tenant isolation - so reserve it for root-gated cross-tenant queries and re-filter explicitly.
 
 ## Gotchas
 
 - **`base.OnModelCreating(builder)` must come last** in your subclass's override. The base applies the global tenant filter + soft-delete filter; if you run it first your per-entity configurations can stomp on those filters (or vice versa).
 - **`Specification<T>.AsNoTracking` is `true` by default.** This is a deliberate guard against unbounded tracking of large query results. Call out tracked queries explicitly if you need write semantics.
 - **Multi-`Where()` calls combine via AND**, not OR. The base doesn't compose `||`; if you need OR, write it inside a single expression.
-- **`TenantNotSetMode.Overwrite`** in `SaveChangesAsync` means saving an entity without a tenant set will be silently filled in with the current tenant. That's intentional — without it, every handler would have to remember `entity.TenantId = current.GetTenant()` — but it does mean entities created in a null-tenant context get assigned to whichever tenant the current request belongs to. Don't run write paths from background threads without restoring tenant context first.
+- **`TenantNotSetMode.Overwrite`** in `SaveChangesAsync` means saving an entity without a tenant set will be silently filled in with the current tenant. That's intentional - without it, every handler would have to remember `entity.TenantId = current.GetTenant()` - but it does mean entities created in a null-tenant context get assigned to whichever tenant the current request belongs to. Don't run write paths from background threads without restoring tenant context first.
 - **Entity ids are client-generated `Guid.CreateVersion7()`** (set in the aggregate's static factory), not database-generated. UUIDv7 keeps inserts index-friendly while letting the domain own the id.
-- **Child entities reached only via a parent nav collection need `Property(x => x.Id).ValueGeneratedNever()`** in their configuration. Without it, EF sees the factory-assigned non-default `Guid` and tracks the child as Modified instead of Added — the insert silently never happens. `ProductImage`, `TicketComment`, and Chat's `MessageReaction`/`MessageMention` all carry this config for exactly that reason.
+- **Child entities reached only via a parent nav collection need `Property(x => x.Id).ValueGeneratedNever()`** in their configuration. Without it, EF sees the factory-assigned non-default `Guid` and tracks the child as Modified instead of Added - the insert silently never happens. `ProductImage`, `TicketComment`, and Chat's `MessageReaction`/`MessageMention` all carry this config for exactly that reason.
 
 ## Critical files
 
@@ -162,6 +162,6 @@ The kit already uses this pattern for soft delete: the filter is registered unde
 
 ## Related
 
-- [Core](/docs/building-blocks/core/) — `BaseEntity`, `IHasTenant`, `ISoftDeletable`, `IGlobalEntity`.
-- [Multitenancy module](/docs/modules/multitenancy/) — the Finbuckle setup `BaseDbContext` builds on.
-- [Architecture: multitenancy deep-dive](/docs/architecture/multitenancy-deep-dive/) — `IgnoreQueryFilters()` (all filters) vs `IgnoreQueryFilters([QueryFilters.SoftDelete])` (named filter only) discipline.
+- [Core](/docs/building-blocks/core/) - `BaseEntity`, `IHasTenant`, `ISoftDeletable`, `IGlobalEntity`.
+- [Multitenancy module](/docs/modules/multitenancy/) - the Finbuckle setup `BaseDbContext` builds on.
+- [Architecture: multitenancy deep-dive](/docs/architecture/multitenancy-deep-dive/) - `IgnoreQueryFilters()` (all filters) vs `IgnoreQueryFilters([QueryFilters.SoftDelete])` (named filter only) discipline.

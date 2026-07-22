@@ -1,6 +1,6 @@
 ---
 /**
- * Screenshot — placeholder for in-progress documentation.
+ * Screenshot - placeholder for in-progress documentation.
  *
  * Usage in MDX:
  *   <Screenshot src="/screenshots/admin/login.png"
@@ -18,7 +18,7 @@
  *         shouldn't leak placeholder boxes into shipped docs.
  *
  * Authors capture, drop into docs/public/screenshots/, and the placeholder
- * flips to a real image on the next build — no MDX edits required.
+ * flips to a real image on the next build - no MDX edits required.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -26,7 +26,7 @@ import path from 'node:path';
 interface Props {
   /** Path under docs/public/, e.g. "/screenshots/admin/login.png". */
   src?: string;
-  /** Required — short alt text describing what the screenshot shows. */
+  /** Required - short alt text describing what the screenshot shows. */
   alt: string;
   /** Optional caption rendered beneath the image. */
   caption?: string;
@@ -46,8 +46,8 @@ const exists = publicPath ? fs.existsSync(publicPath) : false;
  * Read intrinsic pixel dimensions from a PNG header (IHDR width/height are
  * big-endian uint32s at byte offsets 16 and 20). We emit these as the img's
  * width/height attributes so that (a) the image is exempt from prose.css's
- * `img:not([width])` CLS rule — which otherwise forces a 16/9 box with
- * object-fit:contain and pillarboxes any non-16/9 screenshot with side bars —
+ * `img:not([width])` CLS rule - which otherwise forces a 16/9 box with
+ * object-fit:contain and pillarboxes any non-16/9 screenshot with side bars -
  * and (b) the browser reserves the correct aspect ratio, preventing layout
  * shift. Works for any aspect ratio; falls back to the `width` prop if the
  * file isn't a parseable PNG.
@@ -68,7 +68,7 @@ const dim = exists && publicPath ? readPngSize(publicPath) : null;
 const imgWidth = dim?.width ?? width;
 const imgHeight = dim?.height;
 
-// Hide placeholders in production builds — missing screenshots leave no
+// Hide placeholders in production builds - missing screenshots leave no
 // trace in shipped docs. Dev keeps showing them so the author can see
 // what's still needed.
 const showPlaceholder = !exists && import.meta.env.DEV;
