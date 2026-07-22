@@ -1,6 +1,6 @@
 ---
 title: Per-tenant theming
-lastUpdated: 2026-06-11
+lastUpdated: 2026-07-13
 description: How tenant branding works in the kit - the TenantTheme aggregate in the Multitenancy module, the admin branding editor, and the dashboard's per-user appearance system.
 sidebar:
   label: Theming
@@ -14,10 +14,10 @@ seo:
 
 Theming in the kit has two layers that are easy to conflate, so let's name them up front:
 
-1. **Per-tenant branding** - the Multitenancy module owns a `TenantTheme` aggregate (colour palettes, brand assets, typography, layout) with permission-gated read/update/reset endpoints and an editor in the admin console. Themes are **data, not deploys** - editing one never requires a rebuild.
+1. **Per-tenant branding** - the Multitenancy module owns a `TenantTheme` aggregate (colour palettes, brand assets, typography, layout) with permission-gated read/update/reset endpoints. Two editors write it: operators edit any tenant from the admin console, and a tenant admin edits their **own** tenant from the dashboard's **Settings → Branding** (gated on `Tenants.UpdateTheme`, current-tenant-scoped). Themes are **data, not deploys** - editing one never requires a rebuild.
 2. **Per-user appearance** - the dashboard ships a rich appearance system (light/dark/system mode, accent colour, font, density, reduced motion) that each **user** controls from Settings → Appearance and that persists in localStorage.
 
-The `TenantTheme` store + editor are fully wired end-to-end on the backend and admin side. The dashboard does **not yet** read `TenantTheme` to repaint its chrome per tenant - its visual identity today comes from the per-user appearance system. If you want full white-label rendering, the wiring point is small and described [below](#rendering-tenanttheme-in-your-own-frontend).
+The `TenantTheme` store + both editors are fully wired end-to-end. What's **not yet** wired is *rendering*: neither app reads `TenantTheme` to repaint its chrome per tenant - visual identity today comes from the per-user appearance system, and the dashboard's Branding tab edits the stored theme without yet consuming it for its own paint. If you want full white-label rendering, the wiring point is small and described [below](#rendering-tenanttheme-in-your-own-frontend).
 
 ## The `TenantTheme` model
 
