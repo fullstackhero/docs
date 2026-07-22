@@ -1,13 +1,16 @@
 /* Forked from codewithmukesh/blog src/styles/base.css on 2026-05-19.
-   Keep in sync manually until shared package extracted. */
+   Keep in sync manually until shared package extracted.
+   Diverged 2026-07-22: neutral white/zinc surfaces replace the blog's
+   warm paper neutrals (both themes) - do not re-sync surface tokens. */
 
 /* ════════════════════════════════════════════════════════════════════════
    BASE TOKENS - fullstackhero docs
    ────────────────────────────────────────────────────────────────────────
-   Token system inherited from codewithmukesh/blog (warm paper neutrals
-   light, warm-dark surfaces dark), re-anchored on FSH brand green #15803d
-   with the user-facing brand green #16a34a carried in --primary-soft for
-   accent text / tinted backgrounds / gradient mid-stop.
+   Token system inherited from codewithmukesh/blog, re-anchored on FSH
+   brand green #15803d with the user-facing brand green #16a34a carried
+   in --primary-soft for accent text / tinted backgrounds / gradient
+   mid-stop. Surfaces are neutral (white light, near-black dark); saffron
+   survives only as the semantic warning hue.
 
    Direct hex values (no HSL conversion). Tailwind classes resolve via the
    --color-* mapping in globals.css @theme inline.
@@ -21,13 +24,13 @@
   :root {
     color-scheme: light;
 
-    /* Surfaces - warm paper */
-    --background: #faf7f2;
-    --foreground: #1a1814;
+    /* Surfaces - neutral white */
+    --background: #ffffff;
+    --foreground: #18181b;
     --card: #ffffff;
-    --card-foreground: #1a1814;
+    --card-foreground: #18181b;
     --popover: #ffffff;
-    --popover-foreground: #1a1814;
+    --popover-foreground: #18181b;
 
     /* Brand green */
     --primary: #15803d;
@@ -35,23 +38,23 @@
     --primary-hover: #166534;
     --primary-soft: #16a34a;
 
-    /* Accent - warm beige tint, saffron-toned foreground (matches DSS) */
-    --accent: #f4ecdc;
+    /* Accent - neutral tint; saffron-toned foreground kept for warning-ish accents */
+    --accent: #f4f4f5;
     --accent-foreground: #8a5a10;
     --saffron: #e8a54b;
 
-    --secondary: #f3ede2;
-    --secondary-foreground: #1a1814;
-    --muted: #f3ede2;
-    --muted-foreground: #5b5247; /* WCAG AA: ~6.5:1 vs --background - headroom so /70-/80 opacity uses still pass */
-    --subtle: #efe9dc;
+    --secondary: #f4f4f5;
+    --secondary-foreground: #18181b;
+    --muted: #f4f4f5;
+    --muted-foreground: #52525b; /* WCAG AA: ~7.1:1 vs --background - headroom so /70-/80 opacity uses still pass */
+    --subtle: #efeff1;
 
     --destructive: #d1252b;
     --destructive-foreground: #ffffff;
 
-    --border: #e8e0d0;
-    --border-strong: #d6cab2;
-    --input: #ddd3bf;
+    --border: #e4e4e7;
+    --border-strong: #d4d4d8;
+    --input: #d4d4d8;
     --ring: #15803d;
 
     --success: #1a7a3a; /* WCAG AA: ≥4.5:1 vs --background and bg-foreground/[0.04] */
@@ -68,11 +71,11 @@
     color-scheme: dark;
 
     --background: #0d0e11;
-    --foreground: #ede8df;
+    --foreground: #e7e7ea;
     --card: #17181c;
-    --card-foreground: #ede8df;
+    --card-foreground: #e7e7ea;
     --popover: #17181c;
-    --popover-foreground: #ede8df;
+    --popover-foreground: #e7e7ea;
 
     /* In dark mode primary serves two roles with opposing contrast needs:
        (a) as a background under white text (button), needs primary darker;
@@ -84,14 +87,14 @@
     --primary-hover: #166534;
     --primary-soft: #4ade80; /* green-400. WCAG AA: ≥4.5:1 vs --card (dark bg text) */
 
-    --accent: #241f18;
+    --accent: #1c1d22;
     --accent-foreground: #e8a54b;
     --saffron: #e8a54b;
 
     --secondary: #1c1d22;
-    --secondary-foreground: #ede8df;
+    --secondary-foreground: #e7e7ea;
     --muted: #1a1b1f;
-    --muted-foreground: #b3aca0; /* WCAG AA: ~7.3:1 vs --background - headroom so /70-/80 opacity uses still pass */
+    --muted-foreground: #a5a5ae; /* WCAG AA: ~7.3:1 vs --background - headroom so /70-/80 opacity uses still pass */
     --subtle: #14151a;
 
     --destructive: #ef4444;
