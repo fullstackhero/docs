@@ -38,7 +38,7 @@ Plus `ValidationException` from FluentValidation (returned as 400 with the field
 | Exception | Status | Notes |
 |---|---|---|
 | `FluentValidation.ValidationException` | 400 | Per-field `errors` map in the response |
-| `CustomException` (incl. subclasses) | `e.StatusCode` | `title` = exception type name, `detail` = message, `errors` = `ErrorMessages` when present |
+| `CustomException` (incl. subclasses) | `e.StatusCode` | `title` = localized title for the status (falls back to the exception type name), `detail` = message, `errors` = `ErrorMessages` when present, `code` = `MessageKey` when set |
 | `UnauthorizedAccessException` | 401 | BCL fallback |
 | `KeyNotFoundException` | 404 | BCL fallback |
 | `BadHttpRequestException` | Its own `StatusCode` (usually 400) | Malformed request — missing required header/param, unreadable or oversized body |
@@ -47,6 +47,24 @@ Plus `ValidationException` from FluentValidation (returned as 400 with the field
 The `BadHttpRequestException` mapping matters more than it looks: a request to an anonymous endpoint that omits a required parameter (like the `tenant` header binding) throws it, and before this mapping existed the client saw a misleading 500 instead of a 400 (issue #1245).
 
 Every response also carries `traceId` (the OpenTelemetry trace id, falling back to `HttpContext.TraceIdentifier`) and `correlationId` (the `X-Correlation-ID` request header when present) as ProblemDetails extensions.
+
+### `code` — the machine-readable discriminator
+
+When the thrown exception carries a `MessageKey` (see [Internationalization](/docs/cross-cutting-concerns/internationalization/)), the handler also surfaces that key as a `code` extension:
+
+```json
+{
+  "title": "Forbidden",
+  "status": 403,
+  "detail": "This tenant has been deactivated. Contact your administrator.",
+  "code": "Multitenancy.TenantDeactivated",
+  "traceId": "4a7d8e1f2c..."
+}
+```
+
+`detail` is prose rendered under the caller's culture — the same error reads differently for an `Accept-Language: pt-BR` client. **A client that needs to branch on a specific error must key off `code`, never off `detail`.** The dashboard does exactly this: `isTenantDeactivatedError` matches `code === "Multitenancy.TenantDeactivated"` to route the user to the terminal `/tenant-deactivated` screen, and that detection keeps working in every language.
+
+Exceptions thrown without a `MessageKey` omit the property entirely, so its absence is meaningful: there is no stable code to branch on for that error.
 
 ## The response shape
 
