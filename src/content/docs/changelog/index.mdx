@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-07-13
+lastUpdated: 2026-08-06
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -10,6 +10,10 @@ seo:
 ---
 
 Notable changes to the kit, newest first.
+
+## 2026-08-06
+
+- **Mailing: e-mails now carry real HTML plus a plain-text alternative, so the password-reset link is clickable again (fix).** Every provider puts `MailRequest.Body` in the **HTML** part (MailKit's `BodyBuilder.HtmlBody`, SendGrid's `htmlContent`), but the password-reset and welcome mails passed bare text into it. A plain URL inside an HTML part is not auto-linked by most clients - auto-linking is `text/plain` behaviour - so **the reset link arrived as dead text** and the user could not finish the flow. The welcome mail also interpolated the user-supplied first name straight into that markup, and SendGrid was handed `Body` as *both* parts, shipping raw markup to text-only clients. `MailRequest` gains an optional **`TextBody`** for the `text/plain` alternative: `SmtpMailService` emits both parts as multipart/alternative, and `SendGridMailService` maps them separately onto `plainTextContent`/`htmlContent`. Identity builds its bodies through a new `EmailBodies` helper that renders the action link as a real `<a href>` and HTML-encodes every interpolated value; the four tenant billing mails gained their plain twin, so no message goes out HTML-only. **Action for deployments:** none - `TextBody` is optional and appended last, so existing callers keep compiling. If you send mail from your own code, put HTML in `Body` and the plain wording in `TextBody`; a bare URL in `Body` will not be clickable. See [#1351](https://github.com/fullstackhero/dotnet-starter-kit/pull/1351).
 
 ## 2026-07-13
 
