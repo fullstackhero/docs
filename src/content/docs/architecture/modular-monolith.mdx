@@ -1,6 +1,6 @@
 ---
 title: Modular monolith
-lastUpdated: 2026-06-11
+lastUpdated: 2026-08-07
 description: How fullstackhero composes ten modules into a single deployable process with hard module boundaries enforced by architecture tests.
 sidebar:
   label: Modular monolith
@@ -126,9 +126,9 @@ Domain events are private to the aggregate's module. The `DomainEventsIntercepto
 
 ### 3. Integration events (cross-module)
 
-The canonical pattern. A module writes an `IIntegrationEvent` to the **outbox** (`IOutboxStore.AddAsync`, committed with the business write); the kit's outbox dispatcher publishes it asynchronously via `IEventBus`; any module that implements `IIntegrationEventHandler<TEvent>` receives a copy, with inbox-backed idempotency. Examples in the kit:
+The canonical pattern. A module writes an `IIntegrationEvent` to the **outbox** (`IOutboxWriter.AddAsync`, committed with the business write); the kit's outbox dispatcher publishes it asynchronously via `IEventBus`; any module that implements `IIntegrationEventHandler<TEvent>` receives a copy, with inbox-backed idempotency. The outbox tables are framework-owned (schema `framework`), so no module registers a store of its own. Examples in the kit:
 
-- **Chat → Notifications**: `MentionedInChannelIntegrationEvent` → inbox row + SignalR push.
+- **Chat → Notifications**: `MentionedInChannelIntegrationEvent` → inbox row + SignalR push. The kit's one deliberate direct-bus publish, so the mention badge is not delayed by a dispatch cycle.
 - **Any module → Webhooks**: open-generic `WebhookFanoutHandler<TEvent>` fans every event to subscribed tenants.
 - **Identity → outbox**: `UserRegisteredIntegrationEvent`, `TokenGeneratedIntegrationEvent` for downstream consumers.
 
