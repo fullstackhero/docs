@@ -1,6 +1,6 @@
 ---
 title: Identity module
-lastUpdated: 2026-06-11
+lastUpdated: 2026-08-10
 description: JWT bearer + refresh tokens, ASP.NET Identity with roles + permissions, user groups, operator impersonation, two-factor TOTP, sessions, and password-policy enforcement.
 sidebar:
   label: Identity
@@ -148,6 +148,10 @@ endpoints.MapPost("/users", handler)
 ## Endpoints
 
 All 51 endpoints are under `/api/v1/identity/`. The rate-limited `auth` policy covers `POST /token/issue`, `POST /token/refresh`, `GET /confirm-email`, `POST /users/{id}/resend-confirmation-email`, `POST /forgot-password`, `POST /reset-password`, and `POST /self-register`. Full table:
+
+<Callout type="note" title="Where reset & confirmation e-mails point">
+Auth e-mail links resolve through `FrontendOptions` (a dedicated config, separate from CORS). **Self-service** flows (`forgot-password`, `self-register`) link back to the front-end that made the request - the base URL comes from the request `Origin` header, validated against `FrontendOptions:AllowedOrigins` - so with more than one SPA each user gets a link to the app they started from; a forged or unlisted origin is rejected with `400`, and a request with no `Origin` (non-browser callers) falls back to `FrontendOptions:DefaultOrigin` - as does every request when the allowlist is empty, since there is then nothing to validate against. **Operator-driven** flows (`register`, `resend-confirmation-email`) target `DefaultOrigin` (the recipient's app), so a tenant user provisioned from the admin console gets a link into the tenant app, not the console. The confirmation link lands on the SPA `/confirm-email` page (which then calls `GET /confirm-email`), not the API route directly. Left unset, the host still boots and these links fall back to the API's own origin (`OriginOptions:OriginUrl`, or the request host), which is rarely what you want - configure it, see [CORS & headers](/docs/security/cors-and-headers/).
+</Callout>
 
 | Verb | Route | What it does |
 |---|---|---|

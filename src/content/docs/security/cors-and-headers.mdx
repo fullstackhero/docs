@@ -1,6 +1,6 @@
 ---
 title: CORS & security headers
-lastUpdated: 2026-06-11
+lastUpdated: 2026-08-10
 description: CORS-before-HTTPS-redirect ordering, the SignalR-credentialed-CORS gotcha, and the production security headers the kit emits by default.
 sidebar:
   label: CORS & headers
@@ -53,6 +53,25 @@ Pipeline order (relevant slice):
 5. Security headers
 6. ...
 ```
+
+## Front-end origin for auth e-mail links
+
+Links that land on a front-end SPA - the password-reset and e-mail-confirmation e-mails - are **not** built from the CORS list. They resolve through a dedicated `FrontendOptions`, kept separate from CORS on purpose: the CORS allowlist governs which browsers may *call* the API, while this list governs which origins may appear *inside an outbound link*. The two often overlap but carry different duties, and coupling them breaks same-origin / reverse-proxy topologies (SPA + API on one domain need no CORS entries, yet the browser still sends `Origin` on the POST).
+
+```jsonc
+  "FrontendOptions": {
+    "AllowedOrigins": [ "http://localhost:5173", "http://localhost:5174" ],
+    "DefaultOrigin": "http://localhost:5174"   // the tenant SPA
+  }
+```
+
+- **Self-service flows** (`forgot-password`, `self-register`) build the link from the request `Origin` header, validated against `AllowedOrigins` and returned as the canonical list entry - so with more than one SPA each user gets a link back to the app they started from. Because forgot-password is anonymous this is a security boundary: once the list is non-empty, a **forged or unlisted `Origin` is rejected with `400`** rather than turned into a link. A request with **no** `Origin` header (curl, mobile, server-to-server) falls back to `DefaultOrigin` instead of failing. The Scalar try-it UI is not in that group - it fetches from the browser, so it sends the API's own origin; add that origin to `AllowedOrigins` if you want to exercise these two endpoints from the docs UI.
+- With `AllowedOrigins` **empty** there is nothing to validate against, so the header is discarded and the link uses `DefaultOrigin`. That keeps the single-SPA and reverse-proxy setups working on `DefaultOrigin` alone - browsers attach `Origin` to these POSTs even same-origin, so matching an empty list would otherwise reject every legitimate reset. The client's value is never echoed either way. List your origins as soon as you serve more than one front-end, or every user lands on the same app.
+- **Operator-driven flows** (`register`, `resend-confirmation-email`) target `DefaultOrigin` - the recipient's app - not the calling operator's origin, so a tenant user provisioned from the admin console gets a link into the tenant app, not the console.
+- Matching is component-wise (scheme + host + port, port exact). `appsettings.Production.json` ships both settings empty. The host **still starts** without them: it logs one startup `Warning` naming `FrontendOptions:DefaultOrigin`, and link resolution falls back to the API's own origin - `OriginOptions:OriginUrl`, or the request's own host when that is empty too. E-mails keep going out, but their links point at the API rather than your SPA (which is where confirmation links pointed before this resolver existed). A background job, having no request to derive a host from, fails instead. Configure both (see the [production checklist](/docs/security/production-checklist/)) to send users where they expect to land.
+- `DefaultOrigin` is a **single global**, not per-tenant or custom-domain aware, so operator-driven `register` / `resend-confirmation-email` point every tenant's link at that one SPA. That fits the kit's single-dashboard model; a deployment with per-tenant custom domains would need to resolve the recipient tenant's own origin instead.
+
+(`OriginOptions:OriginUrl` has a second, unrelated role: it's the API's own public base for back-end-served assets such as avatar URLs, exposed via `IRequestContext.Origin`.)
 
 ## Why not AllowAnyOrigin for SignalR
 
@@ -129,7 +148,7 @@ The cookie should be HttpOnly (no JS access - limits XSS impact), Secure (HTTPS 
 ## Common mistakes
 
 - **Setting `AllowAll = true` in production.** CORS exists to give browsers a sanity check on cross-origin calls. Opening to the world removes the check (it doesn't directly compromise auth - auth still gates the request - but it removes the browser-enforced "is this site allowed to call you?" layer).
-- **Forgetting to fill `AllowedOrigins` in production.** With `AllowAll: false` and no origins, CORS isn't mounted - your React apps on other origins will get blocked by the browser. The symptom is "works in Postman, fails in the browser".
+- **Forgetting to fill `AllowedOrigins` in production.** With `AllowAll: false` and no origins, CORS isn't mounted - your React apps on other origins will get blocked by the browser. The symptom is "works in Postman, fails in the browser". (Auth e-mail links are a *separate* concern - they use `FrontendOptions`, see above - which ships empty in production too, and silently falls back to the API origin until you set it.)
 - **Missing HSTS.** Without HSTS, an attacker on the network can downgrade to HTTP for the first request. The kit emits it on HTTPS responses automatically; verify your proxy doesn't strip it.
 - **CSP that breaks the UI.** If a third-party widget breaks after tightening CSP, look at the browser console - CSP violations are logged. Add the needed origins to `ScriptSources`/`StyleSources`, don't disable the middleware.
 

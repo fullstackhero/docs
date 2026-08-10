@@ -1,6 +1,6 @@
 ---
 title: Production security checklist
-lastUpdated: 2026-06-11
+lastUpdated: 2026-08-10
 description: Ten configuration items you must check before shipping fullstackhero to production. Skip none.
 sidebar:
   label: Production checklist
@@ -58,6 +58,8 @@ Adjust for your industry. Healthcare (HIPAA) and finance (PCI-DSS) tend to requi
 ## 3. Allowlist CORS origins
 
 `CorsOptions:AllowAll = true` (and the `SetIsOriginAllowed(_ => true)` policy it enables) is **dev only**. Production needs the explicit lists - and note that `appsettings.Production.json` ships `AllowedOrigins` empty, which means **no CORS middleware mounts at all** until you fill it in; your front-ends on other origins will be blocked by the browser. See [CORS & security headers](/docs/security/cors-and-headers/).
+
+Separately, set **`FrontendOptions`** (`AllowedOrigins` + `DefaultOrigin`) - the allowlist and fallback the Identity module uses to build password-reset and e-mail-confirmation links. It ships empty in production too. The host still boots without it, logging a startup `Warning` and falling back to the API's own origin (`OriginOptions:OriginUrl`, or the request host when that is empty as well), so auth e-mails keep arriving but their links point at the API instead of your SPA. `DefaultOrigin` is the tenant SPA: it's the fallback for non-browser callers and the target for operator-driven register/resend links.
 
 ```jsonc
 {
