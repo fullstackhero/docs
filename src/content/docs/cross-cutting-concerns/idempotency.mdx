@@ -32,7 +32,7 @@ endpoints.MapPost("/orders", handler)
 
 That's the whole opt-in. The kit's `IdempotencyEndpointFilter` (an `IEndpointFilter`) wraps the handler:
 
-1. **Before**: read the `Idempotency-Key` header. If present, build the cache key from the tenant (the caller's `tenant` claim, `"global"` when absent), the **operation** (HTTP method + route pattern) and the key itself, then probe the cache.
+1. **Before**: read the `Idempotency-Key` header. If present, build the cache key from the tenant (the resolved tenant context, the caller's `tenant` claim as a fallback, `"global"` when neither is available), the **operation** (HTTP method + route pattern) and the key itself, then probe the cache.
 2. **If cached**: write the cached status, body and replayable headers, set an `Idempotency-Replayed: true` response header, and skip the handler entirely.
 3. **If not**: reserve the key so a concurrent duplicate can't run the handler too, invoke the handler, capture what it actually put on the wire, store that, then release the reservation.
 
@@ -58,7 +58,9 @@ Storing is still **best-effort**: if the cache is down, the filter logs a warnin
 
 Two requests carrying the same key at the same time are serialized by an atomic in-flight reservation - Redis `SET NX` when an `IConnectionMultiplexer` is registered, an in-process set otherwise (single-instance hosts; a multi-instance host in this stack already runs Redis for the shared Data Protection key ring). The duplicate that loses the race re-probes once - the original may have finished in the meantime, in which case it replays - and otherwise gets **`409 Conflict`**: a request with this key is still being processed.
 
-The reservation fails **open**. A Redis blip on reserve or release logs a warning and lets the request through rather than failing it; the stored response still dedupes later retries.
+The reservation fails **open**. A Redis blip on reserve or release logs a warning and lets the request through rather than failing it; the stored response still dedupes later retries. A request that failed open holds no reservation, so its release deletes nothing - releasing is a compare-and-delete against the token the reservation was taken with, which keeps a request from freeing a lock another one owns.
+
+Both branches expire on `ReservationTtl`: the in-process one hands the key over once the holder has outlived the TTL, mirroring what Redis does on its own, so a handler that never returns cannot strand the key until the process restarts.
 
 ## Configuration
 
@@ -117,6 +119,7 @@ Layer `Idempotency-Key` on top of these for full retry safety across both transp
 ## Gotchas
 
 - **The cache key includes tenant**, so two tenants using the same idempotency key get separate responses. This is correct; tenants are independent.
+- **The tenant on the key is the one the request is scoped to**, not the one in the caller's token. That matters for a root operator using the `tenant` header to act on a specific tenant: the entry follows the target tenant, which is also the one the handler's writes land in. An unresolved `tenant` header - one naming a tenant that does not exist - is never used to build the key; those requests fall back to the claim, then to `"global"`.
 - **The cache key includes the operation** (method + route pattern), so one key reused against two different idempotent endpoints no longer replays the first endpoint's response on the second. Still generate a fresh key per logical request - the scoping is a guard rail, not a licence to share keys.
 - **The cache key does NOT include the request body.** The same key sent to the same endpoint with a *different* payload replays the first response rather than rejecting the mismatch. If you need that check, hash the body yourself.
 - **Anonymous endpoints share the `"global"` tenant bucket.** Self-registration takes its tenant from a header, not a claim, so there is no tenant to scope by; the operation scoping keeps it separate from other endpoints, but two anonymous callers who pick the *same* key value on the *same* endpoint would share an entry. Use a fresh UUID per attempt, which is the documented contract anyway.
