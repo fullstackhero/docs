@@ -65,7 +65,7 @@ builder.AddHeroPlatform(o =>
 - **`AddHeroOpenTelemetry`** - traces + metrics via OTLP; registers `MediatorTracingBehavior` and wires the caching/Hangfire/module sources and meters.
 - **`AddHeroOpenApi`** - OpenAPI documents + Scalar UI at `/scalar`; `OpenApiOptions` (Title, Description, Versions, Contact, License).
 - **`AddHeroVersioning`** - `Asp.Versioning` with **URL-segment** versioning only (`api/v{version}/…`), default v1, assumed when unspecified.
-- **`AddHeroIdempotency`** - `IdempotencyEndpointFilter` + `IdempotencyOptions` (`HeaderName` default `Idempotency-Key`, `DefaultTtl` 24h, `MaxKeyLength` 128); replay protection via distributed cache.
+- **`AddHeroIdempotency`** - `IdempotencyEndpointFilter` + `IdempotencyOptions` (`HeaderName` default `Idempotency-Key`, `DefaultTtl` 24h, `ReservationTtl` 1m, `MaxKeyLength` 128); replay protection via distributed cache.
 - **`AddHeroFeatureFlags`** - `Microsoft.FeatureManagement` with the `TenantFeatureFilter` for per-tenant overrides and a `FeatureGateEndpointFilter` for endpoints.
 - **`AddHeroSse`** - Server-Sent Events plumbing (`SseConnectionManager`, token service, endpoints via `MapHeroSseEndpoints`).
 - **`AddHeroRealtime`** - SignalR (`AppHub` at `/api/v1/realtime/hub` + presence endpoint) with a Redis backplane when `CachingOptions:Redis` is set.
