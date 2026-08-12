@@ -1,14 +1,14 @@
 ---
 title: Idempotency
-lastUpdated: 2026-06-11
-description: Idempotency-Key header support with HybridCache-backed replay protection across instances.
+lastUpdated: 2026-08-12
+description: Idempotency-Key header support with distributed-cache-backed replay protection across instances.
 sidebar:
   label: Idempotency
   order: 4
 pageType: concept
 seo:
   title: 'Idempotency in .NET 10 - Idempotency-Key header + replay'
-  description: 'How fullstackhero handles duplicate requests via the Idempotency-Key header - HybridCache-backed response replay scoped per tenant + key, with a…'
+  description: 'How fullstackhero handles duplicate requests via the Idempotency-Key header - distributed-cache-backed response replay scoped per tenant + key, with a…'
   keywords: 'idempotency key dotnet, asp.net core duplicate requests, request replay protection, idempotent endpoint .net 10'
 ---
 
@@ -32,13 +32,39 @@ endpoints.MapPost("/orders", handler)
 
 That's the whole opt-in. The kit's `IdempotencyEndpointFilter` (an `IEndpointFilter`) wraps the handler:
 
-1. **Before**: read the `Idempotency-Key` header. If present, build the cache key `idem:t:{tenant}:{key}` (tenant from the caller's `tenant` claim, `"global"` when absent) and probe the cache.
-2. **If cached**: write the cached status + body, set an `Idempotency-Replayed: true` response header, and skip the handler entirely.
-3. **If not**: invoke the handler, then store the serialized result + status code under the cache key with a TTL.
+1. **Before**: read the `Idempotency-Key` header. If present, build the cache key from the tenant (the resolved tenant context, the caller's `tenant` claim as a fallback, `"global"` when neither is available), the **caller** (the user id; `anon` when unauthenticated, which is why idempotency does not belong on an anonymous endpoint, see below), the **operation** (HTTP method + route pattern + resolved route values) and the key itself, then probe the cache.
+2. **If cached**: write the cached status, body and replayable headers, set an `Idempotency-Replayed: true` response header, and skip the handler entirely.
+3. **If not**: reserve the key so a concurrent duplicate can't run the handler too, invoke the handler, capture what it actually put on the wire, store that, then release the reservation.
 
 If no header is sent, the filter is a no-op - the endpoint behaves like an ordinary one. Keys longer than `MaxKeyLength` are rejected with a 400 before the handler runs.
 
-The probe reads through `IDistributedCache` directly (a real get-or-null, bypassing L1 - replays are rare so L1 warmth has little value); the write goes through `HybridCache.SetAsync` with tags (`idempotency` + the tenant tag) so tag-based purges work. Caching the response is **best-effort**: if the store write fails, the filter logs a warning and the request still succeeds.
+Probe and store both go through `IDistributedCache`, on the same key and the same serializer. That symmetry is the whole game: a store that keys its entries under a different scheme than the probe reads makes replay silently never engage, with no error anywhere.
+
+### What gets replayed
+
+The handler's `IResult` is executed into an in-memory buffer first, so what's captured is the real wire shape - the plain DTO body and the status the result actually sets, not the `Ok<T>` / `Created<T>` wrapper and not the status the response happens to carry before the result runs. Alongside them the filter captures an allow-list of headers that carry meaning for the caller: **`Location`** and **`ETag`**. A replayed `201` therefore still points at the created resource. Transport and host-owned headers (`Content-Length`, `Transfer-Encoding`, `Date`, `Server`) are deliberately not replayed - a stale value there corrupts the response.
+
+### Only successes are stored
+
+A response is stored only when its status is **2xx**. A `409`, `429` or a `500`-shaped result is not a record of a committed side effect, and storing it would lock the caller out of that key for the whole TTL after a transient downstream failure. A retry with the same key after a failure runs the handler again, which is what you want.
+
+### The store outlives the request
+
+The response is written to the cache **before** the body goes to the client, on a cancellation token that can't be cancelled. Client-times-out-then-retries is the single commonest way a duplicate request is produced; if the store were tied to the client's connection, that exact retry would find nothing cached and run the handler a second time.
+
+For the same reason **the handler itself runs with the client's abort token detached**. Left attached, a disconnect right after the side effect committed cancels whatever the handler awaits next - an EF read, an outbox write, a Mediator behaviour - and the exception leaves the filter with nothing to store, so the retry re-executes. The trade-off is explicit: on an idempotent endpoint, a client hanging up no longer aborts the handler. Keep those handlers short, and don't put `.WithIdempotency()` on a streaming or large-file endpoint - the response is buffered in memory to be captured, with no size ceiling.
+
+Storing is **best-effort**, and so is reading: if the cache is down, the probe, the reservation and the store each log a warning and the request proceeds. Idempotency degrades to a convenience instead of 500ing requests - including the probe, which runs on every keyed request and would otherwise take every idempotent endpoint down for exactly the clients that send a key.
+
+A handler that writes to `HttpContext.Response` itself is left alone: the response has already started, so nothing can be captured and nothing is stored. Return an `IResult` from an idempotent endpoint.
+
+### Concurrent duplicates
+
+Two requests carrying the same key at the same time are serialized by an atomic in-flight reservation - Redis `SET NX` when an `IConnectionMultiplexer` is registered, an in-process set otherwise (single-instance hosts; a multi-instance host in this stack already runs Redis for the shared Data Protection key ring). The duplicate that loses the race re-probes once - the original may have finished in the meantime, in which case it replays - and otherwise gets **`409 Conflict`** with `Retry-After: 1`: a request with this key is still being processed, try again in a second.
+
+The reservation fails **open**. A Redis blip on reserve or release logs a warning and lets the request through rather than failing it; the stored response still dedupes later retries. A request that failed open holds no reservation, so its release deletes nothing - releasing is a compare-and-delete against the token the reservation was taken with, which keeps a request from freeing a lock another one owns.
+
+Both branches expire on `ReservationTtl`: the in-process one hands the key over once the holder has outlived the TTL, mirroring what Redis does on its own, so a handler that never returns cannot strand the key until the process restarts.
 
 ## Configuration
 
@@ -46,13 +72,18 @@ The probe reads through `IDistributedCache` directly (a real get-or-null, bypass
 {
   "IdempotencyOptions": {
     "HeaderName": "Idempotency-Key",   // default
-    "DefaultTtl": "1.00:00:00",        // 24 hours (default)
+    "DefaultTtl": "1.00:00:00",        // 24 hours (default) - how long a stored response replays
+    "ReservationTtl": "00:01:00",      // 1 minute (default) - how long the in-flight lock survives
     "MaxKeyLength": 128                // default
   }
 }
 ```
 
-Idempotency is **on by default** in `FshPlatformOptions` (`EnableIdempotency = true`); `AddHeroPlatform` binds the options. The replay store is HybridCache, so the L2 (Valkey) backing means cached responses survive across instances. Without Valkey you get per-instance idempotency, which is OK for dev but not for multi-instance production.
+`ReservationTtl` is deliberately decoupled from `DefaultTtl`. It only has to outlast the handler's execution: if the process is killed between reserving the key and releasing it, the lock frees itself in about a minute instead of stranding the key for the full response TTL, during which every retry would `409`. Raise it if you have a handler slower than the default - if it lapses mid-request, a concurrent duplicate can slip past the lock.
+
+All four are validated at startup: a non-positive TTL, a `ReservationTtl` above `DefaultTtl`, an empty header name or a non-positive key length fails the host rather than degrading silently (a zero `DefaultTtl` used to throw inside the best-effort store, which logs a warning and carries on - so nothing was ever cached and replay never engaged).
+
+Idempotency is **on by default** in `FshPlatformOptions` (`EnableIdempotency = true`); `AddHeroPlatform` binds the options. The replay store is `IDistributedCache`, so a Valkey backing means cached responses survive across instances. Without Valkey you get per-instance idempotency, which is OK for dev but not for multi-instance production - and note that cross-instance dedup depends on the **cache** being on Valkey, not on the reservation: a host that points only quota at Redis gets a shared lock over a per-process response store, which still lets each instance run the handler once.
 
 ## What clients send
 
@@ -77,7 +108,8 @@ Most HTTP client libraries can generate keys automatically; for `HttpClientFacto
 
 - **It doesn't dedupe content.** If the client sends two requests with **different** keys and identical bodies, both create resources. Idempotency keys are per-request-attempt identifiers, not content hashes. (Use a content hash + lookup if you want content dedupe - but it's a different feature.)
 - **It doesn't span the request boundary forever.** After `DefaultTtl` expires, a replayed request runs again. Set the TTL to whatever is realistic for your client retry strategy - 24 h is the default; longer is reasonable for batch / async flows.
-- **It doesn't catch partial failures.** If the handler runs, mutates state, then crashes before the response is captured, the cache won't have an entry. The retry runs again. Combine idempotency with idempotent domain operations for true safety.
+- **It doesn't catch partial failures.** If the handler runs, mutates state, then throws before the response is captured, the cache won't have an entry. The retry runs again. Combine idempotency with idempotent domain operations for true safety. (A client that hangs up *after* the handler committed is covered - the store happens before the body is written to the client.)
+- **It doesn't replay failures.** Only 2xx responses are stored, so a retry after an error re-runs the handler rather than replaying the error.
 
 ## Domain-level idempotency
 
@@ -93,11 +125,17 @@ Layer `Idempotency-Key` on top of these for full retry safety across both transp
 ## Gotchas
 
 - **The cache key includes tenant**, so two tenants using the same idempotency key get separate responses. This is correct; tenants are independent.
-- **The cache key does NOT include the route.** Reusing one key across two different idempotent endpoints within the same tenant replays the first endpoint's response on the second. Always generate a fresh key per logical request - never share keys across operations.
-- **Cache miss after restart is normal.** If Valkey isn't configured, the in-memory L2 starts empty after a restart - replayed requests run again. Always use Valkey in production.
+- **The tenant on the key is the one the request is scoped to**, not the one in the caller's token. That matters for a root operator using the `tenant` header to act on a specific tenant: the entry follows the target tenant, which is also the one the handler's writes land in. An unresolved `tenant` header - one naming a tenant that does not exist - is never used to build the key; those requests fall back to the claim, then to `"global"`.
+- **The cache key includes the operation** (method + route pattern + resolved route values), so one key reused against two different idempotent endpoints - or against two different resources on the same endpoint, `PUT /tickets/1` then `PUT /tickets/2` - no longer replays the first response on the second. Still generate a fresh key per logical request; the scoping is a guard rail, not a licence to share keys.
+- **The cache key includes the caller.** Two users of the same tenant who pick the same key value on the same endpoint get separate entries, instead of one receiving the other's response body while their own request is silently suppressed.
+- **The cache key does NOT include the request body.** The same key sent to the same endpoint with a *different* payload replays the first response rather than rejecting the mismatch. If you need that check, hash the body yourself.
+- **Do not put `.WithIdempotency()` on an anonymous endpoint.** There is no user to scope by, so every unauthenticated caller resolves to the same `anon` caller: two people sending the same low-entropy key against the same endpoint and tenant would share one entry, and the second would replay the first's response while their own request was silently suppressed. `WithIdempotency()` marks the endpoint with `IdempotentEndpointMetadata`, and an integration test walks the endpoint map to fail the build if an `AllowAnonymous()` endpoint carries it. Self-registration, the one endpoint this applied to, no longer does: a genuine retry there is already safe, because the unique-email constraint rejects the duplicate.
+- **Cache miss after restart is normal.** If Valkey isn't configured, the in-memory store starts empty after a restart - replayed requests run again. Always use Valkey in production.
+- **A duplicate still in flight gets 409, not the response.** The original hasn't produced one yet. Clients that retry aggressively should treat `409` on an idempotent endpoint as "retry shortly" - the response carries `Retry-After: 1` - not as a business conflict.
+- **`Idempotency-Replayed` is not exposed to cross-origin JavaScript.** The CORS policy doesn't list it in `Access-Control-Expose-Headers`, so a browser client cannot read it. Server-to-server callers see it normally.
 
 ## Related
 
-- [Caching](/docs/cross-cutting-concerns/caching/) - the HybridCache that backs the replay store.
+- [Caching](/docs/cross-cutting-concerns/caching/) - the distributed cache that backs the replay store.
 - [HTTP resilience](/docs/cross-cutting-concerns/http-resilience/) - caller-side retry policy that needs idempotency to be safe.
 - [Web building block](/docs/building-blocks/web/) - the filter implementation.
