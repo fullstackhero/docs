@@ -1,8 +1,8 @@
 ---
 /**
- * CodeFirst — section 01, the architecture story.
- * Two balanced "boards": (left) the modular monolith — ten isolated modules in
- * one process; (right) a vertical slice — one feature as one folder of layered
+ * CodeFirst - section 01, the architecture story.
+ * Two balanced "boards": (left) the modular monolith - ten isolated modules in
+ * one process; (right) a vertical slice - one feature as one folder of layered
  * files on a rail. The highlighted Identity module on the left is the feature
  * exploded on the right, so the two ideas read as one architecture.
  */
@@ -55,7 +55,7 @@ const slice = [
         </span>
       </h2>
       <p class="mt-5 text-[15.5px] leading-relaxed text-muted-foreground sm:text-[16.5px]">
-        Each module is an isolated bounded context, talking to the others only through its contracts — never
+        Each module is an isolated bounded context, talking to the others only through its contracts - never
         reaching into their internals. Inside a module, every feature is a vertical slice: endpoint, handler,
         validator, and tests in one folder.
       </p>
@@ -92,7 +92,7 @@ const slice = [
 
         <p class="mt-auto flex items-start gap-2 border-t border-border/60 pt-5 text-[12px] leading-relaxed text-muted-foreground">
           <Icon name="lucide:git-compare-arrows" class="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary/80" />
-          Cross-module calls go through <code class="mx-1 rounded bg-foreground/[0.06] px-1 font-mono text-[11px] text-foreground">*.Contracts</code> only — enforced by architecture tests.
+          Cross-module calls go through <code class="mx-1 rounded bg-foreground/[0.06] px-1 font-mono text-[11px] text-foreground">*.Contracts</code> only - enforced by architecture tests.
         </p>
       </div>
 
@@ -134,7 +134,7 @@ const slice = [
 
         <p class="mt-auto flex items-start gap-2 border-t border-border/60 pt-5 text-[12px] leading-relaxed text-muted-foreground">
           <Icon name="lucide:git-pull-request" class="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary/80" />
-          No jumping between five projects to add a button — one folder, one PR, one merge.
+          No jumping between five projects to add a button - one folder, one PR, one merge.
         </p>
       </div>
     </div>

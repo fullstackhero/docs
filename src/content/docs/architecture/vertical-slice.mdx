@@ -1,18 +1,18 @@
 ---
 title: Vertical Slice Architecture
 lastUpdated: 2026-06-11
-description: How each module is structured inside — one feature, one folder, one PR; endpoint + command + handler + validator + tests living together.
+description: How each module is structured inside - one feature, one folder, one PR; endpoint + command + handler + validator + tests living together.
 sidebar:
   label: Vertical Slice
   order: 3
 pageType: concept
 seo:
   title: 'Vertical Slice Architecture in .NET 10'
-  description: 'How fullstackhero uses Vertical Slice Architecture inside each module — every feature lives in one folder with its endpoint, command, handler, validator…'
+  description: 'How fullstackhero uses Vertical Slice Architecture inside each module - every feature lives in one folder with its endpoint, command, handler, validator…'
   keywords: 'vertical slice architecture .net, vsa pattern dotnet, mediator handler endpoint pattern, feature folder asp.net core'
 ---
 
-Inside every fullstackhero module, **Vertical Slice Architecture** (VSA) determines the shape. A feature — registering a user, changing a product price, sending a chat message — lives in one feature folder: the endpoint, the handler, and the validator together, with the command and response mirrored in the module's `.Contracts` project. No layered round-trip. No Domain → Application → Infrastructure → API hops. One feature, one folder, one PR.
+Inside every fullstackhero module, **Vertical Slice Architecture** (VSA) determines the shape. A feature - registering a user, changing a product price, sending a chat message - lives in one feature folder: the endpoint, the handler, and the validator together, with the command and response mirrored in the module's `.Contracts` project. No layered round-trip. No Domain → Application → Infrastructure → API hops. One feature, one folder, one PR.
 
 <Callout type="tip" title="The question to ask: 'what changes when this feature changes?'">
 In Vertical Slice the answer is "one folder, maybe two files." In a layered architecture the answer is "one DTO, one application service, one domain method, one infrastructure repository, one controller method, and probably four interface declarations to wire them." VSA optimises for the change you actually make.
@@ -35,7 +35,7 @@ Modules.Identity/Features/v1/Users/RegisterUser/
 
 The command + response live in Contracts because they're the public surface anyone (including other modules) reads. The endpoint, handler, and validator live in the runtime project because they're private to the module.
 
-Tests for the slice live in the module's test project (e.g. `src/Tests/Identity.Tests/Handlers/RegisterUserCommandHandlerTests.cs`), and `src/Tests/Architecture.Tests/` enforces the structural rules — handlers paired with validators, Contracts free of EF/FluentValidation, versioned features not reaching into newer versions.
+Tests for the slice live in the module's test project (e.g. `src/Tests/Identity.Tests/Handlers/RegisterUserCommandHandlerTests.cs`), and `src/Tests/Architecture.Tests/` enforces the structural rules - handlers paired with validators, Contracts free of EF/FluentValidation, versioned features not reaching into newer versions.
 
 ## A complete slice
 
@@ -131,21 +131,21 @@ The kit enforces a small set of conventions through code review and architecture
 - **Every `await` uses `.ConfigureAwait(false)`.** This is library code; never capture the synchronization context.
 - **Commands and queries are `record`s or `sealed` classes.** Enforced by an architecture test (`Commands_And_Queries_Should_Be_Records_Or_Sealed`). Prefer records; reach for a class when the endpoint needs to enrich the command (like `RegisterUserCommand.Origin` above).
 - **Endpoints are static extension methods on `IEndpointRouteBuilder`.** No controllers. No `[ApiController]`. Just minimal APIs.
-- **One endpoint per slice.** A slice represents one feature; one feature has one HTTP entrypoint. `ChangeProductPrice` has `PATCH /products/{productId:guid}/price`; `UpdateProduct` has `PUT /products/{productId:guid}` — separate slices because they're separate operations with separate events.
+- **One endpoint per slice.** A slice represents one feature; one feature has one HTTP entrypoint. `ChangeProductPrice` has `PATCH /products/{productId:guid}/price`; `UpdateProduct` has `PUT /products/{productId:guid}` - separate slices because they're separate operations with separate events.
 - **Validators live next to handlers.** The module loader auto-registers FluentValidation validators from each module's assembly.
 - **Permissions live in `Contracts/Authorization/`.** Endpoints reference them via `.RequirePermission(...)`. Permission constants are registered once during module startup.
 
 ## Why not layered Clean Architecture?
 
-Clean Architecture (Jason Taylor, Ardalis) is a valid alternative — many teams use it well. The kit picks VSA because most production changes are **cohesive feature changes**, not cross-cutting refactors. When a stakeholder asks "can we add a discount code to product pricing?", you want one folder to open, not five.
+Clean Architecture (Jason Taylor, Ardalis) is a valid alternative - many teams use it well. The kit picks VSA because most production changes are **cohesive feature changes**, not cross-cutting refactors. When a stakeholder asks "can we add a discount code to product pricing?", you want one folder to open, not five.
 
 The trade-off: cross-cutting refactors (rename `Product.Sku` to `Product.SkuCode` everywhere) are slightly more tedious in VSA because the affected slices are scattered. Modern IDEs handle this fine; if your team makes a lot of cross-cutting changes, layered architecture is a better fit. If your team ships features more than it refactors abstractions, VSA wins.
 
-The kit's three architectural pillars — modular monolith, vertical slice inside each module, integration events across modules — combine well. Each module is a clean unit of ownership; each slice is a clean unit of change.
+The kit's three architectural pillars - modular monolith, vertical slice inside each module, integration events across modules - combine well. Each module is a clean unit of ownership; each slice is a clean unit of change.
 
 ## CQRS without ceremony
 
-VSA goes well with CQRS — separating commands (writes that emit events) from queries (reads that project data). The kit uses Mediator 3 (source-generated, no runtime reflection) so the distinction is just two marker interfaces:
+VSA goes well with CQRS - separating commands (writes that emit events) from queries (reads that project data). The kit uses Mediator 3 (source-generated, no runtime reflection) so the distinction is just two marker interfaces:
 
 ```csharp
 public sealed record CreateProductCommand(...) : ICommand<ProductResponse>;
@@ -154,7 +154,7 @@ public sealed record GetProductByIdQuery(Guid Id) : IQuery<ProductResponse>;
 
 Handlers implement `ICommandHandler<TCommand, TResponse>` or `IQueryHandler<TQuery, TResponse>`. Mediator's source generator wires the dispatch table at compile time. There's no `IRequestHandler<,>` magic, no runtime reflection, no startup scan.
 
-For most slices, command and query handlers look almost the same — they take a DTO, do the work, return a DTO. The point isn't ceremony, it's intent: a `Query` handler is allowed to skip `SaveChanges`; a `Command` handler is allowed to `RaiseDomainEvent`. Keeping the convention makes the read / write distinction obvious to future readers.
+For most slices, command and query handlers look almost the same - they take a DTO, do the work, return a DTO. The point isn't ceremony, it's intent: a `Query` handler is allowed to skip `SaveChanges`; a `Command` handler is allowed to `RaiseDomainEvent`. Keeping the convention makes the read / write distinction obvious to future readers.
 
 ## What VSA doesn't do
 
@@ -164,7 +164,7 @@ For most slices, command and query handlers look almost the same — they take a
 
 ## Related
 
-- [Modular monolith](/docs/architecture/modular-monolith/) — the outer structure that contains the slices.
-- [Modules overview](/docs/modules/) — every module is structured this way.
-- [Catalog module](/docs/modules/catalog/) — the most slice-dense module; read its `Features/v1/` for examples.
-- [Dependency injection](/docs/architecture/dependency-injection/) — how the module loader wires slice handlers.
+- [Modular monolith](/docs/architecture/modular-monolith/) - the outer structure that contains the slices.
+- [Modules overview](/docs/modules/) - every module is structured this way.
+- [Catalog module](/docs/modules/catalog/) - the most slice-dense module; read its `Features/v1/` for examples.
+- [Dependency injection](/docs/architecture/dependency-injection/) - how the module loader wires slice handlers.

@@ -1,22 +1,22 @@
 ---
 title: Install
 lastUpdated: 2026-06-20
-description: Every way to get the kit — the fsh CLI, the dotnet new template, a git clone, and GitHub (Use this template / Codespaces).
+description: Every way to get the kit - the fsh CLI, the dotnet new template, a git clone, and GitHub (Use this template / Codespaces).
 sidebar:
   order: 4
 pageType: guide
 seo:
-  title: 'Install fullstackhero — fsh CLI, dotnet new template, git clone'
+  title: 'Install fullstackhero - fsh CLI, dotnet new template, git clone'
   description: 'Four ways to install fullstackhero 10: the FullStackHero.CLI tool and the FullStackHero.NET.StarterKit dotnet new template (both on NuGet), a git clone, or the GitHub template / Codespaces.'
   keywords: 'install fullstackhero, fsh CLI, dotnet new fsh template, clone .NET 10 starter kit, fullstackhero codespaces, use this template'
 ---
 
-Make sure you've got everything in [Prerequisites](/docs/getting-started/prerequisites/) first. There are four ways to get the kit — pick based on whether you want a fresh renamed project, the raw source, or zero local install.
+Make sure you've got everything in [Prerequisites](/docs/getting-started/prerequisites/) first. There are four ways to get the kit - pick based on whether you want a fresh renamed project, the raw source, or zero local install.
 
 <Callout type="tip" title="10.0.0 is live on NuGet">
 Both the `fsh` CLI (`FullStackHero.CLI`) and the `dotnet new` template
 (`FullStackHero.NET.StarterKit`) are published as stable **10.0.0**. The
-one-command flow — install the CLI, then `fsh new MyApp` — works end-to-end.
+one-command flow - install the CLI, then `fsh new MyApp` - works end-to-end.
 </Callout>
 
 ## Which path?
@@ -31,10 +31,10 @@ one-command flow — install the CLI, then `fsh new MyApp` — works end-to-end.
 <Callout type="tip" title="Not sure? Use the CLI">
 `fsh new` is the smoothest path: it scaffolds a fully renamed project, swaps in a
 unique JWT signing key, generates strong Docker secrets, runs `npm install`, and
-makes the first commit — the setup you'd otherwise do by hand.
+makes the first commit - the setup you'd otherwise do by hand.
 </Callout>
 
-## Path 1 — The fsh CLI (recommended)
+## Path 1 - The fsh CLI (recommended)
 
 A NuGet-distributed dotnet tool that scaffolds a fresh, fully renamed project from the latest template:
 
@@ -58,7 +58,7 @@ dotnet run --project src/Host/MyApp.AppHost
   caption="The fsh new wizard prompts for the project name and what to include (Aspire AppHost, React apps)."
 />
 
-Non-interactive (handy for scripts) — skips the prompts and uses defaults:
+Non-interactive (handy for scripts) - skips the prompts and uses defaults:
 
 ```bash
 fsh new MyApp --non-interactive
@@ -66,9 +66,9 @@ fsh new MyApp --non-interactive
 
 See the [CLI reference](/docs/cli/) for every command (`new`, `doctor`, `info`, `update`) and flag.
 
-## Path 2 — The dotnet new template
+## Path 2 - The dotnet new template
 
-`fsh new` scaffolds from this template under the hood; you can also use it directly without the CLI — handy for scripted or CI scaffolding:
+`fsh new` scaffolds from this template under the hood; you can also use it directly without the CLI - handy for scripted or CI scaffolding:
 
 ```bash
 dotnet new install FullStackHero.NET.StarterKit
@@ -83,7 +83,7 @@ dotnet run --project src/Host/MyApp.AppHost
   caption="dotnet new fsh -n MyApp produces a fully renamed solution."
 />
 
-## Path 3 — Clone the repository
+## Path 3 - Clone the repository
 
 Get the full source as-is, with no project renaming (the solution keeps its `FSH.Starter` names):
 
@@ -96,9 +96,9 @@ dotnet run --project src/Host/FSH.Starter.AppHost
 
 This is the path for reading the code, [contributing](/docs/contributing/), or running the kit unchanged.
 
-## Path 4 — GitHub: Use this template / Codespaces
+## Path 4 - GitHub: Use this template / Codespaces
 
-On the [GitHub repo](https://github.com/fullstackhero/dotnet-starter-kit), click **Use this template** to create your own repository from the kit — or **Open in Codespaces** for a zero-install dev environment (the devcontainer ships the .NET 10 SDK and Docker-in-Docker, restores the solution, and forwards the API ports).
+On the [GitHub repo](https://github.com/fullstackhero/dotnet-starter-kit), click **Use this template** to create your own repository from the kit - or **Open in Codespaces** for a zero-install dev environment (the devcontainer ships the .NET 10 SDK and Docker-in-Docker, restores the solution, and forwards the API ports).
 
 <Screenshot
   src="/screenshots/install/use-this-template.png"
@@ -120,6 +120,6 @@ However you installed, the AppHost launches the Aspire dashboard. Every service 
 
 ## Next
 
-- **[Quick Start](/docs/getting-started/quick-start/)** — the minimal scaffold-and-run walkthrough.
-- **[Local Orchestration with Aspire](/docs/deployment/aspire/)** — what each service is and why it's wired that way.
-- **[Architecture](/docs/architecture/)** — the modular monolith + vertical slice mental model.
+- **[Quick Start](/docs/getting-started/quick-start/)** - the minimal scaffold-and-run walkthrough.
+- **[Local Orchestration with Aspire](/docs/deployment/aspire/)** - what each service is and why it's wired that way.
+- **[Architecture](/docs/architecture/)** - the modular monolith + vertical slice mental model.

@@ -1,6 +1,6 @@
 ---
 /**
- * Hero — conversion-first landing surface.
+ * Hero - conversion-first landing surface.
  *
  * Modeled on the editorial pattern from
  * codewithmukesh/blog/src/pages/resources/dotnet-claude-kit/_Hero.astro
@@ -39,7 +39,7 @@ const heroStats = [
   class="relative isolate overflow-hidden pt-12 sm:pt-16 md:pt-20 pb-12 sm:pb-16"
   id="hero-section"
 >
-  {/* Dotted backdrop with radial mask — focal point under headline */}
+  {/* Dotted backdrop with radial mask - focal point under headline */}
   <div
     aria-hidden="true"
     class="pointer-events-none absolute inset-0 -z-10"
@@ -50,20 +50,9 @@ const heroStats = [
   <div class="brand-shadow" aria-hidden="true"></div>
 
   <div class="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-    {/* Magazine eyebrow rule */}
-    <div class="mb-10 sm:mb-14 flex items-center gap-3 sm:gap-4">
-      <span class="shrink-0 font-mono text-[11px] font-semibold uppercase tracking-[0.16em] tabular-nums text-primary">
-        Open source · .NET 10 starter kit
-      </span>
-      <span class="h-px flex-1 bg-border" aria-hidden></span>
-      <span class="hidden shrink-0 font-mono text-[11px] font-medium uppercase tracking-[0.16em] tabular-nums text-muted-foreground sm:inline">
-        v10 · MIT · production-ready
-      </span>
-    </div>
-
     {/* Centered hero copy */}
     <div class="relative mx-auto flex max-w-3xl flex-col items-center text-center">
-      {/* Brand mark — the recognizable FSH logo, crowning the hero */}
+      {/* Brand mark - the recognizable FSH logo, crowning the hero */}
       <div class="fsh-hero-logo mb-7 sm:mb-8">
         <Image
           src={logo}
@@ -79,7 +68,7 @@ const heroStats = [
         />
       </div>
 
-      {/* Social-proof chip — lead with star count */}
+      {/* Social-proof chip - lead with star count */}
       <a
         href={siteConfig.repo}
         target="_blank"
@@ -102,7 +91,7 @@ const heroStats = [
         <span aria-hidden class="transition-transform group-hover:translate-x-0.5">→</span>
       </a>
 
-      {/* Display headline — light/bold split with gradient underline */}
+      {/* Display headline - light/bold split with gradient underline */}
       <h1 class="mt-7 text-balance font-display font-semibold tracking-[-0.035em] text-[34px] leading-[1.02] sm:text-[60px] md:text-[72px]">
         <span class="font-light text-muted-foreground">The .NET 10 starter kit</span>
         <span class="mt-1 block">
@@ -117,20 +106,20 @@ const heroStats = [
         </span>
       </h1>
 
-      {/* Subtitle — citable definition paragraph for AI + keyword density */}
+      {/* Subtitle - citable definition paragraph for AI + keyword density */}
       <p class="mt-6 max-w-2xl text-[16px] leading-relaxed text-muted-foreground sm:text-[17.5px]">
         <span class="font-semibold text-foreground">fullstackhero</span> is the
         <span class="font-semibold text-foreground">free, MIT-licensed .NET 10 starter kit</span>
-        for teams shipping production SaaS — paired with a
+        for teams shipping production SaaS - paired with a
         <span class="font-semibold text-foreground">React + Vite</span> admin and dashboard out of the box.
-        <span class="font-semibold text-foreground">Ten modules</span> — identity, multitenancy, auditing, files, chat, notifications, webhooks, billing, catalog, tickets — wired through a
+        <span class="font-semibold text-foreground">Ten modules</span> - identity, multitenancy, auditing, files, chat, notifications, webhooks, billing, catalog, tickets - wired through a
         <span class="font-semibold text-foreground">modular monolith</span> with
         <span class="font-semibold text-foreground">Vertical Slice Architecture</span>.
         <span class="font-semibold text-foreground">A real codebase, not a tutorial.</span>
         No vendor framework. No lock-in.
       </p>
 
-      {/* CTAs — primary ink, secondary with live star count badge */}
+      {/* CTAs - primary ink, secondary with live star count badge */}
       <div class="mt-9 flex flex-wrap items-center justify-center gap-3">
         <Button href="/docs/getting-started/quick-start/" variant="primary" size="lg" class="group">
           Get started
@@ -171,7 +160,7 @@ const heroStats = [
       </ul>
     </div>
 
-    {/* Animated terminal preview — typewriter command + staggered reveal */}
+    {/* Animated terminal preview - typewriter command + staggered reveal */}
     <div class="relative mx-auto mt-14 max-w-3xl sm:mt-20" id="hero-terminal">
       <div class="overflow-hidden rounded-2xl border border-border bg-[#0d1117] shadow-lg shadow-black/20 dark:shadow-black/40">
         {/* Title bar */}
@@ -193,12 +182,12 @@ const heroStats = [
 
         {/* Body */}
         <div class="overflow-x-auto p-5 font-mono text-[13.5px] leading-relaxed sm:text-sm" id="hero-terminal-body">
-          {/* Line 0 — typewriter command */}
+          {/* Line 0 - typewriter command */}
           <div class="terminal-line flex items-baseline" data-delay="0">
             <span class="text-emerald-400">$</span><span class="text-slate-300" id="hero-typewriter"></span><span class="terminal-cursor inline-block h-4 w-[2px] translate-y-[2px] bg-emerald-400"></span>
           </div>
 
-          {/* Aspire orchestration boot lines — mirror the actual AppHost.cs */}
+          {/* Aspire orchestration boot lines - mirror the actual AppHost.cs */}
           <div class="terminal-line mt-3 hidden" data-delay="2200">
             <span class="text-amber-400">↪</span>
             <span class="text-slate-300"> Starting Aspire 13 orchestration…</span>
@@ -239,7 +228,7 @@ const heroStats = [
             <span class="text-slate-400">  http://localhost:5174</span>
           </div>
 
-          {/* Verdict — no fictional timing */}
+          {/* Verdict - no fictional timing */}
           <div class="terminal-line mt-3 hidden" data-delay="5300">
             <span style="color: var(--primary-soft);" class="font-semibold">All services up</span>
             <span class="text-slate-400" aria-hidden="true"> ·</span>
@@ -259,7 +248,7 @@ const heroStats = [
       </p>
     </div>
 
-    {/* Stat grid — 4 metric cards with EQ-tick hover */}
+    {/* Stat grid - 4 metric cards with EQ-tick hover */}
     <div class="mt-14 sm:mt-20">
       <div class="mb-6 flex items-center gap-3">
         <span class="font-mono text-[10.5px] font-semibold uppercase tracking-[0.22em] tabular-nums text-muted-foreground">
@@ -319,7 +308,7 @@ const heroStats = [
   </div>
 
   <style is:global>
-    /* Hero brand mark — recognizable FSH logo with a soft green halo + gentle float */
+    /* Hero brand mark - recognizable FSH logo with a soft green halo + gentle float */
     .fsh-hero-logo {
       position: relative;
       display: inline-flex;

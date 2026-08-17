@@ -1,18 +1,18 @@
 ---
 title: Integration tests
 lastUpdated: 2026-06-11
-description: WebApplicationFactory in-process API tests against Testcontainers Postgres + MinIO — one container set, all modules, real round trips.
+description: WebApplicationFactory in-process API tests against Testcontainers Postgres + MinIO - one container set, all modules, real round trips.
 sidebar:
   label: Integration tests
   order: 2
 pageType: guide
 seo:
-  title: 'Integration tests in .NET 10 — WebApplicationFactory'
+  title: 'Integration tests in .NET 10 - WebApplicationFactory'
   description: 'How fullstackhero runs integration tests against real Postgres + MinIO via Testcontainers, in-process API tests through WebApplicationFactory…'
   keywords: 'webapplicationfactory dotnet, testcontainers postgres .net 10, integration test asp.net core, in-process api test, testcontainers minio'
 ---
 
-Integration tests in fullstackhero spin up real infrastructure in containers — PostgreSQL 17 and MinIO — and exercise the API end-to-end through `Microsoft.AspNetCore.Mvc.Testing`'s `WebApplicationFactory<T>`. One factory (and therefore one container set) serves the entire `Integration.Tests` project via an xUnit collection fixture, so the startup cost is paid once and the per-test cost is small.
+Integration tests in fullstackhero spin up real infrastructure in containers - PostgreSQL 17 and MinIO - and exercise the API end-to-end through `Microsoft.AspNetCore.Mvc.Testing`'s `WebApplicationFactory<T>`. One factory (and therefore one container set) serves the entire `Integration.Tests` project via an xUnit collection fixture, so the startup cost is paid once and the per-test cost is small.
 
 <Callout type="tip" title="One project, one container set, all modules">
 Splitting integration tests into per-module projects would mean per-project container startup. The single project shares one factory + one container set across every test class, runs faster, and you don't have to think about container leakage across boundaries.
@@ -27,7 +27,7 @@ Splitting integration tests into per-module projects would mean per-project cont
 | HTTP | `HttpClient` from `factory.CreateClient()` | Real HTTP calls through the full middleware pipeline |
 | Assertions | Shouldly, NSubstitute, AutoFixture | Same as unit tests |
 
-There is **no Redis/Valkey container** in the shared harness — `CachingOptions:Redis` is set to an empty string, so HybridCache runs on its in-memory fallback and Hangfire runs on `Hangfire.InMemory`. The one place a real cache engine matters, `Tests/Caching/HybridCacheRedisTests.cs`, spins up its own `valkey/valkey:9.1.0-alpine` container to guard against in-memory-vs-distributed serialization divergence.
+There is **no Redis/Valkey container** in the shared harness - `CachingOptions:Redis` is set to an empty string, so HybridCache runs on its in-memory fallback and Hangfire runs on `Hangfire.InMemory`. The one place a real cache engine matters, `Tests/Caching/HybridCacheRedisTests.cs`, spins up its own `valkey/valkey:9.1.0-alpine` container to guard against in-memory-vs-distributed serialization divergence.
 
 ## The fixture pattern
 
@@ -80,7 +80,7 @@ public sealed class BrandsEndpointTests
 }
 ```
 
-On startup (`IAsyncLifetime.InitializeAsync`) the factory starts both containers in parallel, creates the MinIO bucket, then **migrates the tenant catalog, seeds the root tenant, and runs every module's `IDbInitializer` migrate + seed** — including the production `RolePermissionSyncer`. A semaphore stops test classes from racing the migration.
+On startup (`IAsyncLifetime.InitializeAsync`) the factory starts both containers in parallel, creates the MinIO bucket, then **migrates the tenant catalog, seeds the root tenant, and runs every module's `IDbInitializer` migrate + seed** - including the production `RolePermissionSyncer`. A semaphore stops test classes from racing the migration.
 
 ## Authenticated test clients
 
@@ -91,32 +91,32 @@ There are no hand-minted JWTs. `AuthHelper` logs in through the **real token end
 | `CreateRootAdminClientAsync()` | `HttpClient` authenticated as the seeded root admin, `tenant: root` header set |
 | `CreateAuthenticatedClientAsync(email, password, tenant)` | Same, for any user/tenant your test has created |
 | `GetTokenAsync(email, password, tenant)` | Just the token, when you need to build the client yourself |
-| `_factory.CreateClient()` | Anonymous — for 401 tests; remember to add the `tenant` header |
+| `_factory.CreateClient()` | Anonymous - for 401 tests; remember to add the `tenant` header |
 
-Constants like `TestConstants.RootAdminEmail`, `TestConstants.DefaultPassword`, and the per-module base paths (`TestConstants.CatalogBasePath` etc.) live in `Infrastructure/TestConstants.cs`. Tests that need a non-root tenant or a low-privilege user create them through the API — there are no pre-seeded demo tenants in the test database.
+Constants like `TestConstants.RootAdminEmail`, `TestConstants.DefaultPassword`, and the per-module base paths (`TestConstants.CatalogBasePath` etc.) live in `Infrastructure/TestConstants.cs`. Tests that need a non-root tenant or a low-privilege user create them through the API - there are no pre-seeded demo tenants in the test database.
 
 ## What the factory swaps out
 
 The factory overrides configuration and services so tests are deterministic:
 
 - **Hangfire** runs on `Hangfire.InMemory` with a real server (1-second polling), so background jobs actually execute.
-- **Mail** is a `NoOpMailService` — no SMTP, no retries.
+- **Mail** is a `NoOpMailService` - no SMTP, no retries.
 - **Exceptions** surface through a `DetailedTestExceptionHandler` instead of the generic production error response, so failures tell you what broke.
-- **Rate limiting and security headers** are disabled (they get their own dedicated suite — see below).
+- **Rate limiting and security headers** are disabled (they get their own dedicated suite - see below).
 - **Storage** is rewired to S3-against-MinIO *after* registration:
 
 <Callout type="warning" title="Storage must be rewired post-registration">
-`AddHeroStorage` reads `Storage:Provider` from configuration **eagerly** — before the test config overlay applies — so it wires the local-disk provider. The factory removes the registered `IStorageService` and re-registers the S3 stack pointed at the MinIO container (`RewireStorageForS3`). If you build your own factory, you need the same trick.
+`AddHeroStorage` reads `Storage:Provider` from configuration **eagerly** - before the test config overlay applies - so it wires the local-disk provider. The factory removes the registered `IStorageService` and re-registers the S3 stack pointed at the MinIO container (`RewireStorageForS3`). If you build your own factory, you need the same trick.
 </Callout>
 
 ## Two more harness gotchas
 
 - **SignalR tests force long polling.** `TestServer` has no WebSocket support, so the chat tests configure `HttpTransportType.LongPolling` on their hub connections. A hub test that "hangs forever" is almost always a missing transport override.
-- **Set the tenant context inline.** When a test reaches past HTTP into a scoped service (`UserManager`, a DbContext), it must set the Finbuckle tenant context via `IMultiTenantContextSetter` **in the same method** as the call that needs it. The setter writes an `AsyncLocal` — set it inside an awaited helper and the value is gone when the helper returns, and the tenant query filter NREs.
+- **Set the tenant context inline.** When a test reaches past HTTP into a scoped service (`UserManager`, a DbContext), it must set the Finbuckle tenant context via `IMultiTenantContextSetter` **in the same method** as the call that needs it. The setter writes an `AsyncLocal` - set it inside an awaited helper and the value is gone when the helper returns, and the tenant query filter NREs.
 
 ## The middleware suite
 
-`Integration.Middleware.Tests` is a separate, smaller project that keeps the **production** middleware wiring: the real `GlobalExceptionHandler` (RFC 9457 responses), rate limiting with a tiny deterministic window, and security headers enabled. It lives in its own assembly because the module loader is static per process — a second differently-configured host can't share a process with the main suite.
+`Integration.Middleware.Tests` is a separate, smaller project that keeps the **production** middleware wiring: the real `GlobalExceptionHandler` (RFC 9457 responses), rate limiting with a tiny deterministic window, and security headers enabled. It lives in its own assembly because the module loader is static per process - a second differently-configured host can't share a process with the main suite.
 
 ## Test data discipline
 
@@ -128,7 +128,7 @@ The factory overrides configuration and services so tests are deterministic:
 
 A few-minutes integration suite is acceptable in CI but painful locally. Mitigations:
 
-- **Run unit tests first** (`dotnet test src/Tests/{Module}.Tests/`) — they're fast and they catch most regressions.
+- **Run unit tests first** (`dotnet test src/Tests/{Module}.Tests/`) - they're fast and they catch most regressions.
 - **Use `--filter`** to run just the test you're iterating on:
 
   ```bash
@@ -156,10 +156,10 @@ dotnet test src/Tests/Integration.Middleware.Tests/
 dotnet test src/Tests/Integration.Tests/ --logger "console;verbosity=detailed"
 ```
 
-CI runs both integration projects on every backend push — see [CI/CD](/docs/deployment/ci-cd/).
+CI runs both integration projects on every backend push - see [CI/CD](/docs/deployment/ci-cd/).
 
 ## Related
 
-- [Unit tests](/docs/testing/unit-tests/) — for fast in-process tests.
-- [Architecture tests](/docs/testing/architecture-tests/) — for the structural rule families.
-- [Fixtures & seed data](/docs/testing/fixtures-and-seed-data/) — how the sharing works in detail.
+- [Unit tests](/docs/testing/unit-tests/) - for fast in-process tests.
+- [Architecture tests](/docs/testing/architecture-tests/) - for the structural rule families.
+- [Fixtures & seed data](/docs/testing/fixtures-and-seed-data/) - how the sharing works in detail.

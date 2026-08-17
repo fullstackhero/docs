@@ -1,4 +1,4 @@
-# OG Image Generator — Design
+# OG Image Generator - Design
 
 **Date:** 2026-05-24
 **Status:** Approved, ready for implementation plan
@@ -24,7 +24,7 @@ This repo, however, already has the SEO plumbing the generator can plug into:
 - `MarketingLayout.astro` already forwards an `image` prop to `BaseLayout`.
 
 The site also shares the blog's exact fonts (Outfit / Figtree / JetBrains Mono) and dark
-background (`#0d0e11`), so the blog's CSS ports over directly — only the accent color changes
+background (`#0d0e11`), so the blog's CSS ports over directly - only the accent color changes
 from purple to FSH green (`--primary: #15803d`, `--primary-soft: #16a34a`).
 
 ## Decisions (from brainstorming)
@@ -63,21 +63,21 @@ The generator selects a variant automatically:
 
 ### Components
 
-1. **`scripts/og/template.mjs`** — pure rendering module.
+1. **`scripts/og/template.mjs`** - pure rendering module.
    - Exports `renderDocsTemplate({ variant, eyebrow, title, description, badge, accent })`
      returning a full HTML document string.
    - Holds the shared CSS (FSH-green port of the blog's `_v2-shared.css`).
    - Inlines the FSH logo as a base64 data URI so Playwright `setContent` needs no file paths.
    - Title auto-sizes by length tier; description truncates to ~150 chars.
-   - No I/O, no Playwright — independently testable by inspecting returned HTML.
+   - No I/O, no Playwright - independently testable by inspecting returned HTML.
 
-2. **`scripts/og/templates/landing.html`, `scripts/og/templates/404.html`** — bespoke site cards
+2. **`scripts/og/templates/landing.html`, `scripts/og/templates/404.html`** - bespoke site cards
    (self-contained HTML referencing the shared styles), rendered to `public/og/<name>.jpg`.
 
-3. **`scripts/og/templates/docs/<slug>.html`** — optional per-page override. If a file exists for
+3. **`scripts/og/templates/docs/<slug>.html`** - optional per-page override. If a file exists for
    a slug, the generator renders it instead of the data-driven `doc` template. Directory starts empty.
 
-4. **`scripts/og/generate.mjs`** — orchestrator (adapted from the blog).
+4. **`scripts/og/generate.mjs`** - orchestrator (adapted from the blog).
    - Globs `src/content/docs/**/*.mdx`, parses frontmatter with `gray-matter`.
    - Determines the slug and variant per page (see slug mapping).
    - Resolves section label from `src/content/docs/_sections.ts` for the eyebrow.
@@ -115,10 +115,10 @@ node scripts/og/generate.mjs landing                           # one named site 
 
 ## Wiring
 
-- **`src/pages/docs/[...slug].astro`** — change `const image = seo.ogImage;` to
+- **`src/pages/docs/[...slug].astro`** - change `const image = seo.ogImage;` to
   `const image = seo.ogImage ?? `/og/docs/${slugForCrumb || 'index'}.jpg`;`
-- **`src/pages/index.astro`** — `<MarketingLayout image="/og/landing.jpg">`
-- **`src/pages/404.astro`** — add `image="/og/404.jpg"` to its `<MarketingLayout>`.
+- **`src/pages/index.astro`** - `<MarketingLayout image="/og/landing.jpg">`
+- **`src/pages/404.astro`** - add `image="/og/404.jpg"` to its `<MarketingLayout>`.
 
 `BaseLayout` already turns these relative paths into absolute `og:image` / `twitter:image` URLs.
 `seo.ogImage` frontmatter continues to override per page.
@@ -139,8 +139,8 @@ node scripts/og/generate.mjs landing                           # one named site 
 1. Render one page of each variant (`home`, `overview`, `doc`, plus `landing`/`404`); inspect inline.
 2. Iterate on the templates until the cards look right.
 3. Render all pages.
-4. `npm run check` — type + content-schema validation passes.
-5. `npm run build` — confirms images are emitted into `dist/og/**` and pages reference the right paths.
+4. `npm run check` - type + content-schema validation passes.
+5. `npm run build` - confirms images are emitted into `dist/og/**` and pages reference the right paths.
 
 ## Out of scope
 

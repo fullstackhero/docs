@@ -7,7 +7,7 @@ sidebar:
   order: 1
 pageType: reference
 seo:
-  title: 'Identity & Authorization in .NET 10 — JWT, Permissions'
+  title: 'Identity & Authorization in .NET 10 - JWT, Permissions'
   description: 'How the Identity module ships ASP.NET Identity + JWT bearer + refresh tokens, fine-grained permissions with .RequirePermission(), user groups, operator…'
   keywords: 'asp.net identity .net 10, jwt bearer refresh tokens dotnet, .net permissions authorization, operator impersonation dotnet, 2fa totp asp.net'
 ---
@@ -15,29 +15,29 @@ seo:
 The Identity module is fullstackhero's load-bearing auth layer. It wraps ASP.NET Identity with JWT bearer + refresh, a flat-but-granular permission system enforced via `.RequirePermission()` on endpoints, user groups, operator impersonation with a full audit trail, two-factor TOTP, per-device sessions, password history, and an outbox-backed integration event publisher for things like user registration and password changes. Around **10,400 lines of code across 205 files**, it's the most substantial module in the kit.
 
 <Callout type="tip" title="Read this module first">
-If you're customising auth — adding SSO, replacing JWT with cookie auth, swapping the user store — start here. The kit puts auth on the foundation of ASP.NET Identity, so anything you'd do in a plain ASP.NET app you can do in fullstackhero. Nothing about the rest of the kit assumes a bespoke identity stack.
+If you're customising auth - adding SSO, replacing JWT with cookie auth, swapping the user store - start here. The kit puts auth on the foundation of ASP.NET Identity, so anything you'd do in a plain ASP.NET app you can do in fullstackhero. Nothing about the rest of the kit assumes a bespoke identity stack.
 </Callout>
 
 ## What ships in v10
 
 - **JWT bearer + refresh tokens** with a rotating refresh on each `POST /token/refresh`.
-- **ASP.NET Identity** on top of `FshUser : IdentityUser` and `FshRole : IdentityRole` — custom password policy, 5-attempt lockout for 15 minutes, custom claims, passkey table.
+- **ASP.NET Identity** on top of `FshUser : IdentityUser` and `FshRole : IdentityRole` - custom password policy, 5-attempt lockout for 15 minutes, custom claims, passkey table.
 - **Permission-based authorization** via a flat registry (`PermissionConstants`) and the `.RequirePermission(...)` fluent helper on endpoints.
-- **User groups** — organise users; groups own roles (`GroupRoles`) and propagate permissions to members.
-- **Operator impersonation** — a SuperAdmin can issue a time-bound impersonation grant against another user (cross-tenant supported via `IGlobalEntity`), with revocation list and an audit trail.
-- **Two-factor TOTP** — enrol with a QR code, verify, disable per user. Optional, not enforced.
-- **Sessions** — per-device records with IP, user-agent, OS, browser, and revocation; cleanup runs as a hosted service.
-- **Password policy** — history (default 5), expiry (default 90 days) with warning window (14 days), enforced via `IPasswordHistoryService` + `IPasswordExpiryService`.
-- **Permission catalog** — `GET /permissions/catalog` returns every permission registered with the host, filtered to the caller's tenant context (root vs admin set). The admin app's role editor is built on it.
+- **User groups** - organise users; groups own roles (`GroupRoles`) and propagate permissions to members.
+- **Operator impersonation** - a SuperAdmin can issue a time-bound impersonation grant against another user (cross-tenant supported via `IGlobalEntity`), with revocation list and an audit trail.
+- **Two-factor TOTP** - enrol with a QR code, verify, disable per user. Optional, not enforced.
+- **Sessions** - per-device records with IP, user-agent, OS, browser, and revocation; cleanup runs as a hosted service.
+- **Password policy** - history (default 5), expiry (default 90 days) with warning window (14 days), enforced via `IPasswordHistoryService` + `IPasswordExpiryService`.
+- **Permission catalog** - `GET /permissions/catalog` returns every permission registered with the host, filtered to the caller's tenant context (root vs admin set). The admin app's role editor is built on it.
 - **51 endpoints** under `/api/v1/identity/...` covering tokens, users, roles, the permission catalog, groups, sessions, impersonation, and 2FA. Rate-limited `auth` policy applied to login, refresh, confirm-email, resend-confirmation-email, forgot-password, reset-password, and self-register.
-- **Outbox-backed integration events** — `UserRegisteredIntegrationEvent` and `TokenGeneratedIntegrationEvent` go out via the Eventing module's outbox dispatcher.
+- **Outbox-backed integration events** - `UserRegisteredIntegrationEvent` and `TokenGeneratedIntegrationEvent` go out via the Eventing module's outbox dispatcher.
 
 ## Architecture at a glance
 
 ```
 src/Modules/Identity/
 ├── Modules.Identity/                            ~10,400 LoC, 205 files
-│   ├── IdentityModule.cs                        IModule entry — order 100
+│   ├── IdentityModule.cs                        IModule entry - order 100
 │   ├── Domain/
 │   │   ├── FshUser.cs                           IdentityUser + IHasDomainEvents
 │   │   ├── FshRole.cs                           IdentityRole + Description
@@ -66,7 +66,7 @@ src/Modules/Identity/
 └── Modules.Identity.Contracts/                  Public commands/queries/services
 ```
 
-The module loads at order `100` — the first module — so every later module can rely on `ICurrentUser`, the JWT pipeline, and the permission registry being already in place.
+The module loads at order `100` - the first module - so every later module can rely on `ICurrentUser`, the JWT pipeline, and the permission registry being already in place.
 
 ## The token pipeline
 
@@ -91,7 +91,7 @@ public record RefreshTokenCommand(string? Token, string RefreshToken)
     : ICommand<RefreshTokenCommandResponse>;
 ```
 
-The access token carries the standard claims plus `tenant` (resolved via Finbuckle on the request that issued it) and the user's **roles** (direct + group-derived). Permissions themselves stay server-side — they're resolved from the role set on each authorization check, so a permission change takes effect without re-issuing tokens. Enforcement on an endpoint is just:
+The access token carries the standard claims plus `tenant` (resolved via Finbuckle on the request that issued it) and the user's **roles** (direct + group-derived). Permissions themselves stay server-side - they're resolved from the role set on each authorization check, so a permission change takes effect without re-issuing tokens. Enforcement on an endpoint is just:
 
 ```csharp
 endpoints.MapPost("/users", handler)
@@ -203,7 +203,7 @@ All 51 endpoints are under `/api/v1/identity/`. The rate-limited `auth` policy c
 | POST | `/2fa/verify` | Verify enrolment |
 | POST | `/2fa/disable` | Disable 2FA (requires current password) |
 
-Yes, the role-permission routes really are `/{id}/permissions` directly under `/api/v1/identity` — there's no `/roles/` segment in them.
+Yes, the role-permission routes really are `/{id}/permissions` directly under `/api/v1/identity` - there's no `/roles/` segment in them.
 
 ## Configuration
 
@@ -226,7 +226,7 @@ Yes, the role-permission routes really are `/{id}/permissions` directly under `/
 }
 ```
 
-Lockout is configured by `IdentityOptions` and defaults to 5 failed attempts → 15-minute lock. Outbox events are dispatched by the framework's `OutboxDispatcherHostedService` (on by default) — the module deliberately registers no dispatcher of its own, since a second one would race the same rows.
+Lockout is configured by `IdentityOptions` and defaults to 5 failed attempts → 15-minute lock. Outbox events are dispatched by the framework's `OutboxDispatcherHostedService` (on by default) - the module deliberately registers no dispatcher of its own, since a second one would race the same rows.
 
 ## How to extend
 
@@ -249,10 +249,10 @@ The `ConfirmEmailCommand` flow is a token exchange. Replace the token-generation
 ## Tests
 
 - Unit tests at `src/Tests/Identity.Tests/` (30 test files) cover handlers, password policy, JWT options.
-- Integration tests at `src/Tests/Integration.Tests/Tests/` — the `Impersonation/`, `Sessions/`, `Users/`, `Roles/`, `Groups/`, `Authentication/`, and `Authorization/` folders all exercise this module end to end.
+- Integration tests at `src/Tests/Integration.Tests/Tests/` - the `Impersonation/`, `Sessions/`, `Users/`, `Roles/`, `Groups/`, `Authentication/`, and `Authorization/` folders all exercise this module end to end.
 
 ## Related
 
-- [Security](/docs/security/) — overall security posture beyond Identity.
-- [Multitenancy module](/docs/modules/multitenancy/) — tenant resolution + per-tenant connection strings.
-- [Architecture: dependency injection](/docs/architecture/) — how the module loader wires `ICurrentUser` and permissions.
+- [Security](/docs/security/) - overall security posture beyond Identity.
+- [Multitenancy module](/docs/modules/multitenancy/) - tenant resolution + per-tenant connection strings.
+- [Architecture: dependency injection](/docs/architecture/) - how the module loader wires `ICurrentUser` and permissions.

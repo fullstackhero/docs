@@ -7,7 +7,7 @@ sidebar:
   order: 11
 pageType: reference
 seo:
-  title: 'Per-tenant quotas in .NET 10 — Redis counters + plan limits'
+  title: 'Per-tenant quotas in .NET 10 - Redis counters + plan limits'
   description: 'How the Quota building block enforces per-tenant resource limits via Redis counters (or in-memory fallback), plan-based limit resolution…'
   keywords: '.net usage quota limits, multi-tenant rate limit dotnet, redis counter quota, plan limits saas dotnet'
 ---
@@ -15,40 +15,40 @@ seo:
 The Quota block enforces per-tenant resource limits. Storage bytes used, number of active users, API calls per month, anything you care to meter. It ships Valkey-backed counters (Valkey is a Redis-compatible, BSD-licensed Redis fork) with an in-memory fallback (for dev/test only), plan-driven limits with per-tenant overrides, an `IQuotaGaugeProvider` hook for modules that expose live counts (the Identity module exposes user count this way), and a request middleware that returns 429 when a tenant blows past its plan.
 
 <Callout type="tip" title="Plans first, overrides second">
-Most tenants are on a plan. Plans live in `appsettings:QuotaOptions:Plans`. A tenant's `AppTenantInfo.QuotaLimits` is the per-tenant override dict — set values there only when you've negotiated a bespoke contract.
+Most tenants are on a plan. Plans live in `appsettings:QuotaOptions:Plans`. A tenant's `AppTenantInfo.QuotaLimits` is the per-tenant override dict - set values there only when you've negotiated a bespoke contract.
 </Callout>
 
 ## What it ships
 
 ### Extensions
 
-- **`AddHeroQuotas(services, configuration)`** — registers an `IQuotaService` based on `QuotaOptions:Enabled` and whether Valkey is configured. Disabled → `NoopQuotaService`. Enabled + Valkey → `RedisQuotaService`. Enabled + no Valkey → `InMemoryQuotaService` (per-process, dev/test only). Also registers `QuotaPlanResolver` + `QuotaEnforcementMiddleware`.
-- **`UseHeroQuotas(app)`** — inserts the enforcement middleware into the pipeline (after authentication **and the rate limiter** — rate-limited requests shouldn't burn quota — before authorization).
+- **`AddHeroQuotas(services, configuration)`** - registers an `IQuotaService` based on `QuotaOptions:Enabled` and whether Valkey is configured. Disabled → `NoopQuotaService`. Enabled + Valkey → `RedisQuotaService`. Enabled + no Valkey → `InMemoryQuotaService` (per-process, dev/test only). Also registers `QuotaPlanResolver` + `QuotaEnforcementMiddleware`.
+- **`UseHeroQuotas(app)`** - inserts the enforcement middleware into the pipeline (after authentication **and the rate limiter** - rate-limited requests shouldn't burn quota - before authorization).
 
 ### Service interfaces
 
-- **`IQuotaService`** — `CheckAsync`, `RecordAsync`, `CheckAndRecordAsync`, `GetCurrentAsync` (all keyed by `string tenantId` + `QuotaResource`). The atomic check-and-record is the one you want for any "this counts towards the quota" path; `RecordAsync` accepts negative amounts for refunds.
-- **`IQuotaGaugeProvider`** — extensibility hook for modules that expose live usage: a `Resource` property plus `GetCurrentAsync(tenantId, ct)`. Gauge-based resources (`Users`, `ActiveFeatureFlags`) are resolved on demand through these.
+- **`IQuotaService`** - `CheckAsync`, `RecordAsync`, `CheckAndRecordAsync`, `GetCurrentAsync` (all keyed by `string tenantId` + `QuotaResource`). The atomic check-and-record is the one you want for any "this counts towards the quota" path; `RecordAsync` accepts negative amounts for refunds.
+- **`IQuotaGaugeProvider`** - extensibility hook for modules that expose live usage: a `Resource` property plus `GetCurrentAsync(tenantId, ct)`. Gauge-based resources (`Users`, `ActiveFeatureFlags`) are resolved on demand through these.
 
 ### Implementations
 
-- **`RedisQuotaService`** — string counters keyed `quota:{tenantId}:{resource}:{YYYYMM}` for periodic resources (`ApiCalls`), `quota:{tenantId}:{resource}` for perpetual ones (`StorageBytes`, which accumulates until explicitly decremented). Periodic keys get a TTL aligned to the start of the next UTC month.
-- **`InMemoryQuotaService`** — in-process counters. Single-instance only.
-- **`NoopQuotaService`** — drop-in for when quotas are off; every check passes.
+- **`RedisQuotaService`** - string counters keyed `quota:{tenantId}:{resource}:{YYYYMM}` for periodic resources (`ApiCalls`), `quota:{tenantId}:{resource}` for perpetual ones (`StorageBytes`, which accumulates until explicitly decremented). Periodic keys get a TTL aligned to the start of the next UTC month.
+- **`InMemoryQuotaService`** - in-process counters. Single-instance only.
+- **`NoopQuotaService`** - drop-in for when quotas are off; every check passes.
 
 ### Models
 
-- **`QuotaResource`** enum — `ApiCalls`, `StorageBytes`, `Users`, `ActiveFeatureFlags`.
-- **`QuotaCheckResult`** — `Allowed`, `Resource`, `CurrentUsage`, `Limit`, `ResetAtUtc` (null for non-periodic resources).
-- **`QuotaPlanResolver`** — `ResolveLimit(tenant, resource)` returns the effective limit: the tenant's own `QuotaLimits` override wins, then the tenant's plan from `QuotaOptions:Plans`, then the `DefaultPlan`, then `long.MaxValue` (no limit). Negative values normalize to unlimited.
+- **`QuotaResource`** enum - `ApiCalls`, `StorageBytes`, `Users`, `ActiveFeatureFlags`.
+- **`QuotaCheckResult`** - `Allowed`, `Resource`, `CurrentUsage`, `Limit`, `ResetAtUtc` (null for non-periodic resources).
+- **`QuotaPlanResolver`** - `ResolveLimit(tenant, resource)` returns the effective limit: the tenant's own `QuotaLimits` override wins, then the tenant's plan from `QuotaOptions:Plans`, then the `DefaultPlan`, then `long.MaxValue` (no limit). Negative values normalize to unlimited.
 
 ### Middleware
 
-- **`QuotaEnforcementMiddleware`** — charges **one `ApiCalls` unit per request** via `CheckAndRecordAsync`. Skips health/metrics paths and requests with no resolved tenant. On exhaustion it returns `429 Too Many Requests` as RFC 9457 ProblemDetails with a `Retry-After` header and `resource`/`limit`/`currentUsage`/`resetAtUtc` extensions, and flags the request (`HttpContextItemKeys.QuotaRejected`) so the auditing module can tag it `OutOfQuota` without a hard dependency.
+- **`QuotaEnforcementMiddleware`** - charges **one `ApiCalls` unit per request** via `CheckAndRecordAsync`. Skips health/metrics paths and requests with no resolved tenant. On exhaustion it returns `429 Too Many Requests` as RFC 9457 ProblemDetails with a `Retry-After` header and `resource`/`limit`/`currentUsage`/`resetAtUtc` extensions, and flags the request (`HttpContextItemKeys.QuotaRejected`) so the auditing module can tag it `OutOfQuota` without a hard dependency.
 
 ### Options
 
-- **`QuotaOptions`** — `Enabled` (bool, default true), `Redis` (connection string), `DefaultPlan` (string; e.g. `free`), `Plans` (Dict — `Plans:free:StorageBytes = 1073741824`), `ExemptRootTenant` (bool, default true).
+- **`QuotaOptions`** - `Enabled` (bool, default true), `Redis` (connection string), `DefaultPlan` (string; e.g. `free`), `Plans` (Dict - `Plans:free:StorageBytes = 1073741824`), `ExemptRootTenant` (bool, default true).
 
 ## How modules consume Quota
 
@@ -132,19 +132,19 @@ services.AddScoped<IQuotaGaugeProvider, OpenTicketsGaugeProvider>();
 
 ### Exempt a path from the per-request meter
 
-The middleware's path exemptions (`/health*`, `/metrics`, …) are a hardcoded list in `QuotaEnforcementMiddleware.IsExempt` — there is no per-endpoint attribute today. To exempt more paths, extend that check; for non-`ApiCalls` resources nothing is enforced unless your code calls `CheckAndRecordAsync`.
+The middleware's path exemptions (`/health*`, `/metrics`, …) are a hardcoded list in `QuotaEnforcementMiddleware.IsExempt` - there is no per-endpoint attribute today. To exempt more paths, extend that check; for non-`ApiCalls` resources nothing is enforced unless your code calls `CheckAndRecordAsync`.
 
 ### Use a different period
 
-The monthly window is implemented inside `RedisQuotaService` (`BuildCounterKey` embeds `YYYYMM`; `GetPeriodResetUtc` returns the first moment of the next UTC month). A different window means a different `IQuotaService` implementation — the interface doesn't care about periods.
+The monthly window is implemented inside `RedisQuotaService` (`BuildCounterKey` embeds `YYYYMM`; `GetPeriodResetUtc` returns the first moment of the next UTC month). A different window means a different `IQuotaService` implementation - the interface doesn't care about periods.
 
 ## Gotchas
 
-- **Only `ApiCalls` is enforced automatically.** The middleware meters one unit per request; every other resource is enforced only where code calls into `IQuotaService` (storage does, via the metered decorator). The `Users` gauge reports usage — nothing blocks user creation against it out of the box.
-- **Period is calendar-month, UTC — and only for `ApiCalls`.** Counters reset at midnight UTC on the 1st; cross-timezone customers see "your usage reset" at 4 PM PT on the 31st. `StorageBytes` never resets — it's a perpetual counter that uploads increment and deletes refund.
+- **Only `ApiCalls` is enforced automatically.** The middleware meters one unit per request; every other resource is enforced only where code calls into `IQuotaService` (storage does, via the metered decorator). The `Users` gauge reports usage - nothing blocks user creation against it out of the box.
+- **Period is calendar-month, UTC - and only for `ApiCalls`.** Counters reset at midnight UTC on the 1st; cross-timezone customers see "your usage reset" at 4 PM PT on the 31st. `StorageBytes` never resets - it's a perpetual counter that uploads increment and deletes refund.
 - **Gauges are read on-demand.** Each `CheckAsync` invokes the gauge providers, which usually do a DB query. Cache the results inside the gauge if the data is expensive to compute and slightly stale is fine.
 - **`InMemoryQuotaService` is not cluster-safe.** Two instances of the API hold separate counters. Use Valkey (or any distributed cache) in production.
-- **Root tenant exemption is global.** With `ExemptRootTenant = true`, the root/platform tenant has unlimited everything. Don't disable this in production unless you have a reason — internal admin actions tend to exceed all the limits you set for paying customers.
+- **Root tenant exemption is global.** With `ExemptRootTenant = true`, the root/platform tenant has unlimited everything. Don't disable this in production unless you have a reason - internal admin actions tend to exceed all the limits you set for paying customers.
 - **Valkey TTL.** Period keys carry a TTL aligned to the period end. Clock skew between instances can produce off-by-one errors at the period boundary. Use NTP.
 
 ## Critical files
@@ -157,6 +157,6 @@ The monthly window is implemented inside `RedisQuotaService` (`BuildCounterKey` 
 
 ## Related
 
-- [Storage](/docs/building-blocks/storage/) — uses the metered decorator for `StorageBytes`.
-- [Identity module](/docs/modules/identity/) — exposes the user-count gauge.
-- [Billing module](/docs/modules/billing/) — plan keys here must match plan keys there.
+- [Storage](/docs/building-blocks/storage/) - uses the metered decorator for `StorageBytes`.
+- [Identity module](/docs/modules/identity/) - exposes the user-count gauge.
+- [Billing module](/docs/modules/billing/) - plan keys here must match plan keys there.

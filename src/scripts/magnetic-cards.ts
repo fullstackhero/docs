@@ -3,12 +3,12 @@
  *
  * Two variants, both pointer-tracked perspective transforms:
  *
- *   [data-magnetic-card] — small tilt + 4px lift. Used on cards.
- *   [data-magnetic-ide]  — slightly larger tilt + scale + radial spotlight
+ *   [data-magnetic-card] - small tilt + 4px lift. Used on cards.
+ *   [data-magnetic-ide]  - slightly larger tilt + scale + radial spotlight
  *                          via --mouse-x / --mouse-y custom properties.
  *                          Used on hero-class editor mockups.
  *
- * Re-binds idempotently — safe to call after astro:after-swap.
+ * Re-binds idempotently - safe to call after astro:after-swap.
  * No-op on touch devices and when prefers-reduced-motion is set.
  */
 export function initMagneticEffects() {

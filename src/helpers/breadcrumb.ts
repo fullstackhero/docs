@@ -10,7 +10,7 @@
  * ]
  *
  * The final crumb (the current page) overrides `name` with the page's
- * actual title when supplied — so "Install" becomes "Install the .NET 10
+ * actual title when supplied - so "Install" becomes "Install the .NET 10
  * Starter Kit" if that's the frontmatter title.
  */
 export interface BreadcrumbItem {

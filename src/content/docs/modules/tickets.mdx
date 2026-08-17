@@ -1,13 +1,13 @@
 ---
 title: Tickets module
 lastUpdated: 2026-06-11
-description: A complete support-ticket workflow — auto-numbered tickets, status state machine (Open → InProgress → Resolved → Closed), comments, assignment, priority, edit, and soft delete.
+description: A complete support-ticket workflow - auto-numbered tickets, status state machine (Open → InProgress → Resolved → Closed), comments, assignment, priority, edit, and soft delete.
 sidebar:
   label: Tickets
   order: 10
 pageType: reference
 seo:
-  title: 'Support Tickets in .NET 10 — state machine, comments'
+  title: 'Support Tickets in .NET 10 - state machine, comments'
   description: 'How the Tickets module ships a support-ticket workflow with auto-numbering, a four-state status machine, priority levels, assignment, comments, and soft…'
   keywords: 'dotnet ticketing system, .net support tickets, ticket state machine .net, helpdesk module dotnet'
 ---
@@ -22,20 +22,20 @@ If you're adding a domain with strict status transitions (orders, applications, 
 
 - **Tickets** with auto-generated `Number` (sequential, tenant-scoped strings: `TK-1`, `TK-2`, …), title, optional description, status, priority (Low / Medium / High / Critical), reporter user, and optional assignee.
 - **Four-state status machine**: Open → InProgress → Resolved → Closed, with reopen-from-Resolved-or-Closed support. `Close` finalizes a resolved ticket (idempotent when already Closed; any other non-Resolved source state is rejected with 409). Every transition raises a `TicketStatusChangedDomainEvent`.
-- **Assignment workflow** — assigning when Open moves to InProgress; unassigning from InProgress moves back to Open; assigning a Resolved or Closed ticket is rejected with 409.
-- **Edit** — `Update` revises a ticket's title, description, and priority; a Closed ticket is frozen and must be reopened first (409).
+- **Assignment workflow** - assigning when Open moves to InProgress; unassigning from InProgress moves back to Open; assigning a Resolved or Closed ticket is rejected with 409.
+- **Edit** - `Update` revises a ticket's title, description, and priority; a Closed ticket is frozen and must be reopened first (409).
 - **Immutable comments** owned by tickets. Closed tickets refuse new comments.
 - **Domain events** for cross-module reactions: `TicketCreatedDomainEvent`, `TicketAssignedDomainEvent`, `TicketStatusChangedDomainEvent`, `TicketCommentAddedDomainEvent`.
-- **Soft delete + restore** on tickets and comments via `ISoftDeletable` — `Delete` trashes a ticket (its comments survive and return on restore), `ListTrashed` lists the trash, `Restore` brings it back. The tenant dashboard's Trash page restores tickets from here (permission-gated tab).
+- **Soft delete + restore** on tickets and comments via `ISoftDeletable` - `Delete` trashes a ticket (its comments survive and return on restore), `ListTrashed` lists the trash, `Restore` brings it back. The tenant dashboard's Trash page restores tickets from here (permission-gated tab).
 - **Search** by status, priority, assignee, and free text.
-- **10 fine-grained permissions** — View / Create / Update / Delete / Restore / Assign / Resolve / Reopen / Close / Comment.
+- **10 fine-grained permissions** - View / Create / Update / Delete / Restore / Assign / Resolve / Reopen / Close / Comment.
 
 ## Architecture at a glance
 
 ```
 src/Modules/Tickets/
 ├── Modules.Tickets/
-│   ├── TicketsModule.cs                         IModule entry — order 700
+│   ├── TicketsModule.cs                         IModule entry - order 700
 │   ├── Domain/
 │   │   ├── Ticket.cs                            AggregateRoot, state machine, ISoftDeletable
 │   │   └── TicketComment.cs                     Owned by Ticket, ISoftDeletable
@@ -123,7 +123,7 @@ public sealed class Ticket : AggregateRoot<Guid>, ISoftDeletable
     public void Resolve(string? resolutionNote)
     {
         if (Status == TicketStatus.Closed)
-            throw new CustomException("A closed ticket cannot be resolved — reopen it first.",
+            throw new CustomException("A closed ticket cannot be resolved - reopen it first.",
                 (IEnumerable<string>?)null, HttpStatusCode.Conflict);
         if (Status == TicketStatus.Resolved) return;       // idempotent
 
@@ -135,7 +135,7 @@ public sealed class Ticket : AggregateRoot<Guid>, ISoftDeletable
     public Guid AddComment(Guid authorUserId, string body)
     {
         if (Status == TicketStatus.Closed)
-            throw new CustomException("A closed ticket cannot accept new comments — reopen it first.",
+            throw new CustomException("A closed ticket cannot accept new comments - reopen it first.",
                 (IEnumerable<string>?)null, HttpStatusCode.Conflict);
 
         var comment = TicketComment.Create(Id, authorUserId, body);
@@ -204,28 +204,28 @@ All under `/api/v1/tickets`, gated by the corresponding `Tickets.*` permission.
 
 Four events ship with the module (each also carries an `EventId` and `OccurredOnUtc` from the `DomainEvent` base):
 
-- `TicketCreatedDomainEvent(TicketId, Number, Title, Priority, ReporterUserId, AssignedToUserId)` — raised by `Ticket.Create`.
-- `TicketAssignedDomainEvent(TicketId, PreviousAssigneeUserId, AssigneeUserId)` — raised by `Ticket.Assign`.
-- `TicketStatusChangedDomainEvent(TicketId, PreviousStatus, NewStatus)` — raised by **every** status transition, including the implicit Open ↔ InProgress moves that assignment triggers.
-- `TicketCommentAddedDomainEvent(TicketId, CommentId, AuthorUserId)` — raised by `Ticket.AddComment`.
+- `TicketCreatedDomainEvent(TicketId, Number, Title, Priority, ReporterUserId, AssignedToUserId)` - raised by `Ticket.Create`.
+- `TicketAssignedDomainEvent(TicketId, PreviousAssigneeUserId, AssigneeUserId)` - raised by `Ticket.Assign`.
+- `TicketStatusChangedDomainEvent(TicketId, PreviousStatus, NewStatus)` - raised by **every** status transition, including the implicit Open ↔ InProgress moves that assignment triggers.
+- `TicketCommentAddedDomainEvent(TicketId, CommentId, AuthorUserId)` - raised by `Ticket.AddComment`.
 
 These are in-module domain events. To react from another module (e.g. send an email when a ticket is resolved), wrap them in an integration event and publish via `IEventBus`.
 
 ## Configuration
 
-- **`TicketsDbContext`** — schema `tickets`, tenant-aware, two tables (`Tickets`, `TicketComments`).
-- **Connection** — per-tenant via Finbuckle resolution.
-- **Demo seed** — `TicketsDbInitializer` creates a handful of tickets when `FSH.Starter.DbMigrator seed-demo` runs.
-- **Number generation** — handled in `CreateTicketCommandHandler`: sequential, tenant-scoped `TK-{n}` strings. The count includes soft-deleted tickets so a trashed number is never reused; racing writers collide on the unique index and get a retryable 409.
+- **`TicketsDbContext`** - schema `tickets`, tenant-aware, two tables (`Tickets`, `TicketComments`).
+- **Connection** - per-tenant via Finbuckle resolution.
+- **Demo seed** - `TicketsDbInitializer` creates a handful of tickets when `FSH.Starter.DbMigrator seed-demo` runs.
+- **Number generation** - handled in `CreateTicketCommandHandler`: sequential, tenant-scoped `TK-{n}` strings. The count includes soft-deleted tickets so a trashed number is never reused; racing writers collide on the unique index and get a retryable 409.
 
 ## How to extend
 
 ### Add a new state transition
 
-`Close` (Resolved → Closed) ships as a first-class command, endpoint, and `Tickets.Close` permission — `Ticket.Close()` validates the source state, stamps `ClosedAtUtc`, and raises `TicketStatusChangedDomainEvent`. Use it as the template for any new transition you need (e.g. an `Escalate` step):
+`Close` (Resolved → Closed) ships as a first-class command, endpoint, and `Tickets.Close` permission - `Ticket.Close()` validates the source state, stamps `ClosedAtUtc`, and raises `TicketStatusChangedDomainEvent`. Use it as the template for any new transition you need (e.g. an `Escalate` step):
 
 ```csharp
-// 1. Domain — guard the source state, mutate, raise the event (Modules.Tickets/Domain/Ticket.cs)
+// 1. Domain - guard the source state, mutate, raise the event (Modules.Tickets/Domain/Ticket.cs)
 public void Escalate()
 {
     if (Status is TicketStatus.Closed)
@@ -235,16 +235,16 @@ public void Escalate()
     UpdatedAtUtc = DateTime.UtcNow;
 }
 
-// 2. Contracts — EscalateTicketCommand(Guid TicketId) : ICommand<Guid>
-// 3. Feature folder — handler + {Command}Validator + endpoint with .RequirePermission(...)
+// 2. Contracts - EscalateTicketCommand(Guid TicketId) : ICommand<Guid>
+// 3. Feature folder - handler + {Command}Validator + endpoint with .RequirePermission(...)
 // 4. Register the endpoint in TicketsModule.MapEndpoints and add the permission constant
 ```
 
-Follow the existing `CloseTicket` slice end-to-end — every command handler needs a `{Command}Validator` (enforced by `Architecture.Tests`).
+Follow the existing `CloseTicket` slice end-to-end - every command handler needs a `{Command}Validator` (enforced by `Architecture.Tests`).
 
 ### Notify the assignee
 
-`TicketAssignedDomainEvent` is an in-module domain event — it can't cross the module boundary. Bridge it: handle it in-module with a Mediator `INotificationHandler<TicketAssignedDomainEvent>`, publish a `TicketAssignedIntegrationEvent` (declared in `Modules.Tickets.Contracts`) via `IEventBus`, then add an `IIntegrationEventHandler` in the Notifications module that writes the inbox row and pushes `NotificationCreated` over SignalR. The [Notifications module page](/docs/modules/notifications/) walks through exactly this example end-to-end.
+`TicketAssignedDomainEvent` is an in-module domain event - it can't cross the module boundary. Bridge it: handle it in-module with a Mediator `INotificationHandler<TicketAssignedDomainEvent>`, publish a `TicketAssignedIntegrationEvent` (declared in `Modules.Tickets.Contracts`) via `IEventBus`, then add an `IIntegrationEventHandler` in the Notifications module that writes the inbox row and pushes `NotificationCreated` over SignalR. The [Notifications module page](/docs/modules/notifications/) walks through exactly this example end-to-end.
 
 ### Add SLA timers
 
@@ -256,6 +256,6 @@ Integration tests live at `src/Tests/Integration.Tests/Tests/Tickets/` and cover
 
 ## Related
 
-- [Notifications module](/docs/modules/notifications/) — wire ticket events to real-time push.
-- [Architecture: vertical slice](/docs/architecture/vertical-slice/) — the feature-folder pattern.
-- [Modules overview](/docs/modules/) — the other nine modules.
+- [Notifications module](/docs/modules/notifications/) - wire ticket events to real-time push.
+- [Architecture: vertical slice](/docs/architecture/vertical-slice/) - the feature-folder pattern.
+- [Modules overview](/docs/modules/) - the other nine modules.

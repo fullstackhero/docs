@@ -1,14 +1,14 @@
 ---
 title: Unit tests
 lastUpdated: 2026-05-19
-description: xUnit + Shouldly + NSubstitute + AutoFixture for fast in-process tests of handlers, aggregates, and validators — no DbContext, no file system, no network.
+description: xUnit + Shouldly + NSubstitute + AutoFixture for fast in-process tests of handlers, aggregates, and validators - no DbContext, no file system, no network.
 sidebar:
   label: Unit tests
   order: 1
 pageType: guide
 seo:
-  title: 'Unit testing in .NET 10 — xUnit + Shouldly + NSubstitute'
-  description: 'How fullstackhero writes unit tests — xUnit + Shouldly readable assertions + NSubstitute mocks + AutoFixture random data.'
+  title: 'Unit testing in .NET 10 - xUnit + Shouldly + NSubstitute'
+  description: 'How fullstackhero writes unit tests - xUnit + Shouldly readable assertions + NSubstitute mocks + AutoFixture random data.'
   keywords: 'xunit unit testing .net 10, shouldly assertions, nsubstitute mocking, autofixture test data, unit test naming convention'
 ---
 
@@ -19,7 +19,7 @@ Unit tests in fullstackhero are **fast, in-process, no infrastructure**. They te
 | Library | Used for |
 |---|---|
 | xUnit 2.x | Test runner, `[Fact]` / `[Theory]` discovery |
-| Shouldly 4.x | Readable assertions — `result.ShouldBe(...)`, `.ShouldThrow<>()`, `.ShouldSatisfyAllConditions(...)` |
+| Shouldly 4.x | Readable assertions - `result.ShouldBe(...)`, `.ShouldThrow<>()`, `.ShouldSatisfyAllConditions(...)` |
 | NSubstitute 5.x | Mocking service interfaces, verifying calls |
 | AutoFixture 4.x | Random DTO / fixture generation |
 
@@ -42,9 +42,9 @@ public void Resolve_Should_ThrowConflict_When_TicketIsAlreadyClosed() { /* ... *
 
 Three rules:
 
-- **`Method_Should_...`** — start with what's being called.
-- **`_Should_X`** — then what the test asserts.
-- **`_When_Y`** — then the condition (or omit if the test is a single fact about default behaviour).
+- **`Method_Should_...`** - start with what's being called.
+- **`_Should_X`** - then what the test asserts.
+- **`_When_Y`** - then the condition (or omit if the test is a single fact about default behaviour).
 
 ## Layout: Arrange / Act / Assert
 
@@ -105,7 +105,7 @@ using var scope = serviceProvider.CreateScope();
 var sut = scope.ServiceProvider.GetRequiredService<RegisterUserCommandHandler>();
 ```
 
-Unit tests test the handler. If your handler is too coupled to its DI container to be unit-tested in isolation, that's a sign to refactor — extract the logic, depend on interfaces.
+Unit tests test the handler. If your handler is too coupled to its DI container to be unit-tested in isolation, that's a sign to refactor - extract the logic, depend on interfaces.
 
 ### 3. No infrastructure, no network, no file system
 
@@ -113,7 +113,7 @@ Anything that touches `DbContext`, `HttpClient`, file I/O, or Valkey is an [inte
 
 ## Testing aggregates
 
-Domain aggregates carry invariants. Test them directly — no handler, no DI:
+Domain aggregates carry invariants. Test them directly - no handler, no DI:
 
 ```csharp
 public sealed class TicketTests
@@ -187,7 +187,7 @@ await _registration.Received(1).RegisterAsync(command, Arg.Any<CancellationToken
 await _registration.DidNotReceive().RegisterAsync(/* different command */, Arg.Any<CancellationToken>());
 ```
 
-Use this to assert "the handler delegated correctly," not just "the result happens to be right." Both matter — a handler that returns the right answer for the wrong reason is a bug waiting to happen.
+Use this to assert "the handler delegated correctly," not just "the result happens to be right." Both matter - a handler that returns the right answer for the wrong reason is a bug waiting to happen.
 
 ## Running
 
@@ -203,6 +203,6 @@ Unit projects run sub-second; no `xunit.runner.json` tweaks needed. Architecture
 
 ## Related
 
-- [Integration tests](/docs/testing/integration-tests/) — when you need real infrastructure.
-- [Architecture tests](/docs/testing/architecture-tests/) — the NetArchTest rule families.
-- [Vertical slice architecture](/docs/architecture/vertical-slice/) — the slice shape unit tests mirror.
+- [Integration tests](/docs/testing/integration-tests/) - when you need real infrastructure.
+- [Architecture tests](/docs/testing/architecture-tests/) - the NetArchTest rule families.
+- [Vertical slice architecture](/docs/architecture/vertical-slice/) - the slice shape unit tests mirror.

@@ -7,15 +7,15 @@ sidebar:
   order: 1
 pageType: concept
 seo:
-  title: 'Caching in .NET 10 — HybridCache + Redis backplane + tag'
+  title: 'Caching in .NET 10 - HybridCache + Redis backplane + tag'
   description: 'How fullstackhero wires HybridCache with L1 in-memory + L2 Redis, OpenTelemetry hit/miss/duration metrics, stampede protection, tag-based invalidation for…'
   keywords: 'hybridcache .net 10, redis cache asp.net core, tag based cache eviction, stampede protection cache, l1 l2 cache pattern'
 ---
 
-`HybridCache` is the .NET 10 framework cache primitive. L1 is in-process memory; L2 is **Valkey** (a Redis-compatible, BSD-licensed Redis fork) — or `DistributedMemoryCache` for dev. The kit wraps it with `ObservableHybridCache` so every call emits OpenTelemetry spans plus metrics — `fsh.cache.hits`, `fsh.cache.misses`, `fsh.cache.invalidations`, and `fsh.cache.factory.duration`.
+`HybridCache` is the .NET 10 framework cache primitive. L1 is in-process memory; L2 is **Valkey** (a Redis-compatible, BSD-licensed Redis fork) - or `DistributedMemoryCache` for dev. The kit wraps it with `ObservableHybridCache` so every call emits OpenTelemetry spans plus metrics - `fsh.cache.hits`, `fsh.cache.misses`, `fsh.cache.invalidations`, and `fsh.cache.factory.duration`.
 
 <Callout type="note" title="The L2 store is Valkey (Redis-compatible)">
-The distributed L2 store is Valkey 8, which speaks the Redis protocol (RESP), so the .NET client (`StackExchange.Redis`) and all `CachingOptions:Redis` config keys are unchanged. In Aspire-based local dev, a **RedisInsight** browser is auto-wired and connected to the Valkey instance so you can inspect keys without any manual config — see [Aspire](/docs/deployment/aspire/).
+The distributed L2 store is Valkey 8, which speaks the Redis protocol (RESP), so the .NET client (`StackExchange.Redis`) and all `CachingOptions:Redis` config keys are unchanged. In Aspire-based local dev, a **RedisInsight** browser is auto-wired and connected to the Valkey instance so you can inspect keys without any manual config - see [Aspire](/docs/deployment/aspire/).
 </Callout>
 
 <Callout type="tip" title="Stampede protection is the win">
@@ -63,7 +63,7 @@ await cache.RemoveByTagAsync($"tenant:{tenantId}", ct).ConfigureAwait(false);
 
 This evicts every cache entry tagged with that tenant id across L1 + L2.
 
-The kit's key + tag conventions live in `CacheKeys` (Caching building block): short prefixed keys like `perm:u:{userId}`, `theme:t:{tenantId}`, `idem:t:{tenantId}:{key}`, and well-known tags — `permissions`, `themes`, `idempotency`, plus `CacheKeys.Tags.Tenant(id)` / `CacheKeys.Tags.User(id)` for scoped bulk invalidation. Follow the same shape for your own entries: tenant-scope the key where applicable, and always attach the tenant tag so tenant-wide purges catch your entries too.
+The kit's key + tag conventions live in `CacheKeys` (Caching building block): short prefixed keys like `perm:u:{userId}`, `theme:t:{tenantId}`, `idem:t:{tenantId}:{key}`, and well-known tags - `permissions`, `themes`, `idempotency`, plus `CacheKeys.Tags.Tenant(id)` / `CacheKeys.Tags.User(id)` for scoped bulk invalidation. Follow the same shape for your own entries: tenant-scope the key where applicable, and always attach the tenant tag so tenant-wide purges catch your entries too.
 
 ## Configuration
 
@@ -94,7 +94,7 @@ The kit's key + tag conventions live in `CacheKeys` (Caching building block): sh
 When `CachingOptions:Redis` is set, `AddHeroCaching` connects once and registers a single shared `IConnectionMultiplexer` used by:
 
 - The **distributed cache** (`AddStackExchangeRedisCache` via a multiplexer factory).
-- **Data Protection** key persistence (`DataProtection-Keys`, app name `FSH.Starter`) — so auth cookies, reset/confirmation tokens, and antiforgery survive rolling deploys across instances.
+- **Data Protection** key persistence (`DataProtection-Keys`, app name `FSH.Starter`) - so auth cookies, reset/confirmation tokens, and antiforgery survive rolling deploys across instances.
 
 One connection pool per host for those consumers. The SignalR backplane (realtime) reads the same `CachingOptions:Redis` connection string but establishes its own connection.
 
@@ -107,12 +107,12 @@ One connection pool per host for those consumers. The SignalR backplane (realtim
 
 ## Gotchas
 
-- **L1 has no backplane.** After `RemoveByTagAsync` on one instance, peer instances' L1 copies aren't invalidated. The `DefaultLocalCacheExpiration` (default 2 min) bounds staleness — don't set it too high if you rely on fast cross-node invalidation.
+- **L1 has no backplane.** After `RemoveByTagAsync` on one instance, peer instances' L1 copies aren't invalidated. The `DefaultLocalCacheExpiration` (default 2 min) bounds staleness - don't set it too high if you rely on fast cross-node invalidation.
 - **Payload size cap is silent.** Entries larger than `MaximumPayloadBytes` are skipped with a warning log, not stored. Lookup will then miss every time. Log-search for "payload too large" warnings before assuming the cache is broken.
 - **`DistributedMemoryCache` is per-process.** Two instances of the API can't see each other's cache. Always check `CachingOptions:Redis` is set in production.
 
 ## Related
 
-- [Caching building block](/docs/building-blocks/caching/) — the implementation reference.
-- [Idempotency](/docs/cross-cutting-concerns/idempotency/) — uses HybridCache to replay requests.
-- [Multitenancy module](/docs/modules/multitenancy/) — uses HybridCache for tenant resolution.
+- [Caching building block](/docs/building-blocks/caching/) - the implementation reference.
+- [Idempotency](/docs/cross-cutting-concerns/idempotency/) - uses HybridCache to replay requests.
+- [Multitenancy module](/docs/modules/multitenancy/) - uses HybridCache for tenant resolution.

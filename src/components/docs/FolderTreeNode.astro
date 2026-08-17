@@ -1,0 +1,119 @@
+---
+/**
+ * FolderTreeNode - one row of a <FolderTree>, recursing into children.
+ * Internal to FolderTree.astro; not registered in mdx.ts directly.
+ */
+interface TreeNode {
+  /** Display name, e.g. "Modules.Identity/". Trailing slash is cosmetic. */
+  name: string;
+  /** Muted annotation, right-aligned behind a dotted leader on sm+. */
+  note?: string;
+  /** Small brand-tinted pill after the name, e.g. "+ Contracts". */
+  badge?: string;
+  /** Compact pill list instead of full child rows (e.g. 11 libraries). */
+  chips?: string[];
+  /** Emphasize this row in brand green. */
+  highlight?: boolean;
+  /** Render a file icon instead of a folder icon. */
+  file?: boolean;
+  children?: TreeNode[];
+}
+
+interface Props {
+  node: TreeNode;
+}
+
+const { node } = Astro.props as Props;
+const isFolder = !node.file;
+---
+
+<li class="min-w-0">
+  <div
+    class:list={[
+      'flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 rounded-md px-2 py-[5px] transition-colors hover:bg-subtle/60',
+      node.highlight && 'bg-primary/5',
+    ]}
+  >
+    {isFolder ? (
+      <svg
+        class:list={['h-4 w-4 shrink-0', node.highlight ? 'text-primary' : 'text-primary/70']}
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.75"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path
+          d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"
+        />
+      </svg>
+    ) : (
+      <svg
+        class="h-4 w-4 shrink-0 text-muted-foreground/70"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.75"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+        <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+      </svg>
+    )}
+    <span
+      class:list={[
+        'font-mono text-[13px] font-medium',
+        node.highlight ? 'text-primary' : 'text-foreground',
+      ]}
+    >
+      {node.name}
+    </span>
+    {node.badge && (
+      <span
+        class="rounded-full border border-primary/25 bg-primary/10 px-2 py-px font-mono text-[10px] font-semibold text-primary"
+      >
+        {node.badge}
+      </span>
+    )}
+    {node.note && (
+      <>
+        <span
+          class="hidden min-w-6 flex-1 border-t border-dashed border-border/80 sm:block"
+          aria-hidden="true"></span>
+        <span
+          class="min-w-0 basis-full pl-6 text-[12px] leading-snug text-muted-foreground sm:basis-auto sm:pl-0 sm:text-right"
+        >
+          {node.note}
+        </span>
+      </>
+    )}
+  </div>
+
+  {node.chips && (
+    <div class="mt-1 mb-1.5 ml-8 flex flex-wrap gap-1.5">
+      {node.chips.map((chip) => (
+        <span
+          class="rounded-md border border-border bg-subtle/60 px-2 py-0.5 font-mono text-[11px] text-muted-foreground"
+        >
+          {chip}
+        </span>
+      ))}
+    </div>
+  )}
+
+  {node.children && node.children.length > 0 && (
+    <ul class="m-0 ml-4 list-none border-l border-border/70 pl-2.5">
+      {node.children.map((child) => (
+        <Astro.self node={child} />
+      ))}
+    </ul>
+  )}
+</li>

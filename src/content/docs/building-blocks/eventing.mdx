@@ -7,12 +7,12 @@ sidebar:
   order: 7
 pageType: reference
 seo:
-  title: 'Event bus + Outbox/Inbox in .NET 10 — InMemory or RabbitMQ'
+  title: 'Event bus + Outbox/Inbox in .NET 10 - InMemory or RabbitMQ'
   description: 'How the Eventing block ships an in-memory or RabbitMQ event bus, EF Core outbox/inbox stores for transactional delivery, and the open-generic handler…'
   keywords: '.net event bus, rabbitmq dotnet integration events, outbox pattern ef core, inbox idempotency .net, in-memory event bus dotnet'
 ---
 
-The Eventing block is the runtime side of the kit's integration-event story. It ships two `IEventBus` implementations — `InMemoryEventBus` (synchronous, in-process) and `RabbitMqEventBus` (durable, cross-service) — an EF Core-backed outbox store for transactional delivery, an inbox store for receiver-side idempotency, a `JsonEventSerializer`, and the auto-discovery hook that registers every `IIntegrationEventHandler<TEvent>` in your module assemblies.
+The Eventing block is the runtime side of the kit's integration-event story. It ships two `IEventBus` implementations - `InMemoryEventBus` (synchronous, in-process) and `RabbitMqEventBus` (durable, cross-service) - an EF Core-backed outbox store for transactional delivery, an inbox store for receiver-side idempotency, a `JsonEventSerializer`, and the auto-discovery hook that registers every `IIntegrationEventHandler<TEvent>` in your module assemblies.
 
 <Callout type="tip" title="Outbox + Inbox = exactly-once you can trust">
 Publish goes through the outbox in the same transaction as your business write. A background dispatcher hands it to RabbitMQ. The receiver's inbox dedupes by event id, so if the broker redelivers (network blip, consumer crash) the handler doesn't fire twice. Two stores, one obvious pattern.
@@ -22,27 +22,27 @@ Publish goes through the outbox in the same transaction as your business write. 
 
 ### Extensions
 
-- **`AddEventingCore(services, configuration)`** — registers `JsonEventSerializer`, a no-op `IEventTenantScope` default (the Multitenancy module swaps in a Finbuckle-backed one), and picks the `IEventBus` from `EventingOptions:Provider` (`InMemory` default, `RabbitMQ`). Adds the outbox dispatcher hosted service when `UseHostedServiceDispatcher` is true.
-- **`AddEventingForDbContext<TDbContext>(services)`** — registers `EfCoreOutboxStore<TDbContext>` + `EfCoreInboxStore<TDbContext>` (scoped) plus the `OutboxDispatcher` scoped service.
-- **`AddIntegrationEventHandlers(services, assemblies[])`** — scans the supplied assemblies for `IIntegrationEventHandler<TEvent>` implementations and registers them scoped in DI.
+- **`AddEventingCore(services, configuration)`** - registers `JsonEventSerializer`, a no-op `IEventTenantScope` default (the Multitenancy module swaps in a Finbuckle-backed one), and picks the `IEventBus` from `EventingOptions:Provider` (`InMemory` default, `RabbitMQ`). Adds the outbox dispatcher hosted service when `UseHostedServiceDispatcher` is true.
+- **`AddEventingForDbContext<TDbContext>(services)`** - registers `EfCoreOutboxStore<TDbContext>` + `EfCoreInboxStore<TDbContext>` (scoped) plus the `OutboxDispatcher` scoped service.
+- **`AddIntegrationEventHandlers(services, assemblies[])`** - scans the supplied assemblies for `IIntegrationEventHandler<TEvent>` implementations and registers them scoped in DI.
 
 ### Event bus implementations
 
-- **`InMemoryEventBus`** — in-process. For each event it **sets the tenant context first** (`IEventTenantScope.Begin(event.TenantId)`), creates a fresh DI scope, resolves the matching handlers, checks the inbox (skip if already processed by that handler), awaits each handler in order, then marks the inbox row. Great for dev/test and single-process production hosts.
-- **`RabbitMqEventBus`** — durable, cross-service; uses `RabbitMQ.Client` and publishes to a durable topic exchange (`EventingOptions:RabbitMQ`).
+- **`InMemoryEventBus`** - in-process. For each event it **sets the tenant context first** (`IEventTenantScope.Begin(event.TenantId)`), creates a fresh DI scope, resolves the matching handlers, checks the inbox (skip if already processed by that handler), awaits each handler in order, then marks the inbox row. Great for dev/test and single-process production hosts.
+- **`RabbitMqEventBus`** - durable, cross-service; uses `RabbitMQ.Client` and publishes to a durable topic exchange (`EventingOptions:RabbitMQ`).
 
 ### Outbox / inbox
 
-- **`IOutboxStore`** (`AddAsync`, `GetPendingBatchAsync`, `MarkAsProcessedAsync`, `MarkAsFailedAsync`) + `EfCoreOutboxStore<TDbContext>` — serialize integration events into an `OutboxMessages` table in your module's DbContext. `AddAsync` rides the same DbContext as your business write, so inside an open transaction the event commits atomically with it.
-- **`IInboxStore`** + `EfCoreInboxStore<TDbContext>` — dedupe table keyed by **(event id, handler name)**, so each handler processes an event at most once.
-- **`OutboxDispatcher`** — scoped service; reads pending rows in batches (`OutboxBatchSize`, default 100), deserializes, publishes via `IEventBus`, marks processed. A failing row increments `RetryCount`; after `OutboxMaxRetries` (default 5) it's flagged `IsDead` and skipped thereafter.
-- **`OutboxDispatcherHostedService`** — background loop calling the dispatcher every `OutboxDispatchIntervalSeconds` (default 10).
-- **`OutboxMessage`** — `Id`, `CreatedOnUtc`, `Type`, `Payload`, `TenantId`, `CorrelationId`, `ProcessedOnUtc`, `RetryCount`, `LastError`, `IsDead`. Implements `IGlobalEntity` (background processors must scan across tenants).
-- **`InboxMessage`** — `Id` + `HandlerName` (composite key), `EventType`, `ProcessedOnUtc`, `TenantId`. Also `IGlobalEntity`.
+- **`IOutboxStore`** (`AddAsync`, `GetPendingBatchAsync`, `MarkAsProcessedAsync`, `MarkAsFailedAsync`) + `EfCoreOutboxStore<TDbContext>` - serialize integration events into an `OutboxMessages` table in your module's DbContext. `AddAsync` rides the same DbContext as your business write, so inside an open transaction the event commits atomically with it.
+- **`IInboxStore`** + `EfCoreInboxStore<TDbContext>` - dedupe table keyed by **(event id, handler name)**, so each handler processes an event at most once.
+- **`OutboxDispatcher`** - scoped service; reads pending rows in batches (`OutboxBatchSize`, default 100), deserializes, publishes via `IEventBus`, marks processed. A failing row increments `RetryCount`; after `OutboxMaxRetries` (default 5) it's flagged `IsDead` and skipped thereafter.
+- **`OutboxDispatcherHostedService`** - background loop calling the dispatcher every `OutboxDispatchIntervalSeconds` (default 10).
+- **`OutboxMessage`** - `Id`, `CreatedOnUtc`, `Type`, `Payload`, `TenantId`, `CorrelationId`, `ProcessedOnUtc`, `RetryCount`, `LastError`, `IsDead`. Implements `IGlobalEntity` (background processors must scan across tenants).
+- **`InboxMessage`** - `Id` + `HandlerName` (composite key), `EventType`, `ProcessedOnUtc`, `TenantId`. Also `IGlobalEntity`.
 
 ### Serializer
 
-- **`JsonEventSerializer`** — System.Text.Json; the outbox stores the event's type name alongside the payload so the dispatcher can rehydrate the concrete event for publishing.
+- **`JsonEventSerializer`** - System.Text.Json; the outbox stores the event's type name alongside the payload so the dispatcher can rehydrate the concrete event for publishing.
 
 ## How modules consume Eventing
 
@@ -58,7 +58,7 @@ public void ConfigureServices(IHostApplicationBuilder builder)
 
 There are two publish paths, and the kit uses both:
 
-**Durable (outbox)** — write the event to `IOutboxStore` next to your business change; the dispatcher publishes it later. This is what Identity does for `UserRegisteredIntegrationEvent`:
+**Durable (outbox)** - write the event to `IOutboxStore` next to your business change; the dispatcher publishes it later. This is what Identity does for `UserRegisteredIntegrationEvent`:
 
 ```csharp
 public async ValueTask<Unit> Handle(ResolveTicketCommand cmd, CancellationToken ct)
@@ -72,7 +72,7 @@ public async ValueTask<Unit> Handle(ResolveTicketCommand cmd, CancellationToken 
 }
 ```
 
-**Immediate** — call `IEventBus.PublishAsync` directly and handlers run right away (in-process with the InMemory bus). Chat's mention events and the tenant-lifecycle events go this way; you trade durability for latency.
+**Immediate** - call `IEventBus.PublishAsync` directly and handlers run right away (in-process with the InMemory bus). Chat's mention events and the tenant-lifecycle events go this way; you trade durability for latency.
 
 The `OutboxDispatcher` picks up pending rows on the next interval (or you can call `DispatchAsync` from a Hangfire job if you don't want a hosted-service loop). The receiving side declares a handler:
 
@@ -134,14 +134,14 @@ Implement `IEventBus`; register your implementation in place of `InMemoryEventBu
 
 ### Skip the outbox for cheap fire-and-forget
 
-The outbox is opt-in: `IEventBus.PublishAsync` already goes straight to the bus. If an event doesn't need transactional durability (a cache invalidation hint, a metrics ping), just publish it directly and skip `IOutboxStore` — that's exactly what Chat and the tenant-lifecycle events do.
+The outbox is opt-in: `IEventBus.PublishAsync` already goes straight to the bus. If an event doesn't need transactional durability (a cache invalidation hint, a metrics ping), just publish it directly and skip `IOutboxStore` - that's exactly what Chat and the tenant-lifecycle events do.
 
 ## Gotchas
 
-- **Domain events vs integration events** are different things in the kit. Domain events fire **inside the SaveChanges interceptor** (synchronous, in-module, via Mediator). Integration events go through the outbox and `IEventBus` (asynchronous, cross-module / cross-service). Use the right one — domain events for invariants and bookkeeping inside the module, integration events for everything else.
-- **Outbox dispatcher is scoped per cycle.** Each poll gets a fresh DbContext scope; a failing publish increments the row's `RetryCount` (with `LastError` recorded) and is retried on the next interval. At `OutboxMaxRetries` the row is flagged `IsDead` and skipped from then on — monitor/clean dead rows, they don't retry themselves.
+- **Domain events vs integration events** are different things in the kit. Domain events fire **inside the SaveChanges interceptor** (synchronous, in-module, via Mediator). Integration events go through the outbox and `IEventBus` (asynchronous, cross-module / cross-service). Use the right one - domain events for invariants and bookkeeping inside the module, integration events for everything else.
+- **Outbox dispatcher is scoped per cycle.** Each poll gets a fresh DbContext scope; a failing publish increments the row's `RetryCount` (with `LastError` recorded) and is retried on the next interval. At `OutboxMaxRetries` the row is flagged `IsDead` and skipped from then on - monitor/clean dead rows, they don't retry themselves.
 - **Inbox dedupes per handler, by `(EventId, HandlerName)`.** A redelivered event is skipped only for handlers that already completed it; if you mint two events with the same `Id`, the second is silently dropped for every handler. Always generate a fresh `Guid` per event.
-- **Background publishers need the tenant context set.** `InMemoryEventBus` does this for you via `IEventTenantScope` (reading `event.TenantId`) *before* resolving handlers — a `MultiTenantDbContext` captures its tenant at construction, so setting it later is too late. If you build your own bus or dispatch path, preserve this ordering or tenant-filtered handlers NRE.
+- **Background publishers need the tenant context set.** `InMemoryEventBus` does this for you via `IEventTenantScope` (reading `event.TenantId`) *before* resolving handlers - a `MultiTenantDbContext` captures its tenant at construction, so setting it later is too late. If you build your own bus or dispatch path, preserve this ordering or tenant-filtered handlers NRE.
 - **RabbitMQ publishing retries in-process** (`PublishRetryCount` / `PublishRetryDelayMs`), but consumers own their durability via inbox + retry semantics.
 
 ## Critical files
@@ -154,6 +154,6 @@ The outbox is opt-in: `IEventBus.PublishAsync` already goes straight to the bus.
 
 ## Related
 
-- [Eventing.Abstractions](/docs/building-blocks/eventing-abstractions/) — the dependency-free contracts.
-- [Notifications module](/docs/modules/notifications/) — consumes integration events into inbox rows.
-- [Webhooks module](/docs/modules/webhooks/) — uses an open-generic handler to fan all events to HTTP subscribers.
+- [Eventing.Abstractions](/docs/building-blocks/eventing-abstractions/) - the dependency-free contracts.
+- [Notifications module](/docs/modules/notifications/) - consumes integration events into inbox rows.
+- [Webhooks module](/docs/modules/webhooks/) - uses an open-generic handler to fan all events to HTTP subscribers.

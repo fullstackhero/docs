@@ -1,10 +1,10 @@
-# Production Docker Deploy — Implementation Plan
+# Production Docker Deploy - Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Ship the v1 "deploy this starter kit" story — frontend Dockerfiles, a single-host production `docker-compose.yml`, and `.env.example` at `deploy/docker/`. Bundle the API + DbMigrator container hardening (drop root, chiseled runtime) while we're touching infra.
+**Goal:** Ship the v1 "deploy this starter kit" story - frontend Dockerfiles, a single-host production `docker-compose.yml`, and `.env.example` at `deploy/docker/`. Bundle the API + DbMigrator container hardening (drop root, chiseled runtime) while we're touching infra.
 
-**Architecture:** Single-host compose with everything inside (Postgres, Redis, MinIO + the FSH services). Subdomain-style routing — operator terminates TLS externally; compose only publishes raw ports. Frontends use runtime `/config.json` (rendered from env by an entrypoint shim at container start), so one image works for any deploy.
+**Architecture:** Single-host compose with everything inside (Postgres, Redis, MinIO + the FSH services). Subdomain-style routing - operator terminates TLS externally; compose only publishes raw ports. Frontends use runtime `/config.json` (rendered from env by an entrypoint shim at container start), so one image works for any deploy.
 
 **Tech Stack:** docker compose v2, multi-stage Dockerfiles, nginx:alpine for static serving + envsubst, mcr.microsoft.com/dotnet/sdk:10.0 for build / `nightly/aspnet:10.0-noble-chiseled` for runtime.
 
@@ -104,7 +104,7 @@ git commit -m "build(docker): tighten root .dockerignore for frontend + test art
 
 ---
 
-### Task 2: Admin app — runtime `/config.json` boot
+### Task 2: Admin app - runtime `/config.json` boot
 
 **Files:**
 - Modify: `clients/admin/src/env.ts`
@@ -118,7 +118,7 @@ The admin currently reads `VITE_API_BASE_URL`, `VITE_DASHBOARD_URL`, `VITE_DEFAU
 Overwrite `clients/admin/src/env.ts` with:
 
 ```ts
-// Runtime config — fetched once at boot from /config.json (served by the
+// Runtime config - fetched once at boot from /config.json (served by the
 // frontend's own nginx in production, by Vite from public/config.json in
 // dev). One image works for every deploy; the operator wires API_URL /
 // DASHBOARD_URL into the JSON file via envsubst at container start.
@@ -232,7 +232,7 @@ git commit -m "refactor(admin): load /config.json at boot for runtime-configurab
 
 ---
 
-### Task 3: Dashboard app — runtime `/config.json` boot
+### Task 3: Dashboard app - runtime `/config.json` boot
 
 **Files:**
 - Modify: `clients/dashboard/src/env.ts`
@@ -246,7 +246,7 @@ Same shape as Task 2 minus the admin-only `dashboardUrl`.
 Overwrite `clients/dashboard/src/env.ts` with:
 
 ```ts
-// Runtime config — fetched once at boot from /config.json. See
+// Runtime config - fetched once at boot from /config.json. See
 // clients/admin/src/env.ts for the rationale; the dashboard doesn't
 // need dashboardUrl (the handoff is one-way: admin → dashboard).
 type RuntimeConfig = {
@@ -305,7 +305,7 @@ if (!rootElement) {
   throw new Error("Root element '#root' not found");
 }
 
-// Cross-app impersonation handoff — must run BEFORE createRoot so the
+// Cross-app impersonation handoff - must run BEFORE createRoot so the
 // installed token is visible to AuthProvider on first paint. See the
 // helper docstring for the why.
 installImpersonationFromHash();
@@ -398,7 +398,7 @@ server {
     add_header Cache-Control "public, immutable";
   }
 
-  # Runtime config — must be re-fetched on every deploy
+  # Runtime config - must be re-fetched on every deploy
   location = /config.json {
     add_header Cache-Control "no-store";
     add_header X-Content-Type-Options "nosniff";
@@ -711,7 +711,7 @@ git commit -m "build(dashboard): Dockerfile with nginx + runtime /config.json en
 
 ---
 
-### Task 6: API Dockerfile — chiseled runtime + csproj hardening
+### Task 6: API Dockerfile - chiseled runtime + csproj hardening
 
 **Files:**
 - Modify: `src/Host/FSH.Starter.Api/Dockerfile`
@@ -728,7 +728,7 @@ Open `src/Host/FSH.Starter.Api/FSH.Starter.Api.csproj` and find the first `<Prop
 <ContainerFamily>noble-chiseled</ContainerFamily>
 ```
 
-These are honored by the SDK's `PublishContainer` target — they don't affect the hand-written Dockerfile but keep the GHCR-published image consistent with the compose-built one.
+These are honored by the SDK's `PublishContainer` target - they don't affect the hand-written Dockerfile but keep the GHCR-published image consistent with the compose-built one.
 
 - [ ] **Step 2: Verify the .NET solution still builds**
 
@@ -779,7 +779,7 @@ ENTRYPOINT ["dotnet", "FSH.Starter.Api.dll"]
 ```
 
 Notes:
-- If `Directory.Build.props` / `Directory.Build.targets` / `global.json` / `.editorconfig` don't exist under `src/`, drop those lines from the first COPY — `docker build` will fail clearly if a referenced file is missing, so adjust based on the actual error.
+- If `Directory.Build.props` / `Directory.Build.targets` / `global.json` / `.editorconfig` don't exist under `src/`, drop those lines from the first COPY - `docker build` will fail clearly if a referenced file is missing, so adjust based on the actual error.
 - The second `COPY src/ ./src/` overwrites the first; this is intentional and gives us a free restore-cache layer at the cost of a few hundred KB of csproj copies.
 
 - [ ] **Step 4: Smoke-build the API image**
@@ -881,7 +881,7 @@ Expected: build succeeds.
 ```bash
 docker run --rm fsh/dbmigrator:smoke 2>&1 | head -5
 ```
-Expected: prints `[migrator] FAILED: DatabaseOptions:ConnectionString is empty — refusing to run against an unconfigured target.` and exits 1. That's the expected fail-fast guard already in the migrator's Program.cs.
+Expected: prints `[migrator] FAILED: DatabaseOptions:ConnectionString is empty - refusing to run against an unconfigured target.` and exits 1. That's the expected fail-fast guard already in the migrator's Program.cs.
 
 - [ ] **Step 6: Commit**
 
@@ -903,7 +903,7 @@ Create `deploy/docker/.env.example`:
 
 ```dotenv
 # ──────────────────────────────────────────────────────────────────────
-# FullStackHero — production docker-compose configuration.
+# FullStackHero - production docker-compose configuration.
 # Copy to `.env` and edit. NEVER commit .env to git.
 # Compose refuses to start until every required (?-flagged) var is set.
 # ──────────────────────────────────────────────────────────────────────
@@ -929,7 +929,7 @@ FSH_ADMIN_PORT=8081
 FSH_DASHBOARD_PORT=8082
 
 # ── Secrets ─────────────────────────────────────────────────────────
-# JWT signing key — must be 32+ chars and NOT contain the substring
+# JWT signing key - must be 32+ chars and NOT contain the substring
 # "replace-with" (the framework's placeholder detector blocks that).
 # Generate with:    openssl rand -base64 48
 JWT_SIGNING_KEY=
@@ -990,7 +990,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 ```bash
 git add deploy/docker/postgres-init/01-create-databases.sql
-git commit -m "build(deploy): postgres init SQL — required extensions"
+git commit -m "build(deploy): postgres init SQL - required extensions"
 ```
 
 ---
@@ -1005,7 +1005,7 @@ git commit -m "build(deploy): postgres init SQL — required extensions"
 Create `deploy/docker/docker-compose.yml`:
 
 ```yaml
-# fullstackhero — production docker-compose.
+# fullstackhero - production docker-compose.
 # Run from this directory:
 #   cp .env.example .env && $EDITOR .env
 #   docker compose up -d --build
@@ -1192,7 +1192,7 @@ rm -f .env .env.bak
 
 ```bash
 git add deploy/docker/docker-compose.yml
-git commit -m "build(deploy): production docker-compose.yml — full stack on one host"
+git commit -m "build(deploy): production docker-compose.yml - full stack on one host"
 ```
 
 ---
@@ -1216,12 +1216,12 @@ This brings up the full stack on a single host:
 | `api` | `fsh/api:local` (built locally) | `FSH_API_PORT` (default 8080) | ASP.NET Core API |
 | `admin` | `fsh/admin:local` | `FSH_ADMIN_PORT` (default 8081) | Operator console (nginx + React) |
 | `dashboard` | `fsh/dashboard:local` | `FSH_DASHBOARD_PORT` (default 8082) | Tenant dashboard (nginx + React) |
-| `migrator` | `fsh/dbmigrator:local` | — | One-shot: applies EF migrations + seeds the root tenant + creates the default admin user |
+| `migrator` | `fsh/dbmigrator:local` | - | One-shot: applies EF migrations + seeds the root tenant + creates the default admin user |
 | `postgres` | `postgres:17-alpine` | (internal) | Identity, tenant catalog, module schemas |
 | `redis` | `redis:7-alpine` | (internal) | HybridCache L2, Data Protection keys, idempotency store |
 | `minio` | `minio/minio:latest` | (internal) | S3-compatible blob store for the Files module |
 
-The compose file does **not** include a reverse proxy or TLS terminator. You bring your own edge — Cloudflare Tunnel, AWS ALB, Tailscale Funnel, your existing nginx, anything that can route a TLS subdomain to a host:port on this machine.
+The compose file does **not** include a reverse proxy or TLS terminator. You bring your own edge - Cloudflare Tunnel, AWS ALB, Tailscale Funnel, your existing nginx, anything that can route a TLS subdomain to a host:port on this machine.
 
 ## Prerequisites
 
@@ -1250,8 +1250,8 @@ Wait until you see something like `[migrator] DbMigrator completed` and the `mig
 
 ```bash
 curl -fsS http://localhost:8080/health        # API
-curl -fsSI http://localhost:8081/ | head -1   # admin SPA — HTTP/1.1 200 OK
-curl -fsS  http://localhost:8081/config.json  # admin runtime config — shows FSH_API_URL
+curl -fsSI http://localhost:8081/ | head -1   # admin SPA - HTTP/1.1 200 OK
+curl -fsS  http://localhost:8081/config.json  # admin runtime config - shows FSH_API_URL
 curl -fsSI http://localhost:8082/ | head -1   # dashboard SPA
 ```
 
@@ -1265,7 +1265,7 @@ Point three TLS subdomains at the published ports:
 | `admin.example.com` | `8081` |
 | `app.example.com` | `8082` |
 
-Make sure the URLs you serve match the `FSH_API_URL` / `FSH_ADMIN_URL` / `FSH_DASHBOARD_URL` you set in `.env` — those values are baked into the frontends' runtime `/config.json` (CORS will fail loudly otherwise).
+Make sure the URLs you serve match the `FSH_API_URL` / `FSH_ADMIN_URL` / `FSH_DASHBOARD_URL` you set in `.env` - those values are baked into the frontends' runtime `/config.json` (CORS will fail loudly otherwise).
 
 ## Sign in for the first time
 
@@ -1320,7 +1320,7 @@ The data-plane volumes (`pg_data`, `redis_data`, `minio_data`) can be deleted on
 | Migrator exits non-zero with `Failed to fetch dynamically imported module` | A frontend bundle baked the wrong API URL. Check `FSH_API_URL` in `.env` and re-run with `--build`. |
 | `OptionsValidationException: SigningKey looks like a sample placeholder` | `JWT_SIGNING_KEY` contains `replace-with` (the framework's placeholder detector). Generate a real key: `openssl rand -base64 48`. |
 | API up but admin shows a CORS error | `FSH_ADMIN_URL` / `FSH_DASHBOARD_URL` in `.env` doesn't match what your external proxy serves. Both go on the CORS allow-list. |
-| `migrator` retries Postgres for 2 minutes then fails | Postgres didn't come up — check `docker compose logs postgres`. Most often a `POSTGRES_PASSWORD` change against an existing `pg_data` volume; delete the volume with `docker compose down -v` (destructive) and start over. |
+| `migrator` retries Postgres for 2 minutes then fails | Postgres didn't come up - check `docker compose logs postgres`. Most often a `POSTGRES_PASSWORD` change against an existing `pg_data` volume; delete the volume with `docker compose down -v` (destructive) and start over. |
 ````
 
 - [ ] **Step 2: Commit**
@@ -1443,7 +1443,7 @@ docker compose down -v
 rm .env
 ```
 
-- [ ] **Step 8: Commit (no file changes — placeholder marker)**
+- [ ] **Step 8: Commit (no file changes - placeholder marker)**
 
 ```bash
 # No code changes from this task. If you want a marker commit, allow-empty:
@@ -1479,7 +1479,7 @@ docker compose up -d --build
 Full walkthrough in [`deploy/docker/README.md`](deploy/docker/README.md).
 ```
 
-If the existing README already has a "Quick start" section that targets `dotnet run`, keep it — that's the local-dev story. The Deploy section is the production-ship story.
+If the existing README already has a "Quick start" section that targets `dotnet run`, keep it - that's the local-dev story. The Deploy section is the production-ship story.
 
 - [ ] **Step 3: Commit**
 
@@ -1519,7 +1519,7 @@ Expected: push succeeds, prints the new range.
 
 ## Out of scope (per the spec)
 
-- Helm chart / k8s manifests — v1.1
-- Multi-arch images — separate publish-workflow PR
-- Caddy / Traefik / built-in TLS — operator owns the edge
-- Localhost demo overlay — Aspire is the local-dev path
+- Helm chart / k8s manifests - v1.1
+- Multi-arch images - separate publish-workflow PR
+- Caddy / Traefik / built-in TLS - operator owns the edge
+- Localhost demo overlay - Aspire is the local-dev path

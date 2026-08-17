@@ -7,12 +7,12 @@ sidebar:
   order: 6
 pageType: concept
 seo:
-  title: 'Data Protection in .NET 10 — Redis-backed key persistence'
-  description: 'How fullstackhero persists ASP.NET Core Data Protection keys to Redis via the shared multiplexer — so cookies, antiforgery tokens, and any…'
+  title: 'Data Protection in .NET 10 - Redis-backed key persistence'
+  description: 'How fullstackhero persists ASP.NET Core Data Protection keys to Redis via the shared multiplexer - so cookies, antiforgery tokens, and any…'
   keywords: 'asp.net core data protection redis, idataprotector dotnet, cookie key persistence, multi instance data protection .net 10'
 ---
 
-ASP.NET Core's Data Protection API encrypts cookies, antiforgery tokens, and any payload you ask it to with `IDataProtector`. Default behaviour stores the keys in the local filesystem — fine for a single-process host, broken for multi-instance deployments where each instance maintains its own key ring and decryption fails across nodes. The kit fixes this by **persisting the key ring to Valkey** (a Redis-compatible, BSD-licensed Redis fork) through the shared multiplexer.
+ASP.NET Core's Data Protection API encrypts cookies, antiforgery tokens, and any payload you ask it to with `IDataProtector`. Default behaviour stores the keys in the local filesystem - fine for a single-process host, broken for multi-instance deployments where each instance maintains its own key ring and decryption fails across nodes. The kit fixes this by **persisting the key ring to Valkey** (a Redis-compatible, BSD-licensed Redis fork) through the shared multiplexer.
 
 <Callout type="tip" title="Already configured if you enabled caching">
 `AddHeroCaching` registers an `IConnectionMultiplexer` against Valkey, then `services.AddDataProtection().PersistKeysToStackExchangeRedis(...)` reuses the same multiplexer for key persistence. One Valkey connection pool, one key ring shared across every instance.
@@ -22,18 +22,18 @@ ASP.NET Core's Data Protection API encrypts cookies, antiforgery tokens, and any
 
 `IDataProtector` is used implicitly by:
 
-- **ASP.NET Identity cookie auth** — if you swap JWT for cookies in your fork, those cookies are Data-Protection-encrypted.
-- **Antiforgery tokens** — `[ValidateAntiForgeryToken]` on form posts uses Data Protection.
-- **Token providers** in `UserManager` — email confirmation tokens, password reset tokens. These are encrypted+signed with Data Protection.
-- **Webhook signing secrets** — the Webhooks module's `WebhookSecretProtector` encrypts each subscription's HMAC secret at rest (purpose string `FSH.Webhooks.SubscriptionSecret.v1`) and decrypts it only at dispatch time. See [webhook signing](/docs/security/webhook-signing/).
-- **Custom `IDataProtector` consumers** — anything you write that calls `services.GetRequiredService<IDataProtectionProvider>().CreateProtector("MyPurpose").Protect(...)`.
+- **ASP.NET Identity cookie auth** - if you swap JWT for cookies in your fork, those cookies are Data-Protection-encrypted.
+- **Antiforgery tokens** - `[ValidateAntiForgeryToken]` on form posts uses Data Protection.
+- **Token providers** in `UserManager` - email confirmation tokens, password reset tokens. These are encrypted+signed with Data Protection.
+- **Webhook signing secrets** - the Webhooks module's `WebhookSecretProtector` encrypts each subscription's HMAC secret at rest (purpose string `FSH.Webhooks.SubscriptionSecret.v1`) and decrypts it only at dispatch time. See [webhook signing](/docs/security/webhook-signing/).
+- **Custom `IDataProtector` consumers** - anything you write that calls `services.GetRequiredService<IDataProtectionProvider>().CreateProtector("MyPurpose").Protect(...)`.
 
 In the kit's default JWT-bearer mode, the most visible payloads are the **email confirmation tokens** + **password reset tokens** sent in emails. If those don't decrypt on the next instance the user lands on, the link is dead.
 
 ## How it's wired
 
 ```csharp
-// AddHeroCaching (simplified) — only when CachingOptions:Redis is set
+// AddHeroCaching (simplified) - only when CachingOptions:Redis is set
 var redis = ConnectionMultiplexer.Connect(opts.Redis);
 services.AddSingleton<IConnectionMultiplexer>(redis);
 
@@ -45,7 +45,7 @@ services.AddDataProtection()
 Two important details:
 
 - **Same multiplexer** as the cache + (optionally) SignalR backplane. One connection pool covers all three.
-- **`SetApplicationName`** — Data Protection isolates keys by application name. If you run two fullstackhero hosts against the same Valkey (staging + dev sharing a Valkey instance), use distinct application names so they don't fight over the key ring.
+- **`SetApplicationName`** - Data Protection isolates keys by application name. If you run two fullstackhero hosts against the same Valkey (staging + dev sharing a Valkey instance), use distinct application names so they don't fight over the key ring.
 
 ## What happens without it
 
@@ -55,11 +55,11 @@ Without Valkey-backed persistence (e.g. you forgot to set `CachingOptions:Redis`
 - **Email confirmation links from one deploy stop working** after the next deploy if the new pod doesn't share the keys.
 - **Antiforgery validation fails** intermittently across pods.
 
-The fix is simple — set `CachingOptions:Redis`. There's no "production-grade-without-Valkey" alternative; if Valkey isn't available, use Postgres for key persistence via `PersistKeysToDbContext(...)` (the kit doesn't ship this by default but it's a 10-line change).
+The fix is simple - set `CachingOptions:Redis`. There's no "production-grade-without-Valkey" alternative; if Valkey isn't available, use Postgres for key persistence via `PersistKeysToDbContext(...)` (the kit doesn't ship this by default but it's a 10-line change).
 
 ## Key rotation
 
-Data Protection rotates keys automatically every 90 days by default. The active key is used for new protections; expired keys are kept for decrypting older payloads up to a retention period. The key ring grows over time — Valkey storage is negligible (a few KB).
+Data Protection rotates keys automatically every 90 days by default. The active key is used for new protections; expired keys are kept for decrypting older payloads up to a retention period. The key ring grows over time - Valkey storage is negligible (a few KB).
 
 Explicit rotation isn't necessary in normal operation; the framework handles it. For incident response (a key may have leaked), revoke the entire ring and force a deploy:
 
@@ -70,11 +70,11 @@ foreach (var key in keyManager.GetAllKeys())
     keyManager.RevokeKey(key.KeyId, "Suspected leak; cycling.");
 ```
 
-Everything currently encrypted with the revoked keys becomes unreadable — users have to re-confirm emails, request new password resets, etc.
+Everything currently encrypted with the revoked keys becomes unreadable - users have to re-confirm emails, request new password resets, etc.
 
 ## Secrets in configuration
 
-Not the same thing as Data Protection, but tightly related. The kit's config-borne secrets — `JwtOptions:SigningKey`, `MailOptions:SMTP:Password`, `MailOptions:SendGrid:ApiKey`, the S3 storage secret key, `HangfireOptions:Password`, `CachingOptions:Redis` (if it contains a password) — must come from a secrets manager, not from `appsettings.json` checked into git.
+Not the same thing as Data Protection, but tightly related. The kit's config-borne secrets - `JwtOptions:SigningKey`, `MailOptions:SMTP:Password`, `MailOptions:SendGrid:ApiKey`, the S3 storage secret key, `HangfireOptions:Password`, `CachingOptions:Redis` (if it contains a password) - must come from a secrets manager, not from `appsettings.json` checked into git.
 
 Local development uses `dotnet user-secrets`:
 
@@ -100,6 +100,6 @@ HANGFIREOPTIONS__PASSWORD=...
 
 ## Related
 
-- [Caching](/docs/cross-cutting-concerns/caching/) — the shared multiplexer used here.
-- [Authentication](/docs/security/authentication/) — JWT tokens (which the kit uses by default) are signed, not Data-Protection-encrypted — but email tokens are.
-- [Production checklist](/docs/security/production-checklist/) — Data Protection wiring is item #9.
+- [Caching](/docs/cross-cutting-concerns/caching/) - the shared multiplexer used here.
+- [Authentication](/docs/security/authentication/) - JWT tokens (which the kit uses by default) are signed, not Data-Protection-encrypted - but email tokens are.
+- [Production checklist](/docs/security/production-checklist/) - Data Protection wiring is item #9.

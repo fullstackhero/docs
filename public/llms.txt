@@ -1,8 +1,8 @@
-# FullStackHero — .NET 10 Starter Kit
+# FullStackHero - .NET 10 Starter Kit
 
-> Free, MIT-licensed, production-ready .NET 10 starter kit. Modular monolith with vertical slice architecture, multitenancy-first, and ten ready-to-ship modules — so engineering teams skip the scaffolding and write features on day one.
+> Free, MIT-licensed, production-ready .NET 10 starter kit. Modular monolith with vertical slice architecture, multitenancy-first, and ten ready-to-ship modules - so engineering teams skip the scaffolding and write features on day one.
 
-FullStackHero is an open-source .NET 10 starter kit maintained by Mukesh Murugan. It is targeted at teams building multitenant SaaS and B2B applications on the .NET platform. The repository ships a complete, runnable application — not just templates — including a backend API, two React frontends (admin console and tenant dashboard), database migrator, and Docker / .NET Aspire orchestration.
+FullStackHero is an open-source .NET 10 starter kit maintained by Mukesh Murugan. It is targeted at teams building multitenant SaaS and B2B applications on the .NET platform. The repository ships a complete, runnable application - not just templates - including a backend API, two React frontends (admin console and tenant dashboard), database migrator, and Docker / .NET Aspire orchestration.
 
 Source: https://github.com/fullstackhero/dotnet-starter-kit
 License: MIT
@@ -11,7 +11,7 @@ Author: Mukesh Murugan (https://codewithmukesh.com)
 ## Architecture
 
 - Modular monolith composed of independent feature modules
-- Vertical Slice Architecture (VSA) inside each module — one feature lives in one folder (endpoint + handler + validator + tests)
+- Vertical Slice Architecture (VSA) inside each module - one feature lives in one folder (endpoint + handler + validator + tests)
 - Cross-module communication only through *.Contracts assemblies; runtime modules never reference each other
 - CQRS via the Mediator 3 source generator (zero runtime reflection)
 - FluentValidation 12 auto-wired by the module loader
@@ -19,16 +19,16 @@ Author: Mukesh Murugan (https://codewithmukesh.com)
 
 ## Ten modules ship in v1
 
-- Identity — JWT bearer + refresh tokens, ASP.NET Identity with roles and permissions, operator impersonation with audit trail, rate-limited login / register / password flows
-- Multitenancy — Finbuckle.MultiTenant 10 (claim, header, query strategies), EF Core global query filter for tenant scoping, IGlobalEntity opt-out for system rows, tenant-aware caching + jobs + outbox
-- Auditing — EF Core SaveChanges interceptor captures every write with before/after snapshots; user, tenant, correlation ID, request path; queryable via /audits with filters and JSON redaction
-- Files — Tenant-scoped object storage on MinIO / S3 with presigned uploads
-- Chat — Realtime channels and DMs with @mentions, threads, reactions, search, typing indicators; SignalR over Redis backplane
-- Notifications — Per-user inbox with real-time push via SignalR
-- Webhooks — Tenant-scoped subscriptions with HMAC-signed payload delivery
-- Billing — Subscription plans and usage metering primitives
-- Catalog — Products, categories, images
-- Tickets — Support tickets and conversations
+- Identity - JWT bearer + refresh tokens, ASP.NET Identity with roles and permissions, operator impersonation with audit trail, rate-limited login / register / password flows
+- Multitenancy - Finbuckle.MultiTenant 10 (claim, header, query strategies), EF Core global query filter for tenant scoping, IGlobalEntity opt-out for system rows, tenant-aware caching + jobs + outbox
+- Auditing - EF Core SaveChanges interceptor captures every write with before/after snapshots; user, tenant, correlation ID, request path; queryable via /audits with filters and JSON redaction
+- Files - Tenant-scoped object storage on MinIO / S3 with presigned uploads
+- Chat - Realtime channels and DMs with @mentions, threads, reactions, search, typing indicators; SignalR over Redis backplane
+- Notifications - Per-user inbox with real-time push via SignalR
+- Webhooks - Tenant-scoped subscriptions with HMAC-signed payload delivery
+- Billing - Subscription plans and usage metering primitives
+- Catalog - Products, categories, images
+- Tickets - Support tickets and conversations
 
 ## Eleven building blocks (shared infrastructure)
 
@@ -80,6 +80,6 @@ For production deployment, `deploy/docker/docker-compose.yml` ships a complete D
 
 ## Positioning
 
-FullStackHero is free and MIT-licensed end-to-end. The closest commercial equivalents in the .NET ecosystem charge several hundred to a few thousand dollars for similar feature coverage. The closest free templates (Jason Taylor Clean Architecture, Ardalis Clean Architecture) are deliberately minimal — they ship architecture, not modules. ABP Framework offers comparable feature breadth but is a heavier opinionated framework with its own DI and CLI; FullStackHero is closer to a "great defaults" reference application that uses only first-party Microsoft + best-in-class OSS libraries.
+FullStackHero is free and MIT-licensed end-to-end. The closest commercial equivalents in the .NET ecosystem charge several hundred to a few thousand dollars for similar feature coverage. The closest free templates (Jason Taylor Clean Architecture, Ardalis Clean Architecture) are deliberately minimal - they ship architecture, not modules. ABP Framework offers comparable feature breadth but is a heavier opinionated framework with its own DI and CLI; FullStackHero is closer to a "great defaults" reference application that uses only first-party Microsoft + best-in-class OSS libraries.
 
-If you are starting a new .NET 10 SaaS or B2B app, the kit gives you authentication, multitenancy, auditing, observability, background jobs, distributed cache, idempotency, webhooks, and two production-grade React frontends — all wired up — so the first thing you write is your business logic.
+If you are starting a new .NET 10 SaaS or B2B app, the kit gives you authentication, multitenancy, auditing, observability, background jobs, distributed cache, idempotency, webhooks, and two production-grade React frontends - all wired up - so the first thing you write is your business logic.

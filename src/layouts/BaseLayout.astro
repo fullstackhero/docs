@@ -12,7 +12,7 @@ interface Props {
   noindex?: boolean;
   /**
    * Per-page <title> override. When set, replaces the default
-   * "{frontmatter title} — {site title}" composition.
+   * "{frontmatter title} - {site title}" composition.
    */
   seoTitle?: string;
   /**
@@ -32,7 +32,7 @@ interface Props {
 }
 
 const { title, description, image, noindex, seoTitle, ogType = 'website', modifiedTime, additionalSchemas } = Astro.props;
-const pageTitle = seoTitle ?? (title ? `${title} — ${siteConfig.name}` : siteConfig.title);
+const pageTitle = seoTitle ?? (title ? `${title} - ${siteConfig.name}` : siteConfig.title);
 const pageDescription = description ?? siteConfig.description;
 const pageImage = new URL(image ?? siteConfig.ogImage, Astro.site ?? siteConfig.url).toString();
 const canonicalURL = new URL(Astro.url.pathname, Astro.site ?? siteConfig.url).toString();
@@ -43,7 +43,7 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site ?? siteConfig.url).t
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    {/* Google Analytics (gtag.js) — loaded early per Google guidance. */}
+    {/* Google Analytics (gtag.js) - loaded early per Google guidance. */}
     <Analytics />
 
     <link rel="canonical" href={canonicalURL} />
@@ -80,7 +80,7 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site ?? siteConfig.url).t
     <meta name="theme-color" content="#15803d" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0d0e11" media="(prefers-color-scheme: dark)" />
 
-    {/* Structured data — Organization + WebSite + SoftwareApplication.
+    {/* Structured data - Organization + WebSite + SoftwareApplication.
         SoftwareApplication (vs SoftwareSourceCode) is what Google Rich
         Results consumes for software listings. The `offers` block with
         price 0 is what triggers the "Free" label in search. */}

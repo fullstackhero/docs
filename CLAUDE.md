@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 The documentation site for the FullStackHero .NET starter kit, served at `fullstackhero.net`.
-It is **not** the starter kit itself — only its docs. Built with Astro 6, Tailwind 4, MDX, and
+It is **not** the starter kit itself - only its docs. Built with Astro 6, Tailwind 4, MDX, and
 deployed as a Cloudflare Worker that wraps a static build.
 
 ## Commands
@@ -14,13 +14,13 @@ deployed as a Cloudflare Worker that wraps a static build.
 npm run dev        # astro dev on http://localhost:4321 (hot-reload of MDX)
 npm run build      # astro build && pagefind --site dist  (produces dist/)
 npm run preview    # serve dist/ locally
-npm run check      # astro check — type + content-schema validation
+npm run check      # astro check - type + content-schema validation
 ```
 
-- There is **no test suite**. `npm run check` is the closest thing to a CI gate — run it after
+- There is **no test suite**. `npm run check` is the closest thing to a CI gate - run it after
   touching `.astro`, `.ts`, layouts, or content schema.
 - Search (Pagefind) only works after `npm run build`. In `dev`, the search modal reports
-  "index not available" — this is expected, not a bug.
+  "index not available" - this is expected, not a bug.
 
 ### Cloudflare / Worker (deploy-time)
 
@@ -37,7 +37,7 @@ binding IDs live in `wrangler.toml`.
 
 This is the single most important thing to understand.
 
-1. **Astro builds fully static** to `dist/`. There is no SSR adapter in `astro.config.mjs` —
+1. **Astro builds fully static** to `dist/`. There is no SSR adapter in `astro.config.mjs` -
    every page, including the `llms-full.txt` endpoint, is prerendered at build time.
 2. **`src/worker.ts` is a standalone Cloudflare Worker** (not an Astro adapter). It serves
    `dist/` through the `ASSETS` binding and adds one dynamic surface: `/api/views/*`. Static
@@ -50,7 +50,7 @@ Consequences:
 - The page-view counter (`/api/views`) writes to D1 (`views` table, see `migrations/0001_init.sql`)
   and dedups per IP+UA via KV with a 1h TTL. Slugs are whitelisted to `/docs/*` only.
 - Anything dynamic must go through the worker; you cannot add an SSR Astro route and expect it
-  to run — the build is static.
+  to run - the build is static.
 
 ## Architecture: content → routes → sidebar
 
@@ -87,13 +87,14 @@ BaseLayout.astro        <head>: SEO meta, OG/Twitter, JSON-LD graph, fonts, them
 
 ## MDX authoring
 
-- Frontmatter shape is enforced by the schema in `src/content.config.ts` — `check` fails the build
+- Frontmatter shape is enforced by the schema in `src/content.config.ts` - `check` fails the build
   on violations. `sidebar.order` is ascending (lower = higher in the list); ties break alphabetically.
 - **Only components registered in `src/components/mdx.ts` are usable inside MDX**: `Callout`,
-  `CategoryIndex`, `CodeGroup`, `Screenshot`, `SectionIndex`. To expose a new one in MDX, add it there.
+  `CategoryIndex`, `CodeGroup`, `Faq`, `FolderTree`, `Screenshot`, `SectionIndex`. To expose a new
+  one in MDX, add it there.
 - The docs `<article>` carries `data-pagefind-body`, which scopes the search index to docs content only.
 
-## SEO surface (this site invests heavily here — don't regress it)
+## SEO surface (this site invests heavily here - don't regress it)
 
 - `astro.config.mjs` `sitemap.serialize()` assigns per-path `priority`/`changefreq` by URL prefix.
 - `public/robots.txt` explicitly allow-lists AI + search crawlers (GPTBot, ClaudeBot, PerplexityBot, …).
@@ -104,7 +105,7 @@ BaseLayout.astro        <head>: SEO meta, OG/Twitter, JSON-LD graph, fonts, them
 ## Styling
 
 - Tailwind 4 via the Vite plugin (no `tailwind.config.js`). Tokens, prose, and code-block themes
-  in `src/styles/*.css` are **forked verbatim from `codewithmukesh/blog`** — preserve the provenance
+  in `src/styles/*.css` are **forked verbatim from `codewithmukesh/blog`** - preserve the provenance
   comments when editing.
 - Brand colors are split deliberately: primary is `#15803d` (green-700); the brighter brand green
   `#16a34a` lives in `--primary-soft` for accents/gradients. Don't collapse the two.
@@ -113,7 +114,7 @@ BaseLayout.astro        <head>: SEO meta, OG/Twitter, JSON-LD graph, fonts, them
 
 ## Client scripts & Astro view transitions
 
-- Inline `<script is:inline>` (e.g. theme bootstrap, Analytics) is shipped verbatim — Astro does not
+- Inline `<script is:inline>` (e.g. theme bootstrap, Analytics) is shipped verbatim - Astro does not
   bundle or typecheck it. Bundled client logic uses `<script>import '...'</script>`.
 - The site uses view transitions, so interactive scripts must be **idempotent and re-bind on
   `astro:page-load` / `astro:after-swap`** (see `views-counter.ts`, the mobile sheet in
@@ -122,6 +123,6 @@ BaseLayout.astro        <head>: SEO meta, OG/Twitter, JSON-LD graph, fonts, them
 ## Conventions
 
 - Formatting is Prettier with `prettier-plugin-astro` + `prettier-plugin-tailwindcss` (Tailwind class
-  sorting is automatic). No standalone config file — plugin defaults apply.
+  sorting is automatic). No standalone config file - plugin defaults apply.
 - TypeScript extends `astro/tsconfigs/strict`; React JSX is enabled for `.tsx` islands.
 - `superpowers/` is gitignored and not part of the site.

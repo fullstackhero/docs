@@ -2,7 +2,7 @@
 import { buildSidebar, getRootPage, isActivePath } from '../../helpers/sidebar';
 
 interface Props {
-  /** ID prefix — required when rendering more than one Sidebar on the page
+  /** ID prefix - required when rendering more than one Sidebar on the page
       so aria-controls / labelledby pairs stay unique. */
   prefix?: string;
 }
@@ -150,7 +150,7 @@ const isRootActive = rootPage ? isActivePath(currentPath, rootPage.href) : false
 
 <style>
   /* ──────────────────────────────────────────────────────────────
-     Sidebar — "field manual" aesthetic.
+     Sidebar - "field manual" aesthetic.
      Numbered chapter cards on warm-paper surfaces; one open at a
      time. Animated open via grid-template-rows 0fr → 1fr (no JS
      height measuring), respects prefers-reduced-motion.
@@ -161,7 +161,7 @@ const isRootActive = rootPage ? isActivePath(currentPath, rootPage.href) : false
     --rail-w: 2px;
   }
 
-  /* Root index pill — active state (neutral chrome, green only on text/icon) */
+  /* Root index pill - active state (neutral chrome, green only on text/icon) */
   .fsh-root-link-active {
     border-color: var(--border-strong);
     background:
@@ -174,7 +174,7 @@ const isRootActive = rootPage ? isActivePath(currentPath, rootPage.href) : false
     box-shadow: 0 1px 2px -1px color-mix(in oklab, var(--foreground) 12%, transparent);
   }
 
-  /* Chapter cards — open state: neutral border, soft neutral lift */
+  /* Chapter cards - open state: neutral border, soft neutral lift */
   .fsh-chapter {
     transition: border-color 200ms ease, box-shadow 250ms ease, background-color 200ms ease;
   }
@@ -234,7 +234,7 @@ const isRootActive = rootPage ? isActivePath(currentPath, rootPage.href) : false
     box-shadow: 0 0 0 2px color-mix(in oklab, var(--primary-soft) 30%, transparent);
   }
 
-  /* Item text — render after rail with no shifting */
+  /* Item text - render after rail with no shifting */
   .fsh-item-text { position: relative; }
 
   @media (prefers-reduced-motion: reduce) {

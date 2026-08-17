@@ -64,7 +64,7 @@ async function handleIncrement(request: Request, env: Env, ctx: ExecutionContext
         .bind(slug),
     ]);
 
-    // Dedup write is fire-and-forget — failure here just means the next
+    // Dedup write is fire-and-forget - failure here just means the next
     // beacon from the same IP increments again, which is fine.
     ctx.waitUntil(env.DEDUPE.put(seenKey, '1', { expirationTtl: DEDUPE_TTL_SECONDS }));
   }
@@ -74,7 +74,7 @@ async function handleIncrement(request: Request, env: Env, ctx: ExecutionContext
     .first<{ count: number }>();
 
   return json({ views: row?.count ?? 0 }, 200, {
-    // Beacons are uncacheable — every request must reach the worker.
+    // Beacons are uncacheable - every request must reach the worker.
     'Cache-Control': 'no-store',
   });
 }
@@ -89,7 +89,7 @@ async function handleRead(request: Request, env: Env): Promise<Response> {
     .first<{ count: number }>();
 
   return json({ views: row?.count ?? 0 }, 200, {
-    // Edge cache 30s — read traffic can dogpile a popular page.
+    // Edge cache 30s - read traffic can dogpile a popular page.
     'Cache-Control': 'public, max-age=30, s-maxage=30',
   });
 }
@@ -116,12 +116,12 @@ function normalizeSlug(raw: string | null): string | null {
   const withSlash = noQuery.startsWith('/') ? noQuery : `/${noQuery}`;
   const trimmed = withSlash.length > 1 ? withSlash.replace(/\/+$/, '') : withSlash;
   // Whitelist: homepage + docs pages only. Keeps the table from filling
-  // with arbitrary paths — a beacon from any other marketing path is dropped.
+  // with arbitrary paths - a beacon from any other marketing path is dropped.
   const isHome = trimmed === '/';
   const isDocs = trimmed.startsWith(SLUG_PREFIX) || trimmed === '/docs';
   if (!isHome && !isDocs) return null;
   if (trimmed.length > MAX_SLUG_LEN) return null;
-  // Path-only — reject anything with control chars.
+  // Path-only - reject anything with control chars.
   if (/[\x00-\x1f\x7f]/.test(trimmed)) return null;
   return trimmed;
 }

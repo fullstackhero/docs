@@ -197,7 +197,7 @@ html, body {
   filter: drop-shadow(0 24px 36px rgba(0, 0, 0, 0.5));
 }
 
-/* Centered (no right column) — used by 404 */
+/* Centered (no right column) - used by 404 */
 .frame.centered { grid-template-columns: 1fr; }
 .frame.centered .copy { align-items: center; text-align: center; padding: 72px 80px; }
 .frame.centered .eyebrow, .frame.centered .brand { justify-content: center; }

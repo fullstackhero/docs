@@ -1,13 +1,13 @@
 ---
 title: CI/CD Pipeline
 lastUpdated: 2026-06-11
-description: The GitHub Actions setup — path-scoped backend and frontend pipelines, a pinned SDK, deduplicated test + coverage, CodeQL, the template smoke guard, and how container images and NuGet packages are published.
+description: The GitHub Actions setup - path-scoped backend and frontend pipelines, a pinned SDK, deduplicated test + coverage, CodeQL, the template smoke guard, and how container images and NuGet packages are published.
 sidebar:
   label: CI/CD
   order: 5
 pageType: reference
 seo:
-  title: 'CI/CD pipeline — GitHub Actions for a .NET 10 modular monolith'
+  title: 'CI/CD pipeline - GitHub Actions for a .NET 10 modular monolith'
   description: 'How fullstackhero builds, tests, and ships in GitHub Actions: path-scoped pipelines, Testcontainers tests, an 80% coverage gate, and container publishing.'
   keywords: 'GitHub Actions .NET 10, dotnet CI pipeline, path filter workflow, coverage gate, Playwright CI, container publish GHCR, dotnet new template CI, NuGet publish'
 ---
@@ -23,45 +23,45 @@ The kit ships **four** GitHub Actions workflows in `.github/workflows/`:
 
 Two design choices shape everything below:
 
-- **Path-scoped pipelines.** A change under `clients/**` never builds or tests the API, and a change under `src/**` never builds the React apps. You only pay for — and wait on — the checks relevant to what you touched.
+- **Path-scoped pipelines.** A change under `clients/**` never builds or tests the API, and a change under `src/**` never builds the React apps. You only pay for - and wait on - the checks relevant to what you touched.
 - **A pinned SDK.** A root `global.json` pins the .NET 10 **GA** SDK (`rollForward: latestFeature`), and every workflow resolves it with `setup-dotnet`'s `global-json-file`. CI is deterministic and never silently pulls a preview SDK. (`global.json` is excluded from the `dotnet new` template, so scaffolded projects aren't pinned to the kit's SDK band.)
 
 <Callout type="note" title="Single trunk: everything targets main">
-The repo uses a single long-lived branch, **`main`** (the default). Workflows trigger on pushes and PRs to `main` plus `v*` tags — there is no `develop` branch. See [Contributing](/docs/contributing/) for the branching model.
+The repo uses a single long-lived branch, **`main`** (the default). Workflows trigger on pushes and PRs to `main` plus `v*` tags - there is no `develop` branch. See [Contributing](/docs/contributing/) for the branching model.
 </Callout>
 
-## backend.yml — build, test, publish
+## backend.yml - build, test, publish
 
 Triggers on pushes to `main`, `v*` tags, and PRs to `main`, plus manual `workflow_dispatch` (with an optional `version` input). PR runs cancel in-progress duplicates.
 
 | Job | Depends on | Runs when | What it does |
 |---|---|---|---|
-| **Detect changes** | — | always | A `dorny/paths-filter` step decides whether backend code changed. On any push/tag/dispatch it's always `true`; on a PR it's `true` only when `src/**`, `global.json`, `coverage.runsettings`, or the workflow itself changed. Every heavy job gates on this. |
+| **Detect changes** | - | always | A `dorny/paths-filter` step decides whether backend code changed. On any push/tag/dispatch it's always `true`; on a PR it's `true` only when `src/**`, `global.json`, `coverage.runsettings`, or the workflow itself changed. Every heavy job gates on this. |
 | **Unit Tests** | Detect changes | backend changed | `dotnet build -c Release -warnaserror` (the build gate), an audit that **fails on directly-referenced vulnerable packages** (transitive advisories are reported, not blocking), then the 12 unit/architecture test projects **with coverage collection**. Uploads the coverage as an artifact. |
 | **Integration Tests** | Detect changes | backend changed | `Integration.Tests` + `Integration.Middleware.Tests` via `WebApplicationFactory` + Testcontainers (Docker on the runner), **with coverage collection**. Uploads its coverage as an artifact. |
-| **DbMigrator Container Smoke** | Detect changes | backend changed | Publishes the `fsh-db-migrator` image (Dockerfile-less SDK publish) and runs `apply --catalog-only` against an ephemeral Postgres 17 — asserts it finishes successfully. Catches container-publish and DI-graph regressions. |
-| **Coverage Gate** | Unit + Integration | backend changed | **Merges** the coverage artifacts from the two test jobs with ReportGenerator and **fails if line coverage drops below 80%**. It does *not* re-run the tests — a ratchet; raise `MIN_LINE` as coverage grows. |
+| **DbMigrator Container Smoke** | Detect changes | backend changed | Publishes the `fsh-db-migrator` image (Dockerfile-less SDK publish) and runs `apply --catalog-only` against an ephemeral Postgres 17 - asserts it finishes successfully. Catches container-publish and DI-graph regressions. |
+| **Coverage Gate** | Unit + Integration | backend changed | **Merges** the coverage artifacts from the two test jobs with ReportGenerator and **fails if line coverage drops below 80%**. It does *not* re-run the tests - a ratchet; raise `MIN_LINE` as coverage grows. |
 | **Publish Dev Containers** | Unit + Integration | push to `main` | Publishes the API **and** DbMigrator images to GHCR tagged `dev-<sha>` and `dev-latest`. |
 | **Publish Release** | Unit + Integration | `v*` tag, or `workflow_dispatch` on `main` | Packs the `fsh` CLI + the `dotnet new` template, pushes both to NuGet.org, and publishes the API + DbMigrator images to GHCR tagged `<version>` and `latest`. |
-| **Backend CI** | the test, smoke, and coverage jobs | always | The single required status check. Always runs (even when the heavy jobs are skipped on a client-only PR) and fails only if a job it depends on actually **failed or was cancelled** — skipped is fine. Publish jobs are deliberately not gated on. |
+| **Backend CI** | the test, smoke, and coverage jobs | always | The single required status check. Always runs (even when the heavy jobs are skipped on a client-only PR) and fails only if a job it depends on actually **failed or was cancelled** - skipped is fine. Publish jobs are deliberately not gated on. |
 
 <Callout type="note" title="Why unit and integration coverage are merged, not re-run">
 Each test job collects coverage as it runs, and the **Coverage Gate** downloads both artifacts and merges them. Earlier the gate re-ran the whole solution on top of the dedicated test jobs, so every push tested the code twice. Merging keeps the same 80% floor while running each test exactly once.
 </Callout>
 
 <Callout type="note" title="The DbMigrator is smoke-tested as a container">
-The migrator smoke job publishes the **same** `fsh-db-migrator` image you run in production and applies migrations against a throwaway Postgres. That's why the migrator is the recommended production deploy step — see [Database Migrations](/docs/deployment/database-migrations/).
+The migrator smoke job publishes the **same** `fsh-db-migrator` image you run in production and applies migrations against a throwaway Postgres. That's why the migrator is the recommended production deploy step - see [Database Migrations](/docs/deployment/database-migrations/).
 </Callout>
 
 ### Required status checks and the gate jobs
 
-Because the pipelines are path-scoped, a client-only PR never starts the backend jobs — so a branch-protection rule that required, say, "Unit Tests" directly would block forever waiting on a check that never reports. To avoid that, each workflow ends with a small **gate job** — `Backend CI` and `Frontend CI` — that *always* runs and turns green when its side is skipped.
+Because the pipelines are path-scoped, a client-only PR never starts the backend jobs - so a branch-protection rule that required, say, "Unit Tests" directly would block forever waiting on a check that never reports. To avoid that, each workflow ends with a small **gate job** - `Backend CI` and `Frontend CI` - that *always* runs and turns green when its side is skipped.
 
-**Require only `Backend CI` and `Frontend CI`** in your branch ruleset on `main` — not the individual jobs. They resolve correctly for backend-only, frontend-only, and cross-cutting PRs alike.
+**Require only `Backend CI` and `Frontend CI`** in your branch ruleset on `main` - not the individual jobs. They resolve correctly for backend-only, frontend-only, and cross-cutting PRs alike.
 
 ### Releasing
 
-A release publishes exactly two **NuGet packages** — the `fsh` CLI tool and the `dotnet new` template — plus the **API and DbMigrator container images**. The distribution model is source-ownership: consumers get the full source via the template, not per-module/BuildingBlocks packages. Two ways to trigger it:
+A release publishes exactly two **NuGet packages** - the `fsh` CLI tool and the `dotnet new` template - plus the **API and DbMigrator container images**. The distribution model is source-ownership: consumers get the full source via the template, not per-module/BuildingBlocks packages. Two ways to trigger it:
 
 ```bash
 # Tag-driven (recommended): the tag name is the version
@@ -75,27 +75,27 @@ git tag v10.0.0 && git push origin v10.0.0
 need a `NUGET_API_KEY` repository secret to push packages to NuGet.org.
 </Callout>
 
-## frontend.yml — lint, build, E2E
+## frontend.yml - lint, build, E2E
 
 Triggers on pushes and PRs to `main` (and manual dispatch). A `Detect changes` job gates the work on `clients/**`. Both apps run as a matrix (`admin`, `dashboard`) on **Node 22** with npm caching.
 
 | Job | Runs when | What it does |
 |---|---|---|
 | **Detect changes** | always | Sets `frontend = true` on any push/dispatch, or on a PR when `clients/**` (or the workflow) changed. |
-| **Lint & Build** *(matrix)* | frontend changed | `npm ci`, `npm run lint` (ESLint), then `npm run build` — which is `tsc -b && vite build`, so it's the typecheck **and** the bundle gate. |
+| **Lint & Build** *(matrix)* | frontend changed | `npm ci`, `npm run lint` (ESLint), then `npm run build` - which is `tsc -b && vite build`, so it's the typecheck **and** the bundle gate. |
 | **E2E** *(matrix)* | frontend changed | `npm ci`, installs the Playwright Chromium browser, then `npm run test:e2e`. The Playwright config boots its own Vite dev server and mocks all API calls via `page.route()`, so **no backend is required**. Uploads the Playwright HTML report on failure. |
 | **Frontend CI** | always | The single required status check for the frontend side (same always-green-when-skipped behaviour as `Backend CI`). |
 
-## codeql.yml — security analysis
+## codeql.yml - security analysis
 
 Runs CodeQL (`csharp`) on pull requests to `main` scoped to `src/**`, plus a scheduled weekly scan. Uses the pinned SDK via `global.json`.
 
-## template-smoke.yml — distribution guard
+## template-smoke.yml - distribution guard
 
 Runs on changes to `.template.config/**`, `templates/**`, `clients/**`, or `src/**`. It proves a freshly scaffolded project actually builds:
 
-- **Scaffold (Aspire + React)** — packs the template, installs the `.nupkg`, runs `dotnet new fsh ... --aspire true --frontend true`, builds the backend (`-warnaserror`), builds **both** React apps (`npm ci && npm run build` on Node 22), and runs the Architecture tests on the scaffolded output.
-- **Scaffold (minimal)** — scaffolds backend-only (`--aspire false --frontend false`) and builds it, guarding the `//#if (frontend)` / `(!aspire)` conditional gating in `AppHost.cs` and the solution.
+- **Scaffold (Aspire + React)** - packs the template, installs the `.nupkg`, runs `dotnet new fsh ... --aspire true --frontend true`, builds the backend (`-warnaserror`), builds **both** React apps (`npm ci && npm run build` on Node 22), and runs the Architecture tests on the scaffolded output.
+- **Scaffold (minimal)** - scaffolds backend-only (`--aspire false --frontend false`) and builds it, guarding the `//#if (frontend)` / `(!aspire)` conditional gating in `AppHost.cs` and the solution.
 
 ## How CI feeds deployment
 
@@ -105,7 +105,7 @@ The image CI publishes is what you deploy. Reference it by its immutable tag in 
 container_image_tag = "v10.0.0"   # or a dev-<sha> tag from a main build
 ```
 
-Then deploy — see [Deploy to AWS with Terraform](/docs/deployment/aws-terraform/). For a fully automated path, run the one-command deploy from your own deploy workflow after the image is published.
+Then deploy - see [Deploy to AWS with Terraform](/docs/deployment/aws-terraform/). For a fully automated path, run the one-command deploy from your own deploy workflow after the image is published.
 
 ## Local parity
 

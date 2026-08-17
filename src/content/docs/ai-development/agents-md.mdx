@@ -8,11 +8,11 @@ sidebar:
 pageType: reference
 ---
 
-## AGENTS.md — the canonical guide
+## AGENTS.md - the canonical guide
 
 **AGENTS.md** at the repo root is the single source of truth for AI tools. It's deliberately lean: a
 repo map, the tech stack, full-stack build/run commands, a short list of "golden rules" that must never be
-broken, and an index pointing into `.agents/rules/`. Conventions are edited *there* — not in the bridges.
+broken, and an index pointing into `.agents/rules/`. Conventions are edited *there* - not in the bridges.
 
 **CLAUDE.md** (Claude Code) and **GEMINI.md** (Gemini CLI) are one-line bridges that import it:
 
@@ -23,7 +23,7 @@ The canonical project guide is **`AGENTS.md`** (tool-neutral). It is imported be
 @AGENTS.md
 ```
 
-So every tool — and every contributor — reads the same guide, and there's exactly one place to update.
+So every tool - and every contributor - reads the same guide, and there's exactly one place to update.
 
 <Callout type="note" title="Why lean?">
 Only the root guide loads into the agent's context on every session. Detailed conventions live in
@@ -54,9 +54,9 @@ AGENTS.md                     ← canonical guide (CLAUDE.md / GEMINI.md import 
     └── {workflow}.md
 ```
 
-## Rules — conventions, read on demand
+## Rules - conventions, read on demand
 
-A **rule** is knowledge the agent reads before working in an area — the conventions and the *footguns*
+A **rule** is knowledge the agent reads before working in an area - the conventions and the *footguns*
 that are easy to get wrong. Rules don't restate what the code or tests already enforce; they point at the
 enforcement and capture the non-obvious. The root `AGENTS.md` carries the index, e.g. *"before EF or
 migration work, read `database.md`."*
@@ -71,7 +71,7 @@ migration work, read `database.md`."*
 | CORS, security headers, rate limiting, idempotency, quotas | `security.md` |
 | SignalR / SSE · logging & OpenTelemetry | `realtime.md` · `logging.md` |
 | Unit tests · integration tests (Testcontainers) | `testing.md` · `integration-testing.md` |
-| Modifying `src/BuildingBlocks` (protected — read first) | `buildingblocks-protection.md` |
+| Modifying `src/BuildingBlocks` (protected - read first) | `buildingblocks-protection.md` |
 | A specific module's quirks | `modules/{module}.md` |
 | Any React work · the operator app · the tenant app | `frontend/shared.md` · `frontend/admin.md` · `frontend/dashboard.md` |
 

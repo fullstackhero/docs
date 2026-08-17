@@ -1,0 +1,84 @@
+---
+/**
+ * FolderTree - a styled repository/folder-structure explorer for MDX.
+ *
+ * Usage in MDX:
+ *   <FolderTree
+ *     root="src/"
+ *     caption="One repo · one process"
+ *     tree={[
+ *       { name: 'Modules/', note: 'Ten bounded contexts', children: [
+ *         { name: 'Identity/', children: [
+ *           { name: 'Modules.Identity.Contracts/', note: 'Public surface', highlight: true },
+ *         ]},
+ *         { name: 'Billing/', badge: '+ Contracts' },
+ *       ]},
+ *       { name: 'BuildingBlocks/', chips: ['Core', 'Web', 'Persistence'] },
+ *     ]}
+ *   />
+ *
+ * Replaces ASCII-art code blocks (├── └──) with a themed, responsive tree:
+ * indent guides, folder/file icons, dotted leaders to annotations, and
+ * brand-tinted badges/highlights. Node shape is documented in
+ * FolderTreeNode.astro.
+ */
+import FolderTreeNode from './FolderTreeNode.astro';
+
+interface TreeNode {
+  name: string;
+  note?: string;
+  badge?: string;
+  chips?: string[];
+  highlight?: boolean;
+  file?: boolean;
+  children?: TreeNode[];
+}
+
+interface Props {
+  /** Root label shown in the header bar, e.g. "src/". */
+  root?: string;
+  /** Optional mono eyebrow on the right of the header bar (hidden on mobile). */
+  caption?: string;
+  tree: TreeNode[];
+}
+
+const { root = '/', caption, tree } = Astro.props as Props;
+---
+
+<figure class="not-prose my-8 overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+  <figcaption
+    class="flex items-center justify-between gap-3 border-b border-border bg-subtle/50 px-4 py-2.5"
+  >
+    <span class="flex items-center gap-2 font-mono text-[12px] font-semibold text-foreground">
+      <svg
+        class="h-4 w-4 text-primary"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.75"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path
+          d="m6 14 1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H18a2 2 0 0 1 2 2v2"
+        />
+      </svg>
+      {root}
+    </span>
+    {caption && (
+      <span
+        class="hidden font-mono text-[10.5px] font-medium uppercase tracking-[0.16em] text-muted-foreground sm:block"
+      >
+        {caption}
+      </span>
+    )}
+  </figcaption>
+  <ul class="m-0 list-none space-y-0.5 p-2 sm:p-3">
+    {tree.map((node) => (
+      <FolderTreeNode node={node} />
+    ))}
+  </ul>
+</figure>

@@ -1,18 +1,18 @@
 ---
 title: Core building block
 lastUpdated: 2026-06-11
-description: The foundational types every module composes against — BaseEntity, AggregateRoot, DomainEvent, ICurrentUser, and the CustomException hierarchy.
+description: The foundational types every module composes against - BaseEntity, AggregateRoot, DomainEvent, ICurrentUser, and the CustomException hierarchy.
 sidebar:
   label: Core
   order: 1
 pageType: reference
 seo:
-  title: 'Core domain primitives in .NET 10 — BaseEntity'
+  title: 'Core domain primitives in .NET 10 - BaseEntity'
   description: 'The Core building block ships BaseEntity, AggregateRoot, DomainEvent, ICurrentUser, IHasTenant, ISoftDeletable, IGlobalEntity, and the CustomException…'
   keywords: '.net domain primitives, base entity dotnet, aggregate root .net, domain event record, ICurrentUser asp.net core'
 ---
 
-`FSH.Framework.Core` (package id) is the foundation every other module and building block depends on. It ships nothing runtime-active — no DI registrations, no middleware, no hosted services — just the **shared abstractions** every domain layer needs: entity bases, aggregate-root markers, the `DomainEvent` record, current-user / tenant interfaces, and the framework's exception hierarchy. Around **a few hundred lines** of interface + abstract-class definitions.
+`FSH.Framework.Core` (package id) is the foundation every other module and building block depends on. It ships nothing runtime-active - no DI registrations, no middleware, no hosted services - just the **shared abstractions** every domain layer needs: entity bases, aggregate-root markers, the `DomainEvent` record, current-user / tenant interfaces, and the framework's exception hierarchy. Around **a few hundred lines** of interface + abstract-class definitions.
 
 <Callout type="tip" title="Read this block first">
 If you're writing a new module, the first file you'll touch is the domain. Every aggregate inherits from one of the bases here. Get familiar with the contracts and the rest of the kit reads naturally.
@@ -22,17 +22,17 @@ If you're writing a new module, the first file you'll touch is the domain. Every
 
 ### Entity bases
 
-- **`BaseEntity<TId>`** — abstract; carries `Id` (protected setter), a private domain-event list surfaced as `DomainEvents`, a protected `AddDomainEvent(IDomainEvent)`, and `ClearDomainEvents()`. Every persisted entity inherits from this.
-- **`AggregateRoot<TId>`** — extends `BaseEntity<TId>`; a semantic marker for aggregate roots. It adds no members today — it exists so the type system says "this is a consistency boundary" and gives you a place for aggregate-wide helpers later.
-- **`IEntity<TId>`** — the minimal entity contract: a single `TId Id { get; }`.
+- **`BaseEntity<TId>`** - abstract; carries `Id` (protected setter), a private domain-event list surfaced as `DomainEvents`, a protected `AddDomainEvent(IDomainEvent)`, and `ClearDomainEvents()`. Every persisted entity inherits from this.
+- **`AggregateRoot<TId>`** - extends `BaseEntity<TId>`; a semantic marker for aggregate roots. It adds no members today - it exists so the type system says "this is a consistency boundary" and gives you a place for aggregate-wide helpers later.
+- **`IEntity<TId>`** - the minimal entity contract: a single `TId Id { get; }`.
 
 ### Cross-cutting interfaces
 
-- **`IHasTenant`** — `string TenantId { get; }`. A read-side convenience for entities that expose their tenant id as a real property. Note: tenant isolation itself does **not** key off this interface — `BaseDbContext` marks every entity `IsMultiTenant()` via Finbuckle unless it implements `IGlobalEntity` (see [Persistence](/docs/building-blocks/persistence/)).
-- **`IAuditableEntity`** — `CreatedOnUtc`, `CreatedBy`, `LastModifiedOnUtc`, `LastModifiedBy` (all `DateTimeOffset`-based). `AuditableEntitySaveChangesInterceptor` fills them in automatically.
-- **`ISoftDeletable`** — `IsDeleted`, `DeletedOnUtc`, `DeletedBy`. The named query filter `QueryFilters.SoftDelete` hides deleted rows by default; opt out surgically with `IgnoreQueryFilters([QueryFilters.SoftDelete])` (tenant scoping stays in force).
-- **`IHasDomainEvents`** — implemented by `BaseEntity`; surfaces the domain-event list so the `DomainEventsInterceptor` can dispatch them after SaveChanges.
-- **`IGlobalEntity`** — opt-out of tenant isolation for platform-wide rows (billing plans, impersonation grants, outbox/inbox messages).
+- **`IHasTenant`** - `string TenantId { get; }`. A read-side convenience for entities that expose their tenant id as a real property. Note: tenant isolation itself does **not** key off this interface - `BaseDbContext` marks every entity `IsMultiTenant()` via Finbuckle unless it implements `IGlobalEntity` (see [Persistence](/docs/building-blocks/persistence/)).
+- **`IAuditableEntity`** - `CreatedOnUtc`, `CreatedBy`, `LastModifiedOnUtc`, `LastModifiedBy` (all `DateTimeOffset`-based). `AuditableEntitySaveChangesInterceptor` fills them in automatically.
+- **`ISoftDeletable`** - `IsDeleted`, `DeletedOnUtc`, `DeletedBy`. The named query filter `QueryFilters.SoftDelete` hides deleted rows by default; opt out surgically with `IgnoreQueryFilters([QueryFilters.SoftDelete])` (tenant scoping stays in force).
+- **`IHasDomainEvents`** - implemented by `BaseEntity`; surfaces the domain-event list so the `DomainEventsInterceptor` can dispatch them after SaveChanges.
+- **`IGlobalEntity`** - opt-out of tenant isolation for platform-wide rows (billing plans, impersonation grants, outbox/inbox messages).
 
 ### Domain events
 
@@ -68,9 +68,9 @@ public sealed record ProductPriceChangedDomainEvent(
 
 ### Current-user + request context
 
-- **`ICurrentUser`** — the request-time view of the authenticated user: `Name`, `GetUserId()`, `GetUserEmail()`, `GetTenant()`, `IsAuthenticated()`, `IsInRole(role)`, `GetUserClaims()`.
-- **`ICurrentUserInitializer`** — implemented by the Identity module's `CurrentUserService`; populates `ICurrentUser` from the `ClaimsPrincipal` (`SetCurrentUser`) or a raw id (`SetCurrentUserId`, used by Hangfire's job activator). The kit's `CurrentUserMiddleware` calls `SetCurrentUser` right after authentication, before the endpoint runs.
-- **`IRequestContext`** — request metadata without an ASP.NET Core dependency: `IpAddress`, `UserAgent`, `ClientId` (from the `X-Client-Id` header), `Origin`.
+- **`ICurrentUser`** - the request-time view of the authenticated user: `Name`, `GetUserId()`, `GetUserEmail()`, `GetTenant()`, `IsAuthenticated()`, `IsInRole(role)`, `GetUserClaims()`.
+- **`ICurrentUserInitializer`** - implemented by the Identity module's `CurrentUserService`; populates `ICurrentUser` from the `ClaimsPrincipal` (`SetCurrentUser`) or a raw id (`SetCurrentUserId`, used by Hangfire's job activator). The kit's `CurrentUserMiddleware` calls `SetCurrentUser` right after authentication, before the endpoint runs.
+- **`IRequestContext`** - request metadata without an ASP.NET Core dependency: `IpAddress`, `UserAgent`, `ClientId` (from the `X-Client-Id` header), `Origin`.
 
 ### Exception hierarchy
 
@@ -90,7 +90,7 @@ All four are plain exception classes. `CustomException` carries an `ErrorMessage
 Every aggregate inherits one of the bases. Every persisted entity opts in or out of the cross-cutting interfaces:
 
 ```csharp
-// Example from Catalog (no TenantId property needed — Finbuckle adds the
+// Example from Catalog (no TenantId property needed - Finbuckle adds the
 // tenant column and filter automatically via BaseDbContext)
 public sealed class Product : AggregateRoot<Guid>, ISoftDeletable
 {
@@ -130,13 +130,13 @@ If you want every entity to track, say, `LastViewedAt`, add `IHasLastViewed` to 
 
 ### Add a new exception type
 
-Inherit `CustomException`, pass the right status code in the base constructor. Don't bypass the handler — keep the handler's RFC 9457 mapping as the single source of truth for HTTP error shape.
+Inherit `CustomException`, pass the right status code in the base constructor. Don't bypass the handler - keep the handler's RFC 9457 mapping as the single source of truth for HTTP error shape.
 
 ## Gotchas
 
 - **`AddDomainEvent` is `protected`** on `BaseEntity`. Domain events must be raised from inside the aggregate, not from a handler. That's by design: it keeps invariants and event emission co-located.
 - **`DomainEvent.Create<T>(factory)`** is the static helper that fills in `EventId` and `OccurredOnUtc` automatically. Use it; don't construct events manually with `Guid.NewGuid()` scattered through code.
-- **Inner exceptions never reach the response.** `CustomException` accepts an inner exception for logging/diagnostics, but the global handler only maps the message, `ErrorMessages`, and status code into ProblemDetails — keep the public message clean and let logs carry the cause.
+- **Inner exceptions never reach the response.** `CustomException` accepts an inner exception for logging/diagnostics, but the global handler only maps the message, `ErrorMessages`, and status code into ProblemDetails - keep the public message clean and let logs carry the cause.
 
 ## Critical files
 
@@ -148,6 +148,6 @@ Inherit `CustomException`, pass the right status code in the base constructor. D
 
 ## Related
 
-- [Persistence](/docs/building-blocks/persistence/) — `BaseDbContext` and the interceptors that consume these interfaces.
-- [Web](/docs/building-blocks/web/) — `CurrentUserMiddleware` populates `ICurrentUser`.
-- [Architecture overview](/docs/architecture/) — modular monolith + Vertical Slice patterns.
+- [Persistence](/docs/building-blocks/persistence/) - `BaseDbContext` and the interceptors that consume these interfaces.
+- [Web](/docs/building-blocks/web/) - `CurrentUserMiddleware` populates `ICurrentUser`.
+- [Architecture overview](/docs/architecture/) - modular monolith + Vertical Slice patterns.

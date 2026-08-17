@@ -1,7 +1,7 @@
 ---
 title: Eventing.Abstractions building block
 lastUpdated: 2026-06-11
-description: Dependency-free contracts for cross-module and cross-service events — IIntegrationEvent, IIntegrationEventHandler, IEventBus, IEventSerializer.
+description: Dependency-free contracts for cross-module and cross-service events - IIntegrationEvent, IIntegrationEventHandler, IEventBus, IEventSerializer.
 sidebar:
   label: Eventing.Abstractions
   order: 6
@@ -12,7 +12,7 @@ seo:
   keywords: 'integration event interface dotnet, ieventbus .net, event-driven architecture .net 10, dependency free event contracts'
 ---
 
-The Eventing.Abstractions block exists for one reason: **contracts assemblies should not pull in EF Core, RabbitMQ, or the Eventing runtime when they declare an event.** This block has zero NuGet dependencies — just five interfaces. It's the smallest building block in the kit.
+The Eventing.Abstractions block exists for one reason: **contracts assemblies should not pull in EF Core, RabbitMQ, or the Eventing runtime when they declare an event.** This block has zero NuGet dependencies - just five interfaces. It's the smallest building block in the kit.
 
 <Callout type="tip" title="Reference this block from .Contracts, the runtime from the module">
 A module's `*.Contracts` assembly references **only** `Eventing.Abstractions`. The module's runtime assembly references both this block and the heavier `Eventing` block (which carries the EF Core / RabbitMQ implementations). That keeps cross-module dependencies one-way, contract-only, and lightweight.
@@ -53,7 +53,7 @@ public interface IEventSerializer
     IIntegrationEvent? Deserialize(string payload, string eventTypeName);
 }
 
-// IEventTenantScope.cs — ambient tenant context for event dispatch
+// IEventTenantScope.cs - ambient tenant context for event dispatch
 public interface IEventTenantScope
 {
     IDisposable Begin(string? tenantId);
@@ -69,7 +69,7 @@ src/Modules/Notifications/
 ├── Modules.Notifications.Contracts/
 │   └── (no references except Eventing.Abstractions + Core)
 └── Modules.Notifications/
-    └── (references Eventing — gets InMemoryEventBus, OutboxDispatcher, etc.)
+    └── (references Eventing - gets InMemoryEventBus, OutboxDispatcher, etc.)
 
 src/Modules/Chat/
 ├── Modules.Chat.Contracts/
@@ -84,7 +84,7 @@ When Chat publishes a `MentionedInChannelIntegrationEvent`, Notifications consum
 
 ## How modules consume the contracts
 
-Define a custom event in your contracts assembly — this is Chat's real mention event:
+Define a custom event in your contracts assembly - this is Chat's real mention event:
 
 ```csharp
 // src/Modules/Chat/Modules.Chat.Contracts/Events/MentionedInChannelIntegrationEvent.cs
@@ -129,10 +129,10 @@ public sealed class MentionedInChannelNotifyHandler(/* deps */)
 
 ## Gotchas
 
-- **No base class.** `IIntegrationEvent` is a pure interface. Use sealed records to implement it; do not invent a base class in this block — it would force every contracts assembly to pull in that base type's transitive deps.
+- **No base class.** `IIntegrationEvent` is a pure interface. Use sealed records to implement it; do not invent a base class in this block - it would force every contracts assembly to pull in that base type's transitive deps.
 - **`Source` is a free-form string.** Use the canonical module name (`Modules.Tickets`, `Modules.Chat`) so logs and diagnostics stay greppable.
-- **`TenantId` is a nullable string.** Global, non-tenant-scoped events carry a null `TenantId`; consumers that key on tenant must guard (the Webhooks fanout handler skips null-tenant events entirely). The tenant id also drives `IEventTenantScope` — a null id leaves the ambient tenant context unchanged.
-- **`CorrelationId` is a non-nullable string.** It exists to tie events back to the request/trace that caused them — propagate the incoming correlation id, don't invent a new one mid-chain.
+- **`TenantId` is a nullable string.** Global, non-tenant-scoped events carry a null `TenantId`; consumers that key on tenant must guard (the Webhooks fanout handler skips null-tenant events entirely). The tenant id also drives `IEventTenantScope` - a null id leaves the ambient tenant context unchanged.
+- **`CorrelationId` is a non-nullable string.** It exists to tie events back to the request/trace that caused them - propagate the incoming correlation id, don't invent a new one mid-chain.
 - **Handler registration is open-generic friendly.** The Webhooks module registers `WebhookFanoutHandler<TEvent>` against the open `IIntegrationEventHandler<>`, so one handler type covers every event. If you do this, be deliberate about the side effects.
 
 ## Critical files
@@ -145,6 +145,6 @@ public sealed class MentionedInChannelNotifyHandler(/* deps */)
 
 ## Related
 
-- [Eventing](/docs/building-blocks/eventing/) — the implementation block with `InMemoryEventBus`, `RabbitMqEventBus`, outbox/inbox stores.
-- [Webhooks module](/docs/modules/webhooks/) — uses the open-generic `IIntegrationEventHandler<>` pattern to fan every event to subscribers.
-- [Notifications module](/docs/modules/notifications/) — consumes integration events into per-user inbox rows.
+- [Eventing](/docs/building-blocks/eventing/) - the implementation block with `InMemoryEventBus`, `RabbitMqEventBus`, outbox/inbox stores.
+- [Webhooks module](/docs/modules/webhooks/) - uses the open-generic `IIntegrationEventHandler<>` pattern to fan every event to subscribers.
+- [Notifications module](/docs/modules/notifications/) - consumes integration events into per-user inbox rows.

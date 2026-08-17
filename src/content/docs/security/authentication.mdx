@@ -7,15 +7,15 @@ sidebar:
   order: 1
 pageType: concept
 seo:
-  title: 'Authentication in .NET 10 — JWT bearer + rotating refresh'
-  description: 'How fullstackhero handles authentication — ASP.NET Identity backed by JWT bearer tokens with rotating refresh, 5-attempt lockout, password policy…'
+  title: 'Authentication in .NET 10 - JWT bearer + rotating refresh'
+  description: 'How fullstackhero handles authentication - ASP.NET Identity backed by JWT bearer tokens with rotating refresh, 5-attempt lockout, password policy…'
   keywords: 'jwt bearer .net 10, refresh token rotation, asp.net identity password policy, email confirmation flow dotnet, login lockout'
 ---
 
 The Identity module owns authentication. Login goes through `POST /api/v1/identity/token/issue` and returns an access token (45 minutes in the shipped config) and a refresh token (7 days). The access token is signed with `JwtOptions:SigningKey`; the refresh token is stored as a SHA-256 hash on the user and **rotated on every refresh** to limit replay damage if it leaks. Both endpoints (and every other auth-flow endpoint) carry the kit's `auth` rate-limit policy.
 
 <Callout type="tip" title="One signing key per environment, never the dev key">
-Set `JwtOptions:SigningKey` via a secrets manager — never check it into git. The repo ships a well-known dev-only key in `appsettings.Development.json`; the base and production config leave it empty, and startup validation **refuses to boot** with an empty key, a key under 32 characters, or the sample `replace-with-…` placeholder. That guard exists so a forgotten key can't silently make your tokens forgeable.
+Set `JwtOptions:SigningKey` via a secrets manager - never check it into git. The repo ships a well-known dev-only key in `appsettings.Development.json`; the base and production config leave it empty, and startup validation **refuses to boot** with an empty key, a key under 32 characters, or the sample `replace-with-…` placeholder. That guard exists so a forgotten key can't silently make your tokens forgeable.
 </Callout>
 
 ## What ships
@@ -23,12 +23,12 @@ Set `JwtOptions:SigningKey` via a secrets manager — never check it into git. T
 - **JWT bearer** via `Microsoft.AspNetCore.Authentication.JwtBearer`.
 - **ASP.NET Identity** on top of `FshUser : IdentityUser` and `FshRole : IdentityRole`.
 - **Refresh tokens** stored hashed (SHA-256) in `FshUser.RefreshToken` with `RefreshTokenExpiryTime`; rotated on each `/token/refresh`.
-- **Per-device sessions** — every login opens a `UserSession` (IP, user agent, device/browser/OS) keyed to the refresh-token hash; sessions can be listed and revoked, including admin revoke-all.
-- **Lockout** — 5 consecutive failed attempts triggers a 15-minute lockout.
-- **Password rules** — 10-character minimum with digit, lowercase, and uppercase required (`IdentityOptions`); history, expiry, and warning windows via `PasswordPolicy:*`.
-- **Email confirmation** — new users start with `EmailConfirmed = false` and cannot mint tokens until the confirm-email flow completes.
-- **Two-factor TOTP** — opt-in per user; once enrolled, `token/issue` requires the TOTP code (see [two-factor authentication](/docs/security/two-factor/)).
-- **Rate-limited endpoints** — token issue, refresh, confirm-email, resend-confirmation, forgot-password, reset-password, and self-register all carry the `auth` policy (10/min per user-or-IP by default — note `RateLimitingOptions:Enabled` is `false` in the base config and `true` in `appsettings.Production.json`).
+- **Per-device sessions** - every login opens a `UserSession` (IP, user agent, device/browser/OS) keyed to the refresh-token hash; sessions can be listed and revoked, including admin revoke-all.
+- **Lockout** - 5 consecutive failed attempts triggers a 15-minute lockout.
+- **Password rules** - 10-character minimum with digit, lowercase, and uppercase required (`IdentityOptions`); history, expiry, and warning windows via `PasswordPolicy:*`.
+- **Email confirmation** - new users start with `EmailConfirmed = false` and cannot mint tokens until the confirm-email flow completes.
+- **Two-factor TOTP** - opt-in per user; once enrolled, `token/issue` requires the TOTP code (see [two-factor authentication](/docs/security/two-factor/)).
+- **Rate-limited endpoints** - token issue, refresh, confirm-email, resend-confirmation, forgot-password, reset-password, and self-register all carry the `auth` policy (10/min per user-or-IP by default - note `RateLimitingOptions:Enabled` is `false` in the base config and `true` in `appsettings.Production.json`).
 
 ## Configuration
 
@@ -74,23 +74,23 @@ POST /api/v1/identity/token/issue
 
 The access token carries the standard claims plus:
 
-- `sub` / `email` / `name` — RFC 7519 short forms (legacy `ClaimTypes.*` equivalents are also emitted)
-- `tenant` — the resolved tenant at login time
-- `fullName`, `image_url` — display conveniences
-- **role claims** — the user's direct roles plus any roles inherited via groups
+- `sub` / `email` / `name` - RFC 7519 short forms (legacy `ClaimTypes.*` equivalents are also emitted)
+- `tenant` - the resolved tenant at login time
+- `fullName`, `image_url` - display conveniences
+- **role claims** - the user's direct roles plus any roles inherited via groups
 
-Note what's *not* there: permissions. Permission checks resolve server-side from a cached per-user permission set — see [authorization](/docs/security/authorization/). That keeps tokens small and lets permission changes apply to live sessions.
+Note what's *not* there: permissions. Permission checks resolve server-side from a cached per-user permission set - see [authorization](/docs/security/authorization/). That keeps tokens small and lets permission changes apply to live sessions.
 
 ## Refresh token rotation
 
 `POST /api/v1/identity/token/refresh` takes the expiring access token plus the refresh token. The handler:
 
 1. Hashes the presented refresh token and looks up the matching user; rejects if expired.
-2. Validates the **session** tied to that refresh-token hash — a revoked session kills the refresh even if the token itself is still valid.
+2. Validates the **session** tied to that refresh-token hash - a revoked session kills the refresh even if the token itself is still valid.
 3. Cross-checks the access token's subject against the refresh token's owner.
 4. Issues a fresh access **and** refresh token, overwrites the stored hash, and re-keys the session to the new refresh-token hash.
 
-Presenting the same refresh token twice fails with 401 on the second attempt — a signal that either replay-after-rotation happened, or your client is misconfigured (sending the same token in parallel). Every rotation is recorded in the security audit log (`TokenRevoked: RefreshTokenRotated`, then `TokenIssued`).
+Presenting the same refresh token twice fails with 401 on the second attempt - a signal that either replay-after-rotation happened, or your client is misconfigured (sending the same token in parallel). Every rotation is recorded in the security audit log (`TokenRevoked: RefreshTokenRotated`, then `TokenIssued`).
 
 ## Sessions and revocation
 
@@ -128,7 +128,7 @@ Lockout is configured in `IdentityOptions` (in `IdentityModule`):
 - A successful login resets the failed-attempt counter.
 - A locked account gets HTTP **423 Locked**, not a generic 401.
 
-This stacks with the [rate-limit `auth` policy](/docs/cross-cutting-concerns/rate-limiting/) — rate limiting throttles abusive callers regardless of identity; lockout protects individual user accounts even from low-rate but persistent attackers.
+This stacks with the [rate-limit `auth` policy](/docs/cross-cutting-concerns/rate-limiting/) - rate limiting throttles abusive callers regardless of identity; lockout protects individual user accounts even from low-rate but persistent attackers.
 
 ## What authentication doesn't do
 
@@ -138,8 +138,8 @@ This stacks with the [rate-limit `auth` policy](/docs/cross-cutting-concerns/rat
 
 ## Related
 
-- [Authorization](/docs/security/authorization/) — what gets gated after authentication.
-- [Two-factor authentication](/docs/security/two-factor/) — TOTP enrolment + verification.
-- [Impersonation](/docs/security/impersonation/) — operator impersonation grants.
-- [Identity module](/docs/modules/identity/) — the full implementation.
-- [Rate limiting](/docs/cross-cutting-concerns/rate-limiting/) — the auth-flow throttle.
+- [Authorization](/docs/security/authorization/) - what gets gated after authentication.
+- [Two-factor authentication](/docs/security/two-factor/) - TOTP enrolment + verification.
+- [Impersonation](/docs/security/impersonation/) - operator impersonation grants.
+- [Identity module](/docs/modules/identity/) - the full implementation.
+- [Rate limiting](/docs/cross-cutting-concerns/rate-limiting/) - the auth-flow throttle.

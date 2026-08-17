@@ -1,8 +1,8 @@
-# Production Docker Deploy — Design
+# Production Docker Deploy - Design
 
 **Date:** 2026-05-19
 **Status:** Approved
-**Scope:** v1 punchlist — Infra section
+**Scope:** v1 punchlist - Infra section
 
 ## Goals
 
@@ -53,7 +53,7 @@ Specifically:
 - **Hardening bundled:** `ContainerUser=$APP_UID` +
   `ContainerFamily=noble-chiseled` on API and DbMigrator csprojs.
 - **.env location:** single `deploy/docker/.env.example`. No
-  repo-root env file (it would have to serve too many masters —
+  repo-root env file (it would have to serve too many masters -
   dotnet user-secrets, docker, future k8s).
 
 ## Architecture
@@ -126,7 +126,7 @@ deploy/docker/
 
 Multi-stage build.
 
-**Stage 1 (`node:22-alpine`)** — install + build:
+**Stage 1 (`node:22-alpine`)** - install + build:
 
 ```dockerfile
 WORKDIR /app
@@ -138,10 +138,10 @@ RUN npm run build
 
 The build emits hashed asset bundles to `dist/`. The bundle uses
 `fetch('/config.json')` before React mounts (already established
-behaviour — covered by the existing app code path that previously read
+behaviour - covered by the existing app code path that previously read
 `VITE_API_URL`; the refactor to fetch-then-mount is part of this PR).
 
-**Stage 2 (`nginx:alpine`)** — serve:
+**Stage 2 (`nginx:alpine`)** - serve:
 
 ```dockerfile
 WORKDIR /usr/share/nginx/html
@@ -165,7 +165,7 @@ envsubst < /usr/share/nginx/html/config.json.template \
 exec nginx -g 'daemon off;'
 ```
 
-**`nginx.conf`** — SPA fallback, asset caching, security headers, no
+**`nginx.conf`** - SPA fallback, asset caching, security headers, no
 caching on `config.json`:
 
 ```nginx
@@ -174,13 +174,13 @@ server {
   root /usr/share/nginx/html;
   index index.html;
 
-  # immutable hashed assets — long-lived
+  # immutable hashed assets - long-lived
   location ~* \.(?:js|css|woff2?|png|jpg|svg|ico)$ {
     expires 1y;
     add_header Cache-Control "public, immutable";
   }
 
-  # runtime config — must be re-fetched on every deploy
+  # runtime config - must be re-fetched on every deploy
   location = /config.json {
     add_header Cache-Control "no-store";
   }
@@ -195,7 +195,7 @@ server {
 }
 ```
 
-**`config.json.template`** — literally `{ "apiUrl": "${FSH_API_URL}" }`.
+**`config.json.template`** - literally `{ "apiUrl": "${FSH_API_URL}" }`.
 
 ### App boot refactor (admin + dashboard)
 
@@ -343,7 +343,7 @@ Notes:
 - The .NET host projects ship a hand-written multi-stage Dockerfile
   (build stage `mcr.microsoft.com/dotnet/sdk:10.0`, runtime stage
   `mcr.microsoft.com/dotnet/nightly/aspnet:10.0-noble-chiseled`).
-  We do NOT call the SDK's `PublishContainer` target from compose —
+  We do NOT call the SDK's `PublishContainer` target from compose -
   that target is great in CI where it pushes to GHCR, but it doesn't
   produce a Dockerfile compose can `build:` against. The two flows
   coexist: CI uses `PublishContainer` for GHCR; compose uses the
@@ -355,7 +355,7 @@ Notes:
 
 ```dotenv
 # ──────────────────────────────────────────────────────────────────────
-# FullStackHero — production docker-compose configuration.
+# FullStackHero - production docker-compose configuration.
 # Copy to `.env` and edit. NEVER commit the .env file.
 # ──────────────────────────────────────────────────────────────────────
 
@@ -376,7 +376,7 @@ FSH_ADMIN_PORT=8081
 FSH_DASHBOARD_PORT=8082
 
 # ── Secrets ─────────────────────────────────────────────────────────
-# JWT signing key — 32+ chars. Generate with:
+# JWT signing key - 32+ chars. Generate with:
 #   openssl rand -base64 48
 JWT_SIGNING_KEY=
 
@@ -410,7 +410,7 @@ OTEL_EXPORTER_OTLP_ENDPOINT=
   images. Running as that user drops root inside the container.
 - `noble-chiseled` swaps the base from `mcr.microsoft.com/dotnet/aspnet:10.0`
   (≈210 MB) to `mcr.microsoft.com/dotnet/nightly/aspnet:10.0-noble-chiseled`
-  (≈95 MB). No shell, no apt, no debugging tooling — just the .NET
+  (≈95 MB). No shell, no apt, no debugging tooling - just the .NET
   runtime. Smaller pull + smaller CVE surface.
 
 Verify post-change: API still mints the auth pipeline correctly,
@@ -423,7 +423,7 @@ Five-minute deploy guide:
 1. Prereqs: docker engine 24+ with compose plugin, 2 GB RAM, ports
    8080–8082 free on the host.
 2. `cp .env.example .env && $EDITOR .env`. The required-to-set
-   variables are flagged with `:?` in the compose file — compose will
+   variables are flagged with `:?` in the compose file - compose will
    refuse to start until they're set.
 3. `docker compose up -d --build` (first run downloads bases + builds
    four images, ~5 min).
@@ -460,7 +460,7 @@ endpoint env vars at the managed endpoints, `docker compose up -d`.
 | Failure | Surfaced as | Recovery |
 |---|---|---|
 | Missing required env var | Compose refuses to start, names the var | Set in `.env`, retry |
-| Migrator can't reach Postgres | `migrator` exits 1, API never starts | Already handled — `WaitForDatabaseAsync` 12 retries × 10s |
+| Migrator can't reach Postgres | `migrator` exits 1, API never starts | Already handled - `WaitForDatabaseAsync` 12 retries × 10s |
 | `Seed:DefaultAdminPassword` empty | Migrator throws at seed step | Already implemented in `IdentityDbInitializer.ResolveInitialAdminPassword` |
 | `JWT_SIGNING_KEY` empty or placeholder | Host throws at `ValidateOnStart` | Already implemented in `JwtOptions.Validate` |
 | Migrator succeeded once, schema drift on update | `git pull && docker compose up -d --build`; migrator re-runs idempotently | Built-in |
@@ -479,7 +479,7 @@ Manual + scripted smoke for v1:
 4. Hit admin via browser pointed at the host:port directly; sign in
    with the seeded admin; create a tenant; confirm webhook +
    notifications work.
-5. `docker compose down && docker compose up -d` (no `--build`) — data
+5. `docker compose down && docker compose up -d` (no `--build`) - data
    in `pg_data`, `redis_data`, `minio_data` volumes survives.
 6. `docker compose down -v` to wipe; re-up; confirm the stack
    re-seeds cleanly.
@@ -489,13 +489,13 @@ that runs steps 1–3 against the built compose (no browser).
 
 ## Implementation order
 
-1. `.dockerignore` at repo root — gets the build contexts under
+1. `.dockerignore` at repo root - gets the build contexts under
    control before any Dockerfile lands.
 2. Frontend `main.tsx` refactor: fetch `/config.json` → window-shim →
    mount React. Same change applied to admin and dashboard. `public/config.json`
    added with dev defaults so `npm run dev` keeps working.
 3. Frontend Dockerfiles + nginx + entrypoint + template (admin first,
-   then dashboard — same shape, copy across). Smoke each via
+   then dashboard - same shape, copy across). Smoke each via
    `docker build` + `docker run -p 8081:80 -e FSH_API_URL=http://localhost:5000`.
 4. .NET Dockerfiles for API + DbMigrator (multi-stage, SDK build →
    aspnet-chiseled runtime).
@@ -512,10 +512,10 @@ that runs steps 1–3 against the built compose (no browser).
 
 ## Out of scope (explicit deferrals)
 
-- Helm chart / k8s manifests — v1.1.
-- Multi-arch images — separate PR on the publish workflow.
-- `azd up` for Azure Container Apps — v1.1.
-- Built-in reverse proxy / TLS — operator owns the edge.
-- "Localhost demo" mode for this compose — Aspire is the local dev path.
+- Helm chart / k8s manifests - v1.1.
+- Multi-arch images - separate PR on the publish workflow.
+- `azd up` for Azure Container Apps - v1.1.
+- Built-in reverse proxy / TLS - operator owns the edge.
+- "Localhost demo" mode for this compose - Aspire is the local dev path.
 - Per-environment compose overlays (`docker-compose.staging.yml` etc.)
-  — operators can layer with `-f` themselves; we don't ship variants.
+  - operators can layer with `-f` themselves; we don't ship variants.

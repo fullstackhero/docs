@@ -1,6 +1,6 @@
 ---
 /**
- * StackAtAGlance — section 01, the marquee opener after the Hero.
+ * StackAtAGlance - section 01, the marquee opener after the Hero.
  * A bento grid stating exactly what you're running, the moment you clone.
  * Two wide "marquee" cells (.NET 10, Multitenancy) anchor a diagonal rhythm;
  * the rest are compact pillars. Staggered scroll-reveal, on-brand green system.
@@ -23,7 +23,7 @@ const cells: Cell[] = [
     icon: 'lucide:server',
     tag: 'Backend',
     title: '.NET 10',
-    desc: 'Minimal APIs, Mediator, and EF Core 10 on the latest LTS — C# 14, source-generated, fast.',
+    desc: 'Minimal APIs, Mediator, and EF Core 10 on the latest LTS - C# 14, source-generated, fast.',
     span: 'lg:col-span-2',
     marquee: true,
   },
@@ -50,7 +50,7 @@ const cells: Cell[] = [
     icon: 'lucide:container',
     tag: 'Deploy',
     title: 'Docker Compose',
-    desc: 'A production compose file in the box — ship it anywhere.',
+    desc: 'A production compose file in the box - ship it anywhere.',
   },
   {
     icon: 'lucide:cloud',
@@ -62,7 +62,7 @@ const cells: Cell[] = [
     icon: 'lucide:building-2',
     tag: 'Tenancy · built-in',
     title: 'Multitenancy',
-    desc: 'Finbuckle-powered tenant isolation across every module and DbContext — claim, header, or query-string resolution.',
+    desc: 'Finbuckle-powered tenant isolation across every module and DbContext - claim, header, or query-string resolution.',
     span: 'lg:col-span-2',
     marquee: true,
   },
@@ -70,7 +70,7 @@ const cells: Cell[] = [
 ---
 
 <section class="relative isolate overflow-hidden border-t border-border" id="stack">
-  {/* Airy radial glow — keeps the bento the focus; distinct from CodeFirst's dot-grid below */}
+  {/* Airy radial glow - keeps the bento the focus; distinct from CodeFirst's dot-grid below */}
   <div
     aria-hidden="true"
     class="pointer-events-none absolute inset-0 -z-10"
@@ -95,7 +95,7 @@ const cells: Cell[] = [
         </span>
       </h2>
       <p class="mt-5 text-[15.5px] leading-relaxed text-muted-foreground sm:text-[16.5px]">
-        The unglamorous infrastructure every product needs — already chosen, already connected. Sensible,
+        The unglamorous infrastructure every product needs - already chosen, already connected. Sensible,
         production-grade defaults, and nothing you can't swap.
       </p>
     </div>
@@ -157,7 +157,7 @@ const cells: Cell[] = [
 </section>
 
 <style>
-  /* Card polish — soft lift via shadow + border only (no transform, so it
+  /* Card polish - soft lift via shadow + border only (no transform, so it
      never fights the reveal animation's translate). */
   .stack-cell {
     transition: border-color 240ms ease, box-shadow 240ms ease, background-color 240ms ease;
@@ -167,7 +167,7 @@ const cells: Cell[] = [
     box-shadow: 0 14px 40px -22px color-mix(in oklab, var(--primary) 38%, transparent);
   }
 
-  /* Staggered scroll-reveal — armed only when JS runs (progressive
+  /* Staggered scroll-reveal - armed only when JS runs (progressive
      enhancement: no-JS / reduced-motion users see everything immediately). */
   .fsh-stack.is-armed .stack-cell {
     opacity: 0;

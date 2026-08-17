@@ -7,7 +7,7 @@ sidebar:
   order: 5
 pageType: reference
 seo:
-  title: 'HybridCache + Redis in .NET 10 — fullstackhero Caching block'
+  title: 'HybridCache + Redis in .NET 10 - fullstackhero Caching block'
   description: 'How the Caching building block configures HybridCache (L1 in-memory + L2 Redis) with stampede protection, OpenTelemetry metrics, a shared Redis multiplexer…'
   keywords: 'hybridcache .net 10, hybridcache redis backplane, l1 l2 cache dotnet, stampede protection .net, opentelemetry cache metrics'
 ---
@@ -22,12 +22,12 @@ HybridCache coalesces concurrent identical requests into a single source fetch a
 
 ### Extension
 
-- **`AddHeroCaching(services, configuration)`** — wires HybridCache + L2 + the OTel decorator. Reads `CachingOptions`.
+- **`AddHeroCaching(services, configuration)`** - wires HybridCache + L2 + the OTel decorator. Reads `CachingOptions`.
 
 ### Decorator
 
-- **`ObservableHybridCache(inner)`** — wraps the framework `HybridCache` to emit:
-  - `fsh.cache.hits` / `fsh.cache.misses` (OTel counters; L1 and L2 hits are both counted as "hit" — HybridCache doesn't surface which layer served the read)
+- **`ObservableHybridCache(inner)`** - wraps the framework `HybridCache` to emit:
+  - `fsh.cache.hits` / `fsh.cache.misses` (OTel counters; L1 and L2 hits are both counted as "hit" - HybridCache doesn't surface which layer served the read)
   - `fsh.cache.invalidations` (OTel counter; `RemoveAsync` + `RemoveByTagAsync`)
   - `fsh.cache.factory.duration` (OTel histogram, ms; recorded only on a miss)
   - Activities under `ActivitySource("FSH.Caching")` with `cache.system`, `cache.key`, `cache.hit` (or `cache.tag`) tags.
@@ -35,16 +35,16 @@ HybridCache coalesces concurrent identical requests into a single source fetch a
 ### Options
 
 - **`CachingOptions`**:
-  - `Redis` — connection string; empty falls back to in-memory `DistributedMemoryCache`
-  - `EnableSsl` — TLS toggle (defaults to inference from the connection string)
-  - `DefaultExpiration` — TimeSpan; default 1 hour, applies to L1 + L2
-  - `DefaultLocalCacheExpiration` — TimeSpan; default 2 minutes; bounds cross-node staleness after RemoveByTag on peers
-  - `MaximumKeyLength` — default 1024 chars; longer keys are rejected
-  - `MaximumPayloadBytes` — default 1 MB; larger payloads are silently skipped
+  - `Redis` - connection string; empty falls back to in-memory `DistributedMemoryCache`
+  - `EnableSsl` - TLS toggle (defaults to inference from the connection string)
+  - `DefaultExpiration` - TimeSpan; default 1 hour, applies to L1 + L2
+  - `DefaultLocalCacheExpiration` - TimeSpan; default 2 minutes; bounds cross-node staleness after RemoveByTag on peers
+  - `MaximumKeyLength` - default 1024 chars; longer keys are rejected
+  - `MaximumPayloadBytes` - default 1 MB; larger payloads are silently skipped
 
 ### Telemetry helper
 
-- **`CachingTelemetry`** — the `ActivitySource` + meter the decorator emits (both named `FSH.Caching`, exposed as `ActivitySourceName` / `MeterName` constants). Wire them into the OTel pipeline via `metrics.AddMeter(...)` / `tracing.AddSource(...)`.
+- **`CachingTelemetry`** - the `ActivitySource` + meter the decorator emits (both named `FSH.Caching`, exposed as `ActivitySourceName` / `MeterName` constants). Wire them into the OTel pipeline via `metrics.AddMeter(...)` / `tracing.AddSource(...)`.
 
 ## How modules consume it
 
@@ -87,7 +87,7 @@ Identity uses HybridCache for per-user permission sets (`UserPermissionService`,
 }
 ```
 
-When `Redis` is empty the block falls back to in-memory L2 (`DistributedMemoryCache`) — fine for dev/test, **not** for multi-instance production. Always set Valkey (or another distributed cache) for production.
+When `Redis` is empty the block falls back to in-memory L2 (`DistributedMemoryCache`) - fine for dev/test, **not** for multi-instance production. Always set Valkey (or another distributed cache) for production.
 
 ## How to extend
 
@@ -108,7 +108,7 @@ public sealed class MyRedisService(IConnectionMultiplexer redis)
 
 ### Add another decorator
 
-Decorate the registered `HybridCache` with another wrapper to add e.g. circuit-breaker logic. Pull the existing descriptor out of the service collection, register your decorator, and chain — `ObservableHybridCache` does this exact dance for OTel.
+Decorate the registered `HybridCache` with another wrapper to add e.g. circuit-breaker logic. Pull the existing descriptor out of the service collection, register your decorator, and chain - `ObservableHybridCache` does this exact dance for OTel.
 
 ### Pre-warm on startup
 
@@ -116,9 +116,9 @@ Resolve `HybridCache` from a hosted service and `GetOrCreateAsync` your hot keys
 
 ## Gotchas
 
-- **L1 has no backplane.** After `RemoveByTag` on one instance, peer instances' L1 copies aren't invalidated. The `DefaultLocalCacheExpiration` (2 min default) bounds the staleness window — don't set it too high if you rely on fast invalidation.
+- **L1 has no backplane.** After `RemoveByTag` on one instance, peer instances' L1 copies aren't invalidated. The `DefaultLocalCacheExpiration` (2 min default) bounds the staleness window - don't set it too high if you rely on fast invalidation.
 - **Payload size cap is silent.** Entries larger than `MaximumPayloadBytes` are skipped (with a warning log), not stored. If your hot-path cache value is suddenly 1.5 MB, lookup will miss every time. Log-search for "payload too large" warnings before assuming the cache is broken.
-- **One multiplexer, two consumers.** Caching and DataProtection key persistence share the same `IConnectionMultiplexer`. The SignalR backplane (`AddHeroRealtime`) reads the same `CachingOptions:Redis` string but opens its **own** connection — so a multi-instance host with realtime enabled holds two Valkey connections, not one.
+- **One multiplexer, two consumers.** Caching and DataProtection key persistence share the same `IConnectionMultiplexer`. The SignalR backplane (`AddHeroRealtime`) reads the same `CachingOptions:Redis` string but opens its **own** connection - so a multi-instance host with realtime enabled holds two Valkey connections, not one.
 - **`DistributedMemoryCache` is per-process.** Two instances of the API can't see each other's cache. This is intentional for test fixtures; if you accidentally ship it to multi-instance prod, multi-tenant cache invalidation breaks. Always check `CachingOptions:Redis` is set in production config.
 
 ## Critical files
@@ -130,6 +130,6 @@ Resolve `HybridCache` from a hosted service and `GetOrCreateAsync` your hot keys
 
 ## Related
 
-- [Web](/docs/building-blocks/web/) — `FshPlatformOptions.EnableCaching` toggle.
-- [Multitenancy module](/docs/modules/multitenancy/) — uses HybridCache as the `DistributedCacheStore`.
-- [Chat module](/docs/modules/chat/) — typing-indicator throttle uses the cache.
+- [Web](/docs/building-blocks/web/) - `FshPlatformOptions.EnableCaching` toggle.
+- [Multitenancy module](/docs/modules/multitenancy/) - uses HybridCache as the `DistributedCacheStore`.
+- [Chat module](/docs/modules/chat/) - typing-indicator throttle uses the cache.

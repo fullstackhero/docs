@@ -10,56 +10,56 @@ pageType: reference
 
 Rules are knowledge; **skills** and **workflows** are action.
 
-- A **skill** (`.agents/skills/{name}/SKILL.md`) is a *verb* — a repeatable, footgun-aware recipe for one task that ends in a green build/test. The agent reaches for it when your request matches its description.
-- A **workflow** (`.agents/workflows/{name}.md`) is *orchestration* — it sequences skills and adds review/verification. Workflows delegate the code recipe to the skills rather than duplicating them.
+- A **skill** (`.agents/skills/{name}/SKILL.md`) is a *verb* - a repeatable, footgun-aware recipe for one task that ends in a green build/test. The agent reaches for it when your request matches its description.
+- A **workflow** (`.agents/workflows/{name}.md`) is *orchestration* - it sequences skills and adds review/verification. Workflows delegate the code recipe to the skills rather than duplicating them.
 
 ## Skills
 
-### Scaffolders — go from idea to working code
+### Scaffolders - go from idea to working code
 
 | Skill | What it does |
 |---|---|
 | `add-feature` | A backend vertical slice: Command/Query in Contracts → handler (injects the module `DbContext`) → validator → endpoint → wired in the module. |
 | `add-entity` | A domain aggregate + EF configuration + migration, with the soft-delete / tenant / value-generation conventions baked in. |
-| `add-module` | A whole new bounded context — both projects, `IModule`, `BaseDbContext`, permissions, and registration in **all four** sites. |
+| `add-module` | A whole new bounded context - both projects, `IModule`, `BaseDbContext`, permissions, and registration in **all four** sites. |
 | `add-react-page` | A frontend slice (admin or dashboard): API module, page, lazy route, permission gate, Playwright test. |
-| `add-full-slice` | End-to-end: the backend slice **and** the React page wired to it — the kit's accelerator. |
+| `add-full-slice` | End-to-end: the backend slice **and** the React page wired to it - the kit's accelerator. |
 
-### Ops — footgun-heavy operations
+### Ops - footgun-heavy operations
 
 | Skill | What it does |
 |---|---|
 | `create-migration` | The exact EF Core migration command (`--project`/`--startup-project`/`--context`/`--output-dir`), build-first to protect the snapshot, review the SQL, apply via the DbMigrator. |
-| `add-integration-event` | Publish a cross-module event through the **Outbox** and handle it idempotently — including background tenant-context restoration. |
+| `add-integration-event` | Publish a cross-module event through the **Outbox** and handle it idempotently - including background tenant-context restoration. |
 | `add-permission` | A new permission end-to-end: server constant + endpoint gate, and (admin app) the mirrored catalog entry + route guard. |
 
-### Reference — guardrails
+### Reference - guardrails
 
 | Skill | What it covers |
 |---|---|
-| `query-patterns` | Read queries the FSH way — paginated `PagedResponse<T>` via DbContext LINQ; when to use a Specification. |
-| `testing-guide` | Test conventions — xUnit + Shouldly + NSubstitute + AutoFixture, naming, and the integration-test gotchas. |
-| `mediator-reference` | This kit uses the **Mediator** source generator, *not* MediatR — the interface map and the registration sites. |
+| `query-patterns` | Read queries the FSH way - paginated `PagedResponse<T>` via DbContext LINQ; when to use a Specification. |
+| `testing-guide` | Test conventions - xUnit + Shouldly + NSubstitute + AutoFixture, naming, and the integration-test gotchas. |
+| `mediator-reference` | This kit uses the **Mediator** source generator, *not* MediatR - the interface map and the registration sites. |
 
 ## Workflows
 
 | Workflow | Role |
 |---|---|
-| `feature-scaffolder` | Orchestrates feature delivery — sequences `add-entity` → `add-feature` → `add-react-page`/`add-full-slice` → tests → verify. |
+| `feature-scaffolder` | Orchestrates feature delivery - sequences `add-entity` → `add-feature` → `add-react-page`/`add-full-slice` → tests → verify. |
 | `module-creator` | Orchestrates a full module bring-up and verifies it actually *loads* (the four-place registration footgun). |
 | `migration-helper` | The facts + troubleshooting around EF migrations; delegates the recipe to `create-migration`. |
 | `code-reviewer` | Reviews the current diff against the conventions and emits a structured report (read-only). |
-| `architecture-guard` | Verifies architectural integrity — module boundaries, BuildingBlocks protection, the architecture-test suite (read-only). |
+| `architecture-guard` | Verifies architectural integrity - module boundaries, BuildingBlocks protection, the architecture-test suite (read-only). |
 
 <Callout type="tip" title="Using them in Claude Code">
-You don't memorize skill names. Describe the task — *"add a CreateInvoice feature to Billing"* — and the
+You don't memorize skill names. Describe the task - *"add a CreateInvoice feature to Billing"* - and the
 matching skill activates automatically. See
 <a href="/docs/ai-development/claude-code/">Developing with Claude Code</a>.
 </Callout>
 
 ## Extending the set
 
-These are plain Markdown — add your own. A good **skill** is a verb (a repeatable task that can self-verify
+These are plain Markdown - add your own. A good **skill** is a verb (a repeatable task that can self-verify
 with a build/test); a good **rule** is a noun (a convention you read). If you find yourself writing a
 "reference" or "guide" skill, it's probably a rule. Keep skills pointing *at* the rules rather than
 restating them, so there's a single source of truth.

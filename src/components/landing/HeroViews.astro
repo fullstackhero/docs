@@ -2,7 +2,7 @@
 import { Icon } from 'astro-icon/components';
 
 // Trust-strip views readout for the landing page. Reuses the shared
-// /api/views beacon (src/scripts/views-counter.ts) — same data plumbing as
+// /api/views beacon (src/scripts/views-counter.ts) - same data plumbing as
 // the docs PageHeader chip, but rendered as plain strip items rather than a
 // bordered pill so it matches the neighbouring trust-strip entries.
 //
@@ -22,7 +22,7 @@ const initialCount = isDev ? '1,234' : '0';
 <li
   data-views-count-wrap
   data-state={initialState}
-  title={isDev ? 'Sample value — run wrangler dev to see real counts' : undefined}
+  title={isDev ? 'Sample value - run wrangler dev to see real counts' : undefined}
   class="views-reveal inline-flex items-center gap-1.5"
 >
   <Icon name="lucide:eye" class="h-3 w-3" aria-hidden="true" />
@@ -35,7 +35,7 @@ const initialCount = isDev ? '1,234' : '0';
      and the readout both stay hidden until it resolves, then reveal together.
      `visibility: hidden` (not display:none) keeps their layout slot reserved,
      so revealing never reflows the centred strip. The translate/opacity reveal
-     is transform-based — it doesn't trigger layout, so it costs zero CLS. */
+     is transform-based - it doesn't trigger layout, so it costs zero CLS. */
   .views-reveal {
     transition:
       opacity 360ms cubic-bezier(0.32, 0.72, 0, 1),
@@ -54,11 +54,11 @@ const initialCount = isDev ? '1,234' : '0';
 
   /* Numeric box for the count-up. Its exact width is reserved in JS once the
      count is known (views-counter.ts), so the count-up grows in place without
-     reflowing the centred strip (zero CLS) — yet a small count like "1" stays
+     reflowing the centred strip (zero CLS) - yet a small count like "1" stays
      tight to the digit instead of leaving a gap. tabular-nums keeps digits
      equal-width; right-align makes the number fill toward the icon as it ticks
      up. (Under `astro dev` the beacon never resolves, so the static sample
-     just renders at its natural width — no reserve needed.) */
+     just renders at its natural width - no reserve needed.) */
   .views-num {
     display: inline-block;
     text-align: right;

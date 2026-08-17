@@ -7,8 +7,8 @@ sidebar:
   order: 5
 pageType: guide
 seo:
-  title: 'Running tests in .NET 10 — dotnet test, filters, CI patterns'
-  description: 'Commands and CI patterns for running fullstackhero''s unit, integration, and architecture test suites — single project, filter by name, parallel execution…'
+  title: 'Running tests in .NET 10 - dotnet test, filters, CI patterns'
+  description: 'Commands and CI patterns for running fullstackhero''s unit, integration, and architecture test suites - single project, filter by name, parallel execution…'
   keywords: 'dotnet test command, dotnet test filter, github actions dotnet test, parallel xunit testing'
 ---
 
@@ -27,8 +27,8 @@ dotnet test src/FSH.Starter.slnx
 This runs every test project. Expect:
 
 - Unit projects: seconds each
-- Architecture project: a few seconds — no containers
-- Integration projects: a few minutes — container startup, migrations, and ~700 real HTTP round-trips (Docker required)
+- Architecture project: a few seconds - no containers
+- Integration projects: a few minutes - container startup, migrations, and ~700 real HTTP round-trips (Docker required)
 
 ## Run a single project
 
@@ -36,10 +36,10 @@ This runs every test project. Expect:
 # Unit tests for one module
 dotnet test src/Tests/Identity.Tests/
 
-# Architecture tests only — fast, no containers
+# Architecture tests only - fast, no containers
 dotnet test src/Tests/Architecture.Tests/
 
-# Integration tests only — Docker must be running
+# Integration tests only - Docker must be running
 dotnet test src/Tests/Integration.Tests/
 
 # Production-middleware integration tests (separate assembly, own process)
@@ -75,12 +75,12 @@ To disable parallelism across classes (e.g. for shared state):
 }
 ```
 
-The kit's integration project uses a **collection fixture** — every test class joins `[Collection(FshCollectionDefinition.Name)]`, sharing one `FshWebApplicationFactory` (and one container set) across the whole suite. xUnit runs classes within a collection sequentially, which is why unique test data matters less than raw isolation here — but keep names unique anyway; it costs nothing.
+The kit's integration project uses a **collection fixture** - every test class joins `[Collection(FshCollectionDefinition.Name)]`, sharing one `FshWebApplicationFactory` (and one container set) across the whole suite. xUnit runs classes within a collection sequentially, which is why unique test data matters less than raw isolation here - but keep names unique anyway; it costs nothing.
 
 ## Verbose output
 
 ```bash
-# Detailed output — useful for debugging slow tests
+# Detailed output - useful for debugging slow tests
 dotnet test --logger "console;verbosity=detailed"
 
 # Trx output for CI parsing
@@ -103,11 +103,11 @@ dotnet tool install --global dotnet-reportgenerator-globaltool
 reportgenerator -reports:**/coverage.cobertura.xml -targetdir:coveragereport
 ```
 
-The HTML report lands in `coveragereport/index.html`. CI collects coverage from the unit and integration jobs separately, merges the two with ReportGenerator, and **fails the build below 80% line coverage** — a ratchet that gets raised as coverage grows. See [CI/CD](/docs/deployment/ci-cd/).
+The HTML report lands in `coveragereport/index.html`. CI collects coverage from the unit and integration jobs separately, merges the two with ReportGenerator, and **fails the build below 80% line coverage** - a ratchet that gets raised as coverage grows. See [CI/CD](/docs/deployment/ci-cd/).
 
 ## Docker requirement for integration tests
 
-Testcontainers needs a running Docker daemon. Locally, Docker Desktop on macOS / Windows, Docker Engine on Linux. In CI, the runner image must have Docker available — GitHub-hosted runners do; self-hosted runners need explicit setup.
+Testcontainers needs a running Docker daemon. Locally, Docker Desktop on macOS / Windows, Docker Engine on Linux. In CI, the runner image must have Docker available - GitHub-hosted runners do; self-hosted runners need explicit setup.
 
 ```bash
 # Verify Docker is reachable before running integration tests
@@ -116,11 +116,11 @@ docker info
 
 If Docker isn't available, integration tests fail with `Testcontainers.DockerNotAvailableException`.
 
-## CI — GitHub Actions
+## CI - GitHub Actions
 
-The kit ships its own path-scoped workflows in `.github/workflows/` — you don't need to write one. On every backend change, `backend.yml` builds with `-warnaserror`, runs the 12 unit + architecture projects and the two integration projects (each with coverage collection), smoke-tests the DbMigrator container, and merges coverage behind an **80% line-coverage gate**. GitHub-hosted runners (`ubuntu-latest`) have Docker pre-installed, so Testcontainers works without extra setup.
+The kit ships its own path-scoped workflows in `.github/workflows/` - you don't need to write one. On every backend change, `backend.yml` builds with `-warnaserror`, runs the 12 unit + architecture projects and the two integration projects (each with coverage collection), smoke-tests the DbMigrator container, and merges coverage behind an **80% line-coverage gate**. GitHub-hosted runners (`ubuntu-latest`) have Docker pre-installed, so Testcontainers works without extra setup.
 
-The full pipeline — jobs, gates, publishing — is documented on the [CI/CD page](/docs/deployment/ci-cd/). Local parity:
+The full pipeline - jobs, gates, publishing - is documented on the [CI/CD page](/docs/deployment/ci-cd/). Local parity:
 
 ```bash
 dotnet build src/FSH.Starter.slnx -c Release -warnaserror   # the CI build gate
@@ -129,7 +129,7 @@ dotnet test  src/FSH.Starter.slnx -c Release                # everything (needs 
 
 ## Watch mode (local iteration)
 
-`dotnet watch` reruns tests on file change — useful while iterating on a single test:
+`dotnet watch` reruns tests on file change - useful while iterating on a single test:
 
 ```bash
 dotnet watch --project src/Tests/Identity.Tests/ test \
@@ -140,7 +140,7 @@ It picks up file edits, recompiles, and reruns the filter. Fast feedback loop wi
 
 ## Container cleanup
 
-The kit's containers are created with `WithAutoRemove(true)`, and Testcontainers' reaper (Ryuk) cleans up after crashed runs — so leaks are rare. If a hard kill (machine sleep, Docker restart mid-run) leaves something behind:
+The kit's containers are created with `WithAutoRemove(true)`, and Testcontainers' reaper (Ryuk) cleans up after crashed runs - so leaks are rare. If a hard kill (machine sleep, Docker restart mid-run) leaves something behind:
 
 ```bash
 # List anything Testcontainers-labelled
@@ -152,7 +152,7 @@ docker rm -f $(docker ps -aq --filter "label=org.testcontainers")
 
 ## Related
 
-- [Unit tests](/docs/testing/unit-tests/) — what runs fastest.
-- [Integration tests](/docs/testing/integration-tests/) — what runs slowest.
-- [Writing new tests](/docs/testing/writing-new-tests/) — recipes for each layer.
-- [Fixtures & seed data](/docs/testing/fixtures-and-seed-data/) — what the integration tests share.
+- [Unit tests](/docs/testing/unit-tests/) - what runs fastest.
+- [Integration tests](/docs/testing/integration-tests/) - what runs slowest.
+- [Writing new tests](/docs/testing/writing-new-tests/) - recipes for each layer.
+- [Fixtures & seed data](/docs/testing/fixtures-and-seed-data/) - what the integration tests share.

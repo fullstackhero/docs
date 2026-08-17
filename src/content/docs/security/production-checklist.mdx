@@ -8,11 +8,11 @@ sidebar:
 pageType: guide
 seo:
   title: 'Production security checklist for fullstackhero (.NET 10)'
-  description: 'Ten configuration items every fullstackhero deployment must verify before going to production — JWT key rotation, password policy, CORS hardening, security…'
+  description: 'Ten configuration items every fullstackhero deployment must verify before going to production - JWT key rotation, password policy, CORS hardening, security…'
   keywords: 'production deployment checklist .net 10, asp.net core security checklist, fullstackhero deploy checklist'
 ---
 
-The kit ships with secure defaults wherever possible. Some things, by their nature, you must configure for your environment — there's no "secure default" for a JWT signing key or an allowed-origins list. This page is the ten-item checklist; skip none of them.
+The kit ships with secure defaults wherever possible. Some things, by their nature, you must configure for your environment - there's no "secure default" for a JWT signing key or an allowed-origins list. This page is the ten-item checklist; skip none of them.
 
 <Callout type="warning" title="Treat this as a release gate">
 Print it. Stick it on the wall. Run through every item before flipping DNS to production traffic. None of them take more than 5 minutes; missing any one of them is the kind of incident that ends up in post-mortems.
@@ -20,7 +20,7 @@ Print it. Stick it on the wall. Run through every item before flipping DNS to pr
 
 ## 1. Set `JwtOptions:SigningKey` from a secrets manager
 
-The repo's dev-only key lives in `appsettings.Development.json`; base and production config leave the key **empty**, and startup validation refuses to boot with an empty key, a key shorter than 32 characters, or the sample `replace-with-…` placeholder. So the failure mode isn't "silently forgeable tokens" — it's "won't start until you set one". Set a real one:
+The repo's dev-only key lives in `appsettings.Development.json`; base and production config leave the key **empty**, and startup validation refuses to boot with an empty key, a key shorter than 32 characters, or the sample `replace-with-…` placeholder. So the failure mode isn't "silently forgeable tokens" - it's "won't start until you set one". Set a real one:
 
 ```bash
 openssl rand -base64 32
@@ -57,7 +57,7 @@ Adjust for your industry. Healthcare (HIPAA) and finance (PCI-DSS) tend to requi
 
 ## 3. Allowlist CORS origins
 
-`CorsOptions:AllowAll = true` (and the `SetIsOriginAllowed(_ => true)` policy it enables) is **dev only**. Production needs the explicit lists — and note that `appsettings.Production.json` ships `AllowedOrigins` empty, which means **no CORS middleware mounts at all** until you fill it in; your front-ends on other origins will be blocked by the browser. See [CORS & security headers](/docs/security/cors-and-headers/).
+`CorsOptions:AllowAll = true` (and the `SetIsOriginAllowed(_ => true)` policy it enables) is **dev only**. Production needs the explicit lists - and note that `appsettings.Production.json` ships `AllowedOrigins` empty, which means **no CORS middleware mounts at all** until you fill it in; your front-ends on other origins will be blocked by the browser. See [CORS & security headers](/docs/security/cors-and-headers/).
 
 ```jsonc
 {
@@ -75,7 +75,7 @@ Adjust for your industry. Healthcare (HIPAA) and finance (PCI-DSS) tend to requi
 
 ## 4. Review the security headers
 
-The kit emits CSP, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, and HSTS (on HTTPS responses) by default — verify they survive your reverse proxy, and tune the knobs:
+The kit emits CSP, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, and HSTS (on HTTPS responses) by default - verify they survive your reverse proxy, and tune the knobs:
 
 ```jsonc
 {
@@ -89,11 +89,11 @@ The kit emits CSP, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `
 }
 ```
 
-If your production posture disables the API docs UI (item 7), you can drop the `ExcludedPaths` entries too. Test with browser dev tools open — CSP violations log to the console.
+If your production posture disables the API docs UI (item 7), you can drop the `ExcludedPaths` entries too. Test with browser dev tools open - CSP violations log to the console.
 
 ## 5. Turn rate limiting on and tune the values
 
-`RateLimitingOptions:Enabled` is `false` in the base config (so local dev never trips it) and `true` in `appsettings.Production.json` — **verify your deployed config actually enables it**. The `auth` policy defaults to **10 requests per minute** per user-or-IP; the global chained limiters cover tenant (1000/min), user (200/min), and IP (300/min):
+`RateLimitingOptions:Enabled` is `false` in the base config (so local dev never trips it) and `true` in `appsettings.Production.json` - **verify your deployed config actually enables it**. The `auth` policy defaults to **10 requests per minute** per user-or-IP; the global chained limiters cover tenant (1000/min), user (200/min), and IP (300/min):
 
 ```jsonc
 {
@@ -114,7 +114,7 @@ Adjust `Auth` to your traffic profile: relax for high-volume consumer apps on sh
 `UseHttpsRedirection` is on by default. Verify:
 
 - Reverse proxy / load balancer terminates TLS with a valid certificate.
-- `X-Forwarded-Proto: https` forwards to the kit so the redirect middleware doesn't double-redirect — and so the HSTS header (emitted only on HTTPS requests) actually fires.
+- `X-Forwarded-Proto: https` forwards to the kit so the redirect middleware doesn't double-redirect - and so the HSTS header (emitted only on HTTPS requests) actually fires.
 - HTTP/2 or HTTP/3 enabled at the LB for performance.
 
 If you're behind Cloudflare / a CDN, also enable "Always Use HTTPS" + "HSTS" at the CDN.
@@ -123,18 +123,18 @@ If you're behind Cloudflare / a CDN, also enable "Always Use HTTPS" + "HSTS" at 
 
 In production, decide:
 
-- **`/scalar`** (the OpenAPI browser) and **`/openapi/v1.json`** — `appsettings.Production.json` ships with `OpenApiOptions:Enabled = false`, which removes both. If you re-enable them, consider whether revealing your API surface to the world is what you want. Note these paths also bypass the security-headers middleware and authorization (so the docs UI works) — another reason to keep them off in production.
-- **`/health`** — expose to your platform's probes; firewall externally.
-- **OpenTelemetry collector endpoints** — these are inbound to your collector, not the kit, but verify they're not Internet-exposed.
+- **`/scalar`** (the OpenAPI browser) and **`/openapi/v1.json`** - `appsettings.Production.json` ships with `OpenApiOptions:Enabled = false`, which removes both. If you re-enable them, consider whether revealing your API surface to the world is what you want. Note these paths also bypass the security-headers middleware and authorization (so the docs UI works) - another reason to keep them off in production.
+- **`/health`** - expose to your platform's probes; firewall externally.
+- **OpenTelemetry collector endpoints** - these are inbound to your collector, not the kit, but verify they're not Internet-exposed.
 
 ## 8. Lock down the Hangfire dashboard
 
-The jobs dashboard (default route **`/jobs`**, configurable via `HangfireOptions:Route`) is gated by basic auth. Startup validation enforces a username of 3+ chars and a password of 12+ chars — empty values won't boot. Verify:
+The jobs dashboard (default route **`/jobs`**, configurable via `HangfireOptions:Route`) is gated by basic auth. Startup validation enforces a username of 3+ chars and a password of 12+ chars - empty values won't boot. Verify:
 
 - Username is **not** `admin` (rename to something less guessable).
 - Password is **long** (16+ random chars) and **not** the dev value from `appsettings.Development.json`.
 - Behind HTTPS (basic auth is plaintext otherwise).
-- IP-allowlist at the reverse proxy (Cloudflare WAF rule, Nginx `allow`/`deny`, etc.) — only your ops IPs.
+- IP-allowlist at the reverse proxy (Cloudflare WAF rule, Nginx `allow`/`deny`, etc.) - only your ops IPs.
 
 ```jsonc
 {
@@ -182,11 +182,11 @@ These aren't blockers, but the sooner the better:
 - **Add monitoring + alerts** on auth-failure spikes, impersonation events, and 5xx error rates.
 - **Run a vulnerability scan** of the deployed image (Snyk, Trivy, Dependabot) to catch transitive CVEs early.
 - **Set up backup + restore tests** for Postgres + MinIO. Backups you haven't tested restoring are not backups.
-- **Document an incident-response runbook** — who's on-call, where the alerts go, how to revoke every session (admin revoke-all is built in), how to rotate the JWT signing key in an emergency.
+- **Document an incident-response runbook** - who's on-call, where the alerts go, how to revoke every session (admin revoke-all is built in), how to rotate the JWT signing key in an emergency.
 
 ## Related
 
-- [Authentication](/docs/security/authentication/), [Authorization](/docs/security/authorization/), [Impersonation](/docs/security/impersonation/), [Two-factor](/docs/security/two-factor/) — the kit's auth primitives.
-- [Webhook signing](/docs/security/webhook-signing/) — HMAC integrity.
-- [Data protection](/docs/security/data-protection/) — key persistence.
-- [CORS & headers](/docs/security/cors-and-headers/) — the network-layer hardening.
+- [Authentication](/docs/security/authentication/), [Authorization](/docs/security/authorization/), [Impersonation](/docs/security/impersonation/), [Two-factor](/docs/security/two-factor/) - the kit's auth primitives.
+- [Webhook signing](/docs/security/webhook-signing/) - HMAC integrity.
+- [Data protection](/docs/security/data-protection/) - key persistence.
+- [CORS & headers](/docs/security/cors-and-headers/) - the network-layer hardening.

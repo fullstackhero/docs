@@ -7,7 +7,7 @@ sidebar:
   order: 3
 pageType: reference
 seo:
-  title: 'Auditing in .NET 10 — EF Core SaveChanges Interceptor'
+  title: 'Auditing in .NET 10 - EF Core SaveChanges Interceptor'
   description: 'How the Auditing module captures every entity change via EF Core SaveChanges interceptor, HTTP request/response bodies via middleware, security events…'
   keywords: 'ef core audit log .net 10, savechanges interceptor audit, json masking pii dotnet, audit trail postgres trigram, http audit middleware asp.net'
 ---
@@ -20,14 +20,14 @@ Seven read-only endpoints expose audits filtered by tenant, user, event type, se
 
 ## What ships in v10
 
-- **Entity-change capture** — `AuditingSaveChangesInterceptor` records every Insert / Update / Delete with before-and-after property snapshots for each entity. No code changes required in your handlers.
-- **HTTP activity capture** — `AuditHttpMiddleware` records every request / response with body, status code, duration, request id, trace id, user, tenant. Bodies are size-capped and content-type-filtered to keep audits small.
-- **Security events** — `Audit.ForSecurity(SecurityAction.LoginFailed).WithUser(...).WriteAsync()` for login attempts, permission denials, policy failures.
-- **Exception capture** — `Audit.ForException(ex).WithSeverity(...)` with `ExceptionSeverityClassifier` that maps common .NET exception types to sensible severities (e.g. `OperationCanceledException` → Information, `UnauthorizedAccessException` → Warning, everything else → Error).
-- **JSON masking** — `IAuditMaskingService` redacts sensitive fields (passwords, tokens, PII) before audits are written. Configurable patterns.
-- **Channel publisher → SQL sink with file DLQ** — audits go through a `System.Threading.Channels` pipeline so the request path isn't blocked. Writes go to PostgreSQL; failures fall back to a local file DLQ.
-- **Trigram GIN indexes** — PostgreSQL `pg_trgm` extension powers free-text search across `Source`, `UserName`, and other audit fields.
-- **Retention job** — opt-in Hangfire `AuditRetentionJob` purges old records on a daily cron, with per-event-type retention windows.
+- **Entity-change capture** - `AuditingSaveChangesInterceptor` records every Insert / Update / Delete with before-and-after property snapshots for each entity. No code changes required in your handlers.
+- **HTTP activity capture** - `AuditHttpMiddleware` records every request / response with body, status code, duration, request id, trace id, user, tenant. Bodies are size-capped and content-type-filtered to keep audits small.
+- **Security events** - `Audit.ForSecurity(SecurityAction.LoginFailed).WithUser(...).WriteAsync()` for login attempts, permission denials, policy failures.
+- **Exception capture** - `Audit.ForException(ex).WithSeverity(...)` with `ExceptionSeverityClassifier` that maps common .NET exception types to sensible severities (e.g. `OperationCanceledException` → Information, `UnauthorizedAccessException` → Warning, everything else → Error).
+- **JSON masking** - `IAuditMaskingService` redacts sensitive fields (passwords, tokens, PII) before audits are written. Configurable patterns.
+- **Channel publisher → SQL sink with file DLQ** - audits go through a `System.Threading.Channels` pipeline so the request path isn't blocked. Writes go to PostgreSQL; failures fall back to a local file DLQ.
+- **Trigram GIN indexes** - PostgreSQL `pg_trgm` extension powers free-text search across `Source`, `UserName`, and other audit fields.
+- **Retention job** - opt-in Hangfire `AuditRetentionJob` purges old records on a daily cron, with per-event-type retention windows.
 - **`[NoAudit]` attribute** + `.NoAudit()` endpoint extension to disable auditing for sensitive endpoints (e.g. password reset doesn't need its body captured).
 - **7 read endpoints** under `/api/v1/audits/...` for querying.
 
@@ -36,7 +36,7 @@ Seven read-only endpoints expose audits filtered by tenant, user, event type, se
 ```
 src/Modules/Auditing/
 ├── Modules.Auditing/                            ~3,300 LoC, 48 files
-│   ├── AuditingModule.cs                        IModule entry — order 300
+│   ├── AuditingModule.cs                        IModule entry - order 300
 │   ├── Core/
 │   │   ├── Audit.cs                             Fluent builder static factory
 │   │   ├── ChannelAuditPublisher.cs             Non-blocking publisher
@@ -84,7 +84,7 @@ await Audit.ForException(ex, ExceptionArea.HttpRequest, route: ctx.Request.Path)
     .WriteAsync(ct);
 ```
 
-The entity-change variant is the one **you almost never call directly** — the SaveChanges interceptor calls it for you on every Insert / Update / Delete. The other three are explicit one-line entries you scatter through code that needs them.
+The entity-change variant is the one **you almost never call directly** - the SaveChanges interceptor calls it for you on every Insert / Update / Delete. The other three are explicit one-line entries you scatter through code that needs them.
 
 ## What gets captured automatically
 
@@ -99,7 +99,7 @@ What you wire manually:
 4. Security actions you care about (login success / failure, permission denials, policy failures).
 5. Custom activity entries when an HTTP-middleware capture isn't the right fit (long-running jobs, websocket actions, etc.).
 
-## Public API — read queries
+## Public API - read queries
 
 | Type | Purpose |
 |---|---|
@@ -123,9 +123,9 @@ What you wire manually:
 | GET | `/api/v1/audits/exceptions` | Exception-only filter |
 | GET | `/api/v1/audits/summary` | Aggregations |
 
-All seven require `Permissions.AuditTrails.View`. Results are scoped to the caller's tenant; asking for another tenant's audits (or the all-tenants view) additionally requires `Permissions.AuditTrails.ViewCrossTenant` — without it the handler throws a 403 rather than silently narrowing.
+All seven require `Permissions.AuditTrails.View`. Results are scoped to the caller's tenant; asking for another tenant's audits (or the all-tenants view) additionally requires `Permissions.AuditTrails.ViewCrossTenant` - without it the handler throws a 403 rather than silently narrowing.
 
-One serialization quirk: enums like `Severity` and `EventType` round-trip as **strings** (the host registers a global `JsonStringEnumConverter`), but the two `[Flags]` enums — `AuditTag` and `BodyCapture` — stay **numeric** via a dedicated `NumericEnumConverter`, because flag combinations don't have a single string name.
+One serialization quirk: enums like `Severity` and `EventType` round-trip as **strings** (the host registers a global `JsonStringEnumConverter`), but the two `[Flags]` enums - `AuditTag` and `BodyCapture` - stay **numeric** via a dedicated `NumericEnumConverter`, because flag combinations don't have a single string name.
 
 ## Configuration
 
@@ -201,7 +201,7 @@ endpoints.MapPost("/sensitive", handler)
 
 ### Plug a different sink
 
-`IAuditSink` is the interface; `SqlAuditSink` is the default; `IAuditDlqSink` is the dead-letter sink. Add an OpenTelemetry sink, a Splunk sink, a Kafka sink — anything you need — by registering a different implementation. The channel publisher fans out so multiple sinks can coexist.
+`IAuditSink` is the interface; `SqlAuditSink` is the default; `IAuditDlqSink` is the dead-letter sink. Add an OpenTelemetry sink, a Splunk sink, a Kafka sink - anything you need - by registering a different implementation. The channel publisher fans out so multiple sinks can coexist.
 
 ## Tests
 
@@ -210,6 +210,6 @@ endpoints.MapPost("/sensitive", handler)
 
 ## Related
 
-- [Architecture: multitenancy deep-dive](/docs/architecture/) — how the audit query filters tenant scope safely.
-- [Cross-cutting concerns](/docs/cross-cutting-concerns/) — OpenTelemetry, Serilog, idempotency.
-- [Identity module](/docs/modules/identity/) — security events captured by Identity flow into Auditing automatically.
+- [Architecture: multitenancy deep-dive](/docs/architecture/) - how the audit query filters tenant scope safely.
+- [Cross-cutting concerns](/docs/cross-cutting-concerns/) - OpenTelemetry, Serilog, idempotency.
+- [Identity module](/docs/modules/identity/) - security events captured by Identity flow into Auditing automatically.

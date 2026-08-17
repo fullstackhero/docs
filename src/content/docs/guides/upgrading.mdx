@@ -1,30 +1,30 @@
 ---
 title: Staying current with upstream
 lastUpdated: 2026-06-11
-description: How to take upstream fixes when you own the code — add the upstream remote, read the changelog, merge or re-apply a release, then rebuild, retest, and run pending migrations.
+description: How to take upstream fixes when you own the code - add the upstream remote, read the changelog, merge or re-apply a release, then rebuild, retest, and run pending migrations.
 sidebar:
   label: Upgrading
   order: 4
 pageType: recipe
 seo:
-  title: 'Upgrading fullstackhero — taking upstream fixes into your own code'
-  description: 'fullstackhero ships as source you own, not framework NuGet packages — so upgrades are a git workflow. Add the upstream remote, review the changelog, merge a release, resolve conflicts, and let the test suite catch the rest.'
+  title: 'Upgrading fullstackhero - taking upstream fixes into your own code'
+  description: 'fullstackhero ships as source you own, not framework NuGet packages - so upgrades are a git workflow. Add the upstream remote, review the changelog, merge a release, resolve conflicts, and let the test suite catch the rest.'
   keywords: 'fullstackhero upgrade, .net starter kit update, merge upstream template, fsh update, dotnet starter kit upstream fixes'
 ---
 
-fullstackhero is distributed as **source you own**. The template scaffolds the full codebase, modules and framework are consumed via `ProjectReference`, and nothing about your running app comes from a fullstackhero NuGet package — only the `fsh` CLI and the `dotnet new` template ship to NuGet ([the kit's `Directory.Build.props` turns `IsPackable` off for everything else](https://github.com/fullstackhero/dotnet-starter-kit/blob/main/src/Directory.Build.props)).
+fullstackhero is distributed as **source you own**. The template scaffolds the full codebase, modules and framework are consumed via `ProjectReference`, and nothing about your running app comes from a fullstackhero NuGet package - only the `fsh` CLI and the `dotnet new` template ship to NuGet ([the kit's `Directory.Build.props` turns `IsPackable` off for everything else](https://github.com/fullstackhero/dotnet-starter-kit/blob/main/src/Directory.Build.props)).
 
 That's a deliberate trade. You can change anything; in exchange, **taking upstream fixes is a git workflow, not a package bump**. There is no `dotnet update fullstackhero`. This page is the honest version of what that workflow looks like.
 
 <Callout type="warning" title="fsh update does NOT upgrade your project">
-`fsh update` updates the **tooling on your machine**: it runs `dotnet tool update -g FullStackHero.CLI` and reinstalls the latest `FullStackHero.NET.StarterKit` template. That affects the *next* project you scaffold — it never touches the code of a project you already have. Upgrading existing code is the git workflow below, and only that.
+`fsh update` updates the **tooling on your machine**: it runs `dotnet tool update -g FullStackHero.CLI` and reinstalls the latest `FullStackHero.NET.StarterKit` template. That affects the *next* project you scaffold - it never touches the code of a project you already have. Upgrading existing code is the git workflow below, and only that.
 </Callout>
 
 ## How upstream ships
 
 - **`main` is the only long-lived branch** and stays releasable; stable releases are cut from `v*` tags (e.g. `v10.0.0`). See [Contributing](/docs/contributing/).
-- **The [changelog](/docs/changelog/) is the upgrade manual.** Entries are dated, explain *why* a change happened, and call out required actions — e.g. "grant the new `Webhooks.*` permissions or those users get `403`" or "wipe your Postgres data volume after the Aspire 13.4 bump". Read every entry between your base and your target before you merge anything.
-- One caution: tags below v10 (`2.0.4-rc` and older) belong to the previous generation of the kit. Don't try to merge across that rewrite boundary — v10 is the baseline. And if the release you're after isn't tagged yet, merge `upstream/main` at the commit matching its changelog entry instead of waiting on a tag.
+- **The [changelog](/docs/changelog/) is the upgrade manual.** Entries are dated, explain *why* a change happened, and call out required actions - e.g. "grant the new `Webhooks.*` permissions or those users get `403`" or "wipe your Postgres data volume after the Aspire 13.4 bump". Read every entry between your base and your target before you merge anything.
+- One caution: tags below v10 (`2.0.4-rc` and older) belong to the previous generation of the kit. Don't try to merge across that rewrite boundary - v10 is the baseline. And if the release you're after isn't tagged yet, merge `upstream/main` at the commit matching its changelog entry instead of waiting on a tag.
 
 ## The upgrade workflow
 
@@ -41,7 +41,7 @@ git remote add upstream https://github.com/fullstackhero/dotnet-starter-kit.git
 # Each upgrade
 git fetch upstream --tags
 git log --oneline HEAD..upstream/main        # what you're behind on
-# → read /docs/changelog/ for the same range — note any "action required" items
+# → read /docs/changelog/ for the same range - note any "action required" items
 
 git checkout -b chore/upstream-merge
 git merge v10.1.0                            # a release tag, or upstream/main for latest
@@ -49,7 +49,7 @@ git merge v10.1.0                            # a release tag, or upstream/main f
 
 Conflicts land exactly where you'd expect: files you customized that upstream also changed. Resolve them knowing that *you* are the source of truth for your customizations and *upstream* is the source of truth for everything you never touched.
 
-You can also cherry-pick a single fix instead of taking a whole release — `git cherry-pick <sha>` with the commit from the changelog or the [GitHub history](https://github.com/fullstackhero/dotnet-starter-kit/commits/main) — but track what you've picked, or the eventual full merge gets confusing.
+You can also cherry-pick a single fix instead of taking a whole release - `git cherry-pick <sha>` with the commit from the changelog or the [GitHub history](https://github.com/fullstackhero/dotnet-starter-kit/commits/main) - but track what you've picked, or the eventual full merge gets confusing.
 
 ### If you used GitHub's "Use this template"
 
@@ -63,7 +63,7 @@ Expect that first merge to be noisy (git can't tell "unchanged" from "both added
 
 ### If you scaffolded with `fsh new` / `dotnet new fsh`
 
-This is the manual one, and we won't pretend otherwise. The template **renames everything** — `FSH.Starter` becomes `MyApp` across namespaces, project files, folder paths, and the solution — so upstream commits don't apply to your tree, and there's no shared history either.
+This is the manual one, and we won't pretend otherwise. The template **renames everything** - `FSH.Starter` becomes `MyApp` across namespaces, project files, folder paths, and the solution - so upstream commits don't apply to your tree, and there's no shared history either.
 
 The realistic approach:
 
@@ -71,17 +71,17 @@ The realistic approach:
 2. View the upstream diff for each change: `git diff v10.0.0..v10.1.0 -- src/Modules/Tickets` against a local clone of the kit.
 3. Re-apply by hand, translating `FSH.Starter.*` names to yours. Small, surgical fixes port in minutes; sweeping refactors are a judgment call on whether they're worth taking at all.
 
-For larger teams planning to track upstream closely, a plain fork (keeping the `FSH.Starter` names) is the smoother path — renaming is cosmetic, mergeability is structural.
+For larger teams planning to track upstream closely, a plain fork (keeping the `FSH.Starter` names) is the smoother path - renaming is cosmetic, mergeability is structural.
 
 ## Verify after the merge
 
-The kit's test suite is the safety net — around 1,500 backend tests plus NetArchTest boundary checks, and 214 Playwright E2E tests across the two React apps. Use all of it:
+The kit's test suite is the safety net - around 1,500 backend tests plus NetArchTest boundary checks, and 214 Playwright E2E tests across the two React apps. Use all of it:
 
 ```bash
 dotnet build src/FSH.Starter.slnx                                    # warnings are errors
 dotnet test src/FSH.Starter.slnx                                     # integration tests need Docker
 
-# New release may carry new EF migrations — review, then apply
+# New release may carry new EF migrations - review, then apply
 dotnet run --project src/Host/FSH.Starter.DbMigrator -- list-pending
 dotnet run --project src/Host/FSH.Starter.DbMigrator -- apply
 
@@ -92,22 +92,22 @@ cd clients/dashboard && npm install && npm run build && npx playwright test
 
 The `Architecture.Tests` project deserves a special mention: if your customizations accidentally violated module boundaries in a way that conflicts with an upstream change, it fails loudly instead of letting the merge compile into something subtly wrong.
 
-Finally, work through any **action-required items** from the changelog entries you just absorbed — permission grants, config keys, volume wipes. Those don't show up as compile errors.
+Finally, work through any **action-required items** from the changelog entries you just absorbed - permission grants, config keys, volume wipes. Those don't show up as compile errors.
 
 ## Make the next merge cheap
 
 Every conflict you'll ever resolve comes from editing a file upstream also edits. You control that surface:
 
-- **Put custom work in your own modules.** A new `Modules.{Name}` + `.Contracts` pair is yours alone — upstream will never touch it, so it merges for free. See [adding a module](/docs/architecture/).
-- **Don't modify `src/BuildingBlocks`.** It's the shared framework under every module and the highest-traffic code upstream maintains — the kit's own rules treat it as protected. Changes there put you in conflict with the most actively fixed code in the repo.
-- **Prefer extension points over editing shipped modules in place.** Swappable interfaces (storage providers, `IInvoicePdfRenderer`, event handlers on published events) let you change behavior without forking the file that implements it. When you must change a shipped module, keep the edit small and leave a comment marking it as yours — future-you resolves that conflict.
+- **Put custom work in your own modules.** A new `Modules.{Name}` + `.Contracts` pair is yours alone - upstream will never touch it, so it merges for free. See [adding a module](/docs/architecture/).
+- **Don't modify `src/BuildingBlocks`.** It's the shared framework under every module and the highest-traffic code upstream maintains - the kit's own rules treat it as protected. Changes there put you in conflict with the most actively fixed code in the repo.
+- **Prefer extension points over editing shipped modules in place.** Swappable interfaces (storage providers, `IInvoicePdfRenderer`, event handlers on published events) let you change behavior without forking the file that implements it. When you must change a shipped module, keep the edit small and leave a comment marking it as yours - future-you resolves that conflict.
 - **Frontend dependencies are yours.** `clients/admin` and `clients/dashboard` each have their own `package-lock.json`; upstream pins what it ships, but auditing and updating npm packages on your schedule is your responsibility, like any app you own.
 
 ## Checklist
 
 1. `git fetch upstream --tags`
 2. Read [the changelog](/docs/changelog/) from your base to your target; list action-required items
-3. Merge (or re-apply) on a branch — never directly on `main`
+3. Merge (or re-apply) on a branch - never directly on `main`
 4. Resolve conflicts: yours wins on customizations, upstream wins on untouched code
 5. `dotnet build` + `dotnet test` (Docker running), frontend builds + E2E if clients changed
 6. `DbMigrator -- list-pending`, review, then `apply`
@@ -116,7 +116,7 @@ Every conflict you'll ever resolve comes from editing a file upstream also edits
 
 ## Related
 
-- [Changelog](/docs/changelog/) — the dated record of every change, with action items.
-- [Install](/docs/getting-started/install/) — the acquisition paths this page's workflow depends on.
-- [CLI](/docs/cli/) — what `fsh update`, `info`, and `doctor` actually do.
-- [Contributing](/docs/contributing/) — branch and release model (`main` + `v*` tags).
+- [Changelog](/docs/changelog/) - the dated record of every change, with action items.
+- [Install](/docs/getting-started/install/) - the acquisition paths this page's workflow depends on.
+- [CLI](/docs/cli/) - what `fsh update`, `info`, and `doctor` actually do.
+- [Contributing](/docs/contributing/) - branch and release model (`main` + `v*` tags).

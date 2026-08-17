@@ -1,19 +1,19 @@
 ---
 title: Local Orchestration with .NET Aspire
 lastUpdated: 2026-06-11
-description: What spins up when you run the AppHost, and the decisions behind the local topology — Postgres, Valkey, MinIO, the migrator, the API, and both React apps.
+description: What spins up when you run the AppHost, and the decisions behind the local topology - Postgres, Valkey, MinIO, the migrator, the API, and both React apps.
 sidebar:
   label: Local Orchestration (Aspire)
   order: 2
 pageType: concept
 seo:
-  title: '.NET Aspire local orchestration — services, ports, and'
+  title: '.NET Aspire local orchestration - services, ports, and'
   description: 'How fullstackhero uses .NET Aspire to run the full stack locally with one command: Postgres + pgAdmin, Redis, MinIO, a one-shot DB migrator, the API, and…'
   keywords: '.NET Aspire AppHost, Aspire Postgres Redis MinIO, dotnet aspire orchestration, fullstackhero local development'
 ---
 
-One command brings up the entire stack — databases, cache, object storage, the
-API, and both React apps — wired together with service discovery, health gating,
+One command brings up the entire stack - databases, cache, object storage, the
+API, and both React apps - wired together with service discovery, health gating,
 and a single dashboard:
 
 ```bash
@@ -29,7 +29,7 @@ documents what it starts and **why** it's wired the way it is.
 |---|---|---|---|
 | PostgreSQL | `postgres` | Primary database server; hosts the `fsh-db` database | Persistent (data volume) |
 | pgAdmin | *(sidecar)* | Web UI on **:5050**, auto-discovers every database on the server | Persistent |
-| Valkey | `redis` | Distributed cache (HybridCache L2) + SignalR backplane + Data Protection key ring (**Valkey** — a Redis-compatible, BSD-licensed Redis fork; resource name stays `redis`) | Persistent (data volume) |
+| Valkey | `redis` | Distributed cache (HybridCache L2) + SignalR backplane + Data Protection key ring (**Valkey** - a Redis-compatible, BSD-licensed Redis fork; resource name stays `redis`) | Persistent (data volume) |
 | RedisInsight | `redis-insight` | Key browser on **:5540**, pre-connected to the Valkey instance for inspecting cache keys in dev | Persistent |
 | MinIO | `minio` | S3-compatible object storage, **:9000** (API) / **:9001** (console) | Persistent (data volume) |
 | MinIO init | `minio-init` | One-shot: creates the `fsh-uploads` bucket + download policy, then exits | Run-once |
@@ -40,7 +40,7 @@ documents what it starts and **why** it's wired the way it is.
 | Dashboard app | `fsh-starter-dashboard` | Tenant React + Vite SPA on **:5174** (with SSE live feed) | Long-running |
 
 <Callout type="note" title="Resource names are namespaced per app">
-The `fsh-starter-*` resource names — and the Docker volume names — are derived
+The `fsh-starter-*` resource names - and the Docker volume names - are derived
 from the AppHost's assembly name. A CLI-scaffolded app (say `Acme.Store`) gets
 `acme-store-api`, `acme-store-admin`, and so on, so two FSH-based apps on one
 machine never collide on container or volume names. The third-party infra
@@ -53,7 +53,7 @@ logs, traces, and endpoints. The API's Scalar UI is at `/scalar`.
 <Callout type="note" title="Startup is ordered, not racy">
 The API waits for Postgres and Valkey to be healthy **and** for the one-shot
 jobs (`minio-init`, `fsh-starter-db-migrator`, `fsh-starter-demo-seeder`) to finish before it starts. So the API
-never boots against an unmigrated database or a missing bucket — no retry loops,
+never boots against an unmigrated database or a missing bucket - no retry loops,
 no first-request 500s.
 </Callout>
 
@@ -64,12 +64,12 @@ no first-request 500s.
 Postgres, Valkey, and MinIO use `ContainerLifetime.Persistent` with named data
 volumes. Your data, pgAdmin layout, and uploaded files survive `dotnet run`
 restarts, so the inner loop stays fast. The migrator and MinIO bootstrap are
-**run-once** — they do their job and exit rather than linger as "unhealthy."
+**run-once** - they do their job and exit rather than linger as "unhealthy."
 
 ### MinIO is S3, so dev matches prod
 
 Object storage uses the same `Storage__Provider = "s3"` code path locally as in
-production — only `ServiceUrl` and `ForcePathStyle` differ. The Files module's
+production - only `ServiceUrl` and `ForcePathStyle` differ. The Files module's
 presigned-URL upload flow (browser → storage directly, bytes never proxied
 through the API) is exercised end-to-end in dev. MinIO is configured to accept
 browser PUTs from the admin (`:5173`) and dashboard (`:5174`) origins via
@@ -80,7 +80,7 @@ browser PUTs from the admin (`:5173`) and dashboard (`:5174`) origins via
 The `fsh-starter-db-migrator` resource runs the same `FSH.Starter.DbMigrator`
 project you run as an explicit step in production (published as the
 `fsh-db-migrator` image; `dotnet run --project ... -- apply`). The database
-is **never** migrated at API startup — locally or in the cloud. One mechanism,
+is **never** migrated at API startup - locally or in the cloud. One mechanism,
 two contexts.
 
 ### Valkey for caching and realtime, with a RedisInsight browser
@@ -88,7 +88,7 @@ two contexts.
 The cache engine is **Valkey** (a Redis-compatible, BSD-licensed Redis fork),
 pulled as `valkey/valkey:9.1.0`. It speaks the Redis protocol (RESP), so the
 .NET client (`StackExchange.Redis`) and every `CachingOptions:Redis` config key
-are unchanged — and the resource keeps the name `redis` in code. It backs the
+are unchanged - and the resource keeps the name `redis` in code. It backs the
 HybridCache L2, the SignalR backplane, and the Data Protection key ring
 (Hangfire uses PostgreSQL storage). A **RedisInsight** container rides along,
 pre-registered against the Valkey instance via `RI_REDIS_*` environment
@@ -107,11 +107,11 @@ Keep it that way.
 ### The Postgres image is unpinned
 
 <Callout type="warning" title="A Postgres major bump can strand your data volume">
-`AddPostgres("postgres")` doesn't pin an image tag — it tracks whatever the
+`AddPostgres("postgres")` doesn't pin an image tag - it tracks whatever the
 Aspire hosting package defaults to (PostgreSQL 18 as of Aspire 13.4). When a
 package update jumps a Postgres **major** version, the persistent
 `*-postgres-data` volume written by the older major can't be read and the
-container exits. Recovery for local dev data: remove the volume and relaunch —
+container exits. Recovery for local dev data: remove the volume and relaunch -
 the migrator + seeders rebuild everything.
 </Callout>
 
@@ -119,7 +119,7 @@ the migrator + seeders rebuild everything.
 
 Both React apps get `VITE_API_BASE_URL` pointing at the API's **https** endpoint,
 not http. The API uses `UseHttpsRedirection()`, so a call to the http endpoint
-307-redirects to https — and browsers strip the `Authorization` header on
+307-redirects to https - and browsers strip the `Authorization` header on
 cross-origin redirects (a different scheme/port is cross-origin per the Fetch
 spec). Hitting https directly preserves the bearer token on every request. The
 Vite apps run un-proxied on fixed ports (5173 / 5174) so HMR works and the

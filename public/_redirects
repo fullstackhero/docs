@@ -1,17 +1,17 @@
-# 301 redirects — old fullstackhero.net (Hugo/Doks, ~2023) → new docs site.
+# 301 redirects - old fullstackhero.net (Hugo/Doks, ~2023) → new docs site.
 #
 # WHY: the old site accumulated ~150k views + backlinks on a completely
 # different URL structure. The domain stays the same, so domain authority
-# is retained automatically — but every OLD PATH 404s on the new site
+# is retained automatically - but every OLD PATH 404s on the new site
 # unless redirected here. A clean 301 transfers that page-level equity to
 # the closest new page; a 404 cutover throws it away.
 #
 # Cloudflare Workers Static Assets processes this file. Rules match top-to-
-# bottom, first match wins — so specific rules precede the per-tree splats.
+# bottom, first match wins - so specific rules precede the per-tree splats.
 # Status MUST be stated (Cloudflare defaults to 302, which does NOT pass
 # ranking equity the way a permanent 301 does).
 
-# ── .NET Web API boilerplate (the flagship — highest traffic) ────────────
+# ── .NET Web API boilerplate (the flagship - highest traffic) ────────────
 /dotnet-webapi-boilerplate/general/overview/                /docs/getting-started/introduction/            301
 /dotnet-webapi-boilerplate/general/development-environment/ /docs/getting-started/prerequisites/           301
 /dotnet-webapi-boilerplate/general/getting-started/         /docs/getting-started/                          301

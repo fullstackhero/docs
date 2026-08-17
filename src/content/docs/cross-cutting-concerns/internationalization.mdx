@@ -1,13 +1,13 @@
 ---
 title: Internationalization (i18n)
 lastUpdated: 2026-07-20
-description: End-to-end localization across the backend and both React apps — en-US as default and fallback, pt-BR included, with per-user language, IStringLocalizer, RequestLocalization, and react-i18next.
+description: End-to-end localization across the backend and both React apps - en-US as default and fallback, pt-BR included, with per-user language, IStringLocalizer, RequestLocalization, and react-i18next.
 sidebar:
   label: Internationalization
   order: 12
 pageType: concept
 seo:
-  title: 'Internationalization in .NET 10 — IStringLocalizer + react-i18next'
+  title: 'Internationalization in .NET 10 - IStringLocalizer + react-i18next'
   description: 'How fullstackhero localizes end-to-end: backend IStringLocalizer with neutral-culture resx and RequestLocalization, per-user language on the JWT, and two React apps on react-i18next with a language switcher.'
   keywords: 'istringlocalizer .net 10, requestlocalization asp.net core, react-i18next, per-user language jwt, accept-language culture resolution, pt-br en-us localization'
 ---
@@ -55,28 +55,28 @@ app.UseAuthorization();
 
 For each request the culture is resolved by trying five sources **in order**. The first source that yields a **supported** culture wins; a value that is present but not in the supported list is discarded and resolution continues to the next source. The chain always terminates with a guaranteed default, so a culture is always set:
 
-1. **Explicit override** — a `?culture=` query-string value or the culture cookie. Intended for quick testing and one-off overrides.
-2. **JWT `locale` claim** — the authenticated user's persisted `User.Locale` (see below). This is what makes a user's preference follow them across devices.
-3. **`Accept-Language` header** — the browser's / client's advertised preference, used for anonymous requests and users who have never set a preference.
-4. **`DefaultCulture`** — the per-deployment default, configurable via `LocalizationOptions:DefaultCulture`.
-5. **`en-US`** — the guaranteed final fallback, so the pipeline never runs without a culture.
+1. **Explicit override** - a `?culture=` query-string value or the culture cookie. Intended for quick testing and one-off overrides.
+2. **JWT `locale` claim** - the authenticated user's persisted `User.Locale` (see below). This is what makes a user's preference follow them across devices.
+3. **`Accept-Language` header** - the browser's / client's advertised preference, used for anonymous requests and users who have never set a preference.
+4. **`DefaultCulture`** - the per-deployment default, configurable via `LocalizationOptions:DefaultCulture`.
+5. **`en-US`** - the guaranteed final fallback, so the pipeline never runs without a culture.
 
 <Callout type="note" title="Unsupported values fall through, they don't fail">
-At every step an unsupported culture is simply ignored and the next source is tried. A request that asks for a language the deployment doesn't ship still succeeds — it lands on the configured default, and ultimately on `en-US`.
+At every step an unsupported culture is simply ignored and the next source is tried. A request that asks for a language the deployment doesn't ship still succeeds - it lands on the configured default, and ultimately on `en-US`.
 </Callout>
 
 ### Per-user language
 
 `User.Locale` is a nullable [BCP 47](https://www.rfc-editor.org/info/bcp47) language tag (for example `pt-BR`) on the identity user. It holds the user's chosen language and is `null` until the user picks one.
 
-The value is emitted as the JWT `locale` claim **only when it is set** — a user who has never chosen a language carries no `locale` claim, so their requests fall through to `Accept-Language` and then the default. Once set (through the language switcher, see below), every subsequently issued token carries the claim and the backend honours it on step 2 of the chain.
+The value is emitted as the JWT `locale` claim **only when it is set** - a user who has never chosen a language carries no `locale` claim, so their requests fall through to `Accept-Language` and then the default. Once set (through the language switcher, see below), every subsequently issued token carries the claim and the backend honours it on step 2 of the chain.
 
 ### Localized messages
 
 Two server-produced message surfaces are localized through the active culture:
 
-- **Problem details** — `GlobalExceptionHandler` localizes the messages it renders into the RFC 7807 `ProblemDetails` body, so an error returned to the client is in the caller's language. Because `detail` is culture-dependent, the handler also emits the exception's `MessageKey` as a stable `code` extension — a client that branches on a specific error keys off the code, never off the prose. See [Error handling](/docs/cross-cutting-concerns/error-handling/#code--the-machine-readable-discriminator).
-- **Validation** — FluentValidation's built-in messages are localized automatically because the framework picks them by `CultureInfo.CurrentUICulture`, which `RequestLocalization` has already set for the request. Custom validation messages are localized explicitly by resolving them through `IStringLocalizer`. See [Vertical Slice architecture](/docs/architecture/vertical-slice/) for where validators live.
+- **Problem details** - `GlobalExceptionHandler` localizes the messages it renders into the RFC 7807 `ProblemDetails` body, so an error returned to the client is in the caller's language. Because `detail` is culture-dependent, the handler also emits the exception's `MessageKey` as a stable `code` extension - a client that branches on a specific error keys off the code, never off the prose. See [Error handling](/docs/cross-cutting-concerns/error-handling/#code--the-machine-readable-discriminator).
+- **Validation** - FluentValidation's built-in messages are localized automatically because the framework picks them by `CultureInfo.CurrentUICulture`, which `RequestLocalization` has already set for the request. Custom validation messages are localized explicitly by resolving them through `IStringLocalizer`. See [Vertical Slice architecture](/docs/architecture/vertical-slice/) for where validators live.
 
 ## Frontend (admin and dashboard)
 
@@ -94,7 +94,7 @@ for example `src/locales/en-US/common.json` and `src/locales/pt-BR/common.json`.
 
 ### Language detection and normalization
 
-The browser language detector caches the resolved language in **`localStorage`** (no cookie is written). Detected values are passed through a `convertDetectedLanguage` step that **normalizes variants** to a supported locale — for instance `pt-PT` is mapped to `pt-BR` — so a browser advertising a regional variant the app doesn't ship still lands on a language it does.
+The browser language detector caches the resolved language in **`localStorage`** (no cookie is written). Detected values are passed through a `convertDetectedLanguage` step that **normalizes variants** to a supported locale - for instance `pt-PT` is mapped to `pt-BR` - so a browser advertising a regional variant the app doesn't ship still lands on a language it does.
 
 ### Talking to the backend
 
@@ -113,13 +113,13 @@ Dates, numbers, and currency are formatted through a shared helper so they follo
 
 ### Per-deployment default
 
-The default language for a deployment is set at runtime through the app's `config.json`, via the `defaultLanguage` key — consistent with how the front-ends take the rest of their environment configuration at runtime rather than from `VITE_*` build-time variables.
+The default language for a deployment is set at runtime through the app's `config.json`, via the `defaultLanguage` key - consistent with how the front-ends take the rest of their environment configuration at runtime rather than from `VITE_*` build-time variables.
 
 ## Adding a language
 
 Supporting a new language is three steps: one on the backend, one shared by both React apps, and an optional deployment default. Suppose you are adding Spanish (`es-ES`).
 
-**1. Backend — add the resource file and register the culture.**
+**1. Backend - add the resource file and register the culture.**
 
 Create a translated resx named for the neutral parent culture so its regional variants resolve through fallback, then add the tag to the supported-cultures list:
 
@@ -127,9 +127,9 @@ Create a translated resx named for the neutral parent culture so its regional va
 src/BuildingBlocks/Core/Localization/SharedResources.es.resx
 ```
 
-Add `"es-ES"` (or the tag you support) to the supported-cultures configuration — the `SupportedCultures.Tags` / `RequestMatch` list that `AddHeroLocalization` reads. Any tag not in this list is treated as unsupported and falls through the resolution chain.
+Add `"es-ES"` (or the tag you support) to the supported-cultures configuration - the `SupportedCultures.Tags` / `RequestMatch` list that `AddHeroLocalization` reads. Any tag not in this list is treated as unsupported and falls through the resolution chain.
 
-**2. Frontend — add catalogs and register the locale (repeat in both `clients/admin` and `clients/dashboard`).**
+**2. Frontend - add catalogs and register the locale (repeat in both `clients/admin` and `clients/dashboard`).**
 
 Create one JSON catalog per namespace:
 
@@ -170,14 +170,14 @@ Front-end default language (runtime `config.json`, served to the app at startup)
 
 ## Gotchas
 
-- **A missing `locale` claim is normal.** Users who have never chosen a language carry no `locale` claim, so their culture comes from `Accept-Language` or the default — not a bug.
+- **A missing `locale` claim is normal.** Users who have never chosen a language carry no `locale` claim, so their culture comes from `Accept-Language` or the default - not a bug.
 - **The neutral resx name is load-bearing.** `SharedResources.pt.resx`, not `SharedResources.pt-BR.resx`. Naming a resource for a specific culture breaks the parent-culture fallback that lets `pt`, `pt-BR`, and `pt-PT` all resolve to it.
 - **`UseHeroLocalization` must run after `UseAuthentication`.** Placed earlier, the JWT `locale` claim isn't available yet, so step 2 of the chain is silently skipped and users fall back to `Accept-Language`.
 - **Both sides must ship a language for it to work.** Registering a locale in the front-end without the matching backend resx (or vice versa) leaves one surface un-localized.
 
 ## Related
 
-- [Core building block](/docs/building-blocks/core/) — where `SharedResources` and the localization wiring live.
-- [Error handling](/docs/cross-cutting-concerns/error-handling/) — problem-details messages are localized through the active culture.
-- [Authentication](/docs/security/authentication/) — the JWT and its claims, including `locale`.
-- [Frontend: dashboard](/docs/frontend/dashboard/) and [Frontend: admin](/docs/frontend/admin/) — the two React apps and their `apiFetch` client.
+- [Core building block](/docs/building-blocks/core/) - where `SharedResources` and the localization wiring live.
+- [Error handling](/docs/cross-cutting-concerns/error-handling/) - problem-details messages are localized through the active culture.
+- [Authentication](/docs/security/authentication/) - the JWT and its claims, including `locale`.
+- [Frontend: dashboard](/docs/frontend/dashboard/) and [Frontend: admin](/docs/frontend/admin/) - the two React apps and their `apiFetch` client.

@@ -1,36 +1,36 @@
 ---
 title: Writing new tests
 lastUpdated: 2026-06-11
-description: Step-by-step recipes for adding a unit test, an integration test, or an architecture rule — copy-paste-ready.
+description: Step-by-step recipes for adding a unit test, an integration test, or an architecture rule - copy-paste-ready.
 sidebar:
   label: Writing new tests
   order: 6
 pageType: recipe
 seo:
-  title: 'Writing tests in .NET 10 — step-by-step recipes for'
+  title: 'Writing tests in .NET 10 - step-by-step recipes for'
   description: 'Copy-paste-ready recipes for adding new unit tests (xUnit), integration tests (WebApplicationFactory + Testcontainers), and architecture tests…'
   keywords: 'how to write unit test dotnet, integration test recipe asp.net core, netarchtest rule example, test driven development .net 10'
 ---
 
-Three recipes — unit test, integration test, architecture rule. Each is copy-paste-ready and follows the conventions the rest of the kit uses.
+Three recipes - unit test, integration test, architecture rule. Each is copy-paste-ready and follows the conventions the rest of the kit uses.
 
 <Callout type="tip" title="Pick the right layer">
 Test the smallest unit that fully exercises the behaviour. An invariant on an aggregate is a domain unit test (no DbContext). An endpoint's HTTP response is an integration test (real round trip). An architectural rule is an architecture test (compile-time predicate). Don't reach for integration when unit will do.
 </Callout>
 
-## Recipe 1 — A unit test for a new handler
+## Recipe 1 - A unit test for a new handler
 
 You've just added a handler under `Modules.Catalog/Features/v1/Products/AdjustProductStock/` and want to verify its logic without infrastructure.
 
 ### 1. Create the test file
 
-Unit test projects group by *kind*, not by feature path — `Domain/` for aggregate tests, `Handlers/` for handler tests, `Services/` for service tests (see `Identity.Tests` for the fullest example):
+Unit test projects group by *kind*, not by feature path - `Domain/` for aggregate tests, `Handlers/` for handler tests, `Services/` for service tests (see `Identity.Tests` for the fullest example):
 
 ```
 src/Tests/Catalog.Tests/Handlers/AdjustProductStockCommandHandlerTests.cs
 ```
 
-(If the module has no test project yet, create it with `dotnet new xunit -n Catalog.Tests -o src/Tests/Catalog.Tests`, add it to the solution, and reference the module plus `Shouldly`, `NSubstitute`, and `AutoFixture` — versions come from central package management.)
+(If the module has no test project yet, create it with `dotnet new xunit -n Catalog.Tests -o src/Tests/Catalog.Tests`, add it to the solution, and reference the module plus `Shouldly`, `NSubstitute`, and `AutoFixture` - versions come from central package management.)
 
 ### 2. Write the test
 
@@ -86,7 +86,7 @@ dotnet test src/Tests/Catalog.Tests/ \
 
 Should pass sub-second.
 
-## Recipe 2 — An integration test for a new endpoint
+## Recipe 2 - An integration test for a new endpoint
 
 You've added `PATCH /api/v1/catalog/products/{productId}/stock` and want to verify the HTTP round-trip.
 
@@ -100,7 +100,7 @@ src/Tests/Integration.Tests/Tests/Catalog/AdjustProductStockEndpointTests.cs
 
 ### 2. Write the test
 
-Join the shared collection, take the factory in the constructor, and authenticate through `AuthHelper` — that's the whole harness contract (see [Fixtures & seed data](/docs/testing/fixtures-and-seed-data/)):
+Join the shared collection, take the factory in the constructor, and authenticate through `AuthHelper` - that's the whole harness contract (see [Fixtures & seed data](/docs/testing/fixtures-and-seed-data/)):
 
 ```csharp
 using Integration.Tests.Infrastructure;
@@ -125,7 +125,7 @@ public sealed class AdjustProductStockEndpointTests
     {
         using var client = await _auth.CreateRootAdminClientAsync();
 
-        // Arrange — create the product this test owns (unique SKU, no shared seed)
+        // Arrange - create the product this test owns (unique SKU, no shared seed)
         var createResponse = await client.PostAsJsonAsync(
             $"{TestConstants.CatalogBasePath}/products", new
             {
@@ -166,7 +166,7 @@ public sealed class AdjustProductStockEndpointTests
 }
 ```
 
-For permission-denial (403) coverage, create a user without the permission via the API and authenticate with `CreateAuthenticatedClientAsync` — see `Tests/Authorization/PermissionEnforcementTests.cs` for the patterns.
+For permission-denial (403) coverage, create a user without the permission via the API and authenticate with `CreateAuthenticatedClientAsync` - see `Tests/Authorization/PermissionEnforcementTests.cs` for the patterns.
 
 ### 3. Run it
 
@@ -175,11 +175,11 @@ dotnet test src/Tests/Integration.Tests/ \
   --filter "FullyQualifiedName~AdjustProductStockEndpointTests"
 ```
 
-Docker must be running — the suite starts its Postgres + MinIO containers once and shares them across every test.
+Docker must be running - the suite starts its Postgres + MinIO containers once and shares them across every test.
 
-## Recipe 3 — A new architecture rule
+## Recipe 3 - A new architecture rule
 
-You've adopted a convention — say, "every Mediator handler must be public sealed" — and want CI to enforce it.
+You've adopted a convention - say, "every Mediator handler must be public sealed" - and want CI to enforce it.
 
 ### 1. Pick the file
 
@@ -229,9 +229,9 @@ public sealed class HandlerShapeTests
 
 Three conventions the shipped rules all follow:
 
-- **XML doc comment** stating the rule and *why* — the readable specification.
-- **Failure message that names the offenders** — so the fix is obvious from the CI log.
-- **Explicit allowlists for exceptions** (see `HandlerValidatorPairingTests.KnownMissingCommandHandlers`) — exemptions are code-reviewed, never silent.
+- **XML doc comment** stating the rule and *why* - the readable specification.
+- **Failure message that names the offenders** - so the fix is obvious from the CI log.
+- **Explicit allowlists for exceptions** (see `HandlerValidatorPairingTests.KnownMissingCommandHandlers`) - exemptions are code-reviewed, never silent.
 
 For pure dependency rules ("X must not reference Y"), NetArchTest's fluent API is shorter:
 
@@ -250,7 +250,7 @@ dotnet test src/Tests/Architecture.Tests/ \
   --filter "FullyQualifiedName~HandlerShapeTests"
 ```
 
-Runs in seconds — no infrastructure. If it fails, the message names the offending types.
+Runs in seconds - no infrastructure. If it fails, the message names the offending types.
 
 ## Three rules of thumb
 
@@ -260,7 +260,7 @@ Runs in seconds — no infrastructure. If it fails, the message names the offend
 
 ## Related
 
-- [Unit tests](/docs/testing/unit-tests/) — conventions and assertion style.
-- [Integration tests](/docs/testing/integration-tests/) — the harness and authenticated clients.
-- [Architecture tests](/docs/testing/architecture-tests/) — the rule families that ship.
-- [Running tests](/docs/testing/running-tests/) — `dotnet test` invocations.
+- [Unit tests](/docs/testing/unit-tests/) - conventions and assertion style.
+- [Integration tests](/docs/testing/integration-tests/) - the harness and authenticated clients.
+- [Architecture tests](/docs/testing/architecture-tests/) - the rule families that ship.
+- [Running tests](/docs/testing/running-tests/) - `dotnet test` invocations.

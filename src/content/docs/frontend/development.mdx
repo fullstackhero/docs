@@ -15,7 +15,7 @@ seo:
 Both `clients/admin` and `clients/dashboard` are Vite-based React SPAs. Standard `npm` lifecycle, standard build output, no special tooling required.
 
 <Callout type="tip" title="Aspire is the easiest local dev">
-`dotnet run --project src/Host/FSH.Starter.AppHost` brings up Postgres, Valkey, MinIO, the API, the admin, and the dashboard — all at once, with service discovery handling URLs. You don't need to run `npm run dev` separately unless you're isolating frontend work.
+`dotnet run --project src/Host/FSH.Starter.AppHost` brings up Postgres, Valkey, MinIO, the API, the admin, and the dashboard - all at once, with service discovery handling URLs. You don't need to run `npm run dev` separately unless you're isolating frontend work.
 </Callout>
 
 ## Running locally
@@ -33,7 +33,7 @@ This starts everything:
 - Dashboard at http://localhost:5174
 - Postgres at tcp/5432, Valkey at tcp/6379, MinIO at :9000
 
-Vite HMR works through Aspire — edits to frontend files reload instantly in the browser.
+Vite HMR works through Aspire - edits to frontend files reload instantly in the browser.
 
 ### Via npm (frontend-only)
 
@@ -45,7 +45,7 @@ npm run dev                # http://localhost:5173 (dashboard: 5174)
 
 This requires the backend to be running separately (either via Aspire, docker-compose, or `dotnet run` against the API project).
 
-The Vite dev server proxies API paths to the backend — `http://localhost:5030` for admin, `https://localhost:7030` for the dashboard by default. To point at a different backend, set `VITE_API_BASE_URL` when starting the dev server; it only steers the **dev proxy target**, it is never compiled into a build.
+The Vite dev server proxies API paths to the backend - `http://localhost:5030` for admin, `https://localhost:7030` for the dashboard by default. To point at a different backend, set `VITE_API_BASE_URL` when starting the dev server; it only steers the **dev proxy target**, it is never compiled into a build.
 
 ## The npm scripts
 
@@ -84,20 +84,20 @@ clients/admin/dist/
 └── ...
 ```
 
-`dist/` is a static site — pure HTML / JS / CSS. No server runtime required.
+`dist/` is a static site - pure HTML / JS / CSS. No server runtime required.
 
 ## Runtime configuration (`/config.json`)
 
 Vite hardcodes `VITE_*` env vars into the bundle at build time. That's fine for static URLs, but you usually want **one built image** that runs against multiple environments (dev, staging, prod) with different API URLs.
 
-The kit's solution: each app fetches `/config.json` once at boot — before React mounts — and reads every environment-dependent value from it. In dev, Vite serves `public/config.json`; in production, the container renders it from environment variables at startup.
+The kit's solution: each app fetches `/config.json` once at boot - before React mounts - and reads every environment-dependent value from it. In dev, Vite serves `public/config.json`; in production, the container renders it from environment variables at startup.
 
 ```jsonc
 // clients/admin/public/config.json (dev defaults)
 {
   "apiBase": "",                   // "" = same-origin (dev proxy / reverse proxy)
   "defaultTenant": "root",
-  "dashboardUrl": "http://localhost:5174",  // admin only — impersonation handoff target
+  "dashboardUrl": "http://localhost:5174",  // admin only - impersonation handoff target
   "inactivityIdleMs": 600000,
   "inactivityWarningMs": 60000
 }
@@ -107,7 +107,7 @@ The dashboard's variant swaps `dashboardUrl` for a `demoMode` flag (login-page d
 
 ### The container pattern
 
-`clients/{app}/Dockerfile` is a two-stage build — `node:22-alpine` runs `npm ci && npm run build`, then `nginx:alpine` serves `dist/`. The entrypoint renders the runtime config before starting Nginx:
+`clients/{app}/Dockerfile` is a two-stage build - `node:22-alpine` runs `npm ci && npm run build`, then `nginx:alpine` serves `dist/`. The entrypoint renders the runtime config before starting Nginx:
 
 ```sh
 # clients/{app}/docker/docker-entrypoint.sh
@@ -148,7 +148,7 @@ import { env } from "@/env";
 env.apiBase; env.defaultTenant; env.inactivityIdleMs;
 ```
 
-`env.*` throws if read before the config loads — a deliberate fail-fast so a misordered import surfaces immediately instead of silently using the wrong API URL.
+`env.*` throws if read before the config loads - a deliberate fail-fast so a misordered import surfaces immediately instead of silently using the wrong API URL.
 
 ## Nginx configuration for SPAs
 
@@ -167,7 +167,7 @@ server {
     add_header Cache-Control "public, immutable";
   }
 
-  # Runtime config — must be re-fetched on every deploy
+  # Runtime config - must be re-fetched on every deploy
   location = /config.json {
     add_header Cache-Control "no-store";
     add_header X-Content-Type-Options "nosniff";
@@ -213,14 +213,14 @@ Connect the repo, configure build command + output directory. Cloudflare's Worke
 
 ## Testing
 
-Both apps ship Playwright E2E suites — fully **route-mocked** (no live backend required) with seeded JWTs, so they run fast and deterministic in CI:
+Both apps ship Playwright E2E suites - fully **route-mocked** (no live backend required) with seeded JWTs, so they run fast and deterministic in CI:
 
 ```bash
 npm run test:e2e           # headless run
 npm run test:e2e:ui        # Playwright's interactive UI mode
 ```
 
-Tests live under `clients/{app}/tests/`. There is no unit-test runner (Vitest) wired — the coverage strategy is E2E against mocked routes plus the backend's own xUnit + integration suites.
+Tests live under `clients/{app}/tests/`. There is no unit-test runner (Vitest) wired - the coverage strategy is E2E against mocked routes plus the backend's own xUnit + integration suites.
 
 ## Linting
 
@@ -250,18 +250,18 @@ server: {
 },
 ```
 
-With this in place, relative URLs (`/api/v1/...`) work in dev, matching the production same-origin default (`"apiBase": ""`). One nuance: the dashboard's dev server serves a `config.json` whose `apiBase` points **directly** at the API, so the long-lived SSE + SignalR streams bypass the proxy — otherwise they pin connections to `localhost:5174` and HTTP/1.1's ~6-per-host cap can starve lazy route-chunk loads.
+With this in place, relative URLs (`/api/v1/...`) work in dev, matching the production same-origin default (`"apiBase": ""`). One nuance: the dashboard's dev server serves a `config.json` whose `apiBase` points **directly** at the API, so the long-lived SSE + SignalR streams bypass the proxy - otherwise they pin connections to `localhost:5174` and HTTP/1.1's ~6-per-host cap can starve lazy route-chunk loads.
 
 ## Common issues
 
-- **CORS errors in dev** — your proxy isn't picking up the right backend URL. Set `VITE_API_BASE_URL` when starting `npm run dev`, or fix the backend's CORS config if you're hitting it directly.
-- **SignalR fails to connect after deploy** — your reverse proxy isn't forwarding WebSocket upgrade headers. Add `proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade";` to Nginx.
-- **App boots to an error about `/config.json`** — the runtime config file is missing or unreachable. In containers, check the `FSH_*` env vars (the entrypoint refuses to start without `FSH_API_URL`); on static hosts, make sure `config.json` deployed next to `index.html`.
-- **HMR not updating in Aspire** — `dotnet watch` doesn't always proxy WebSocket upgrades for Vite. Run `npm run dev` separately in that case.
+- **CORS errors in dev** - your proxy isn't picking up the right backend URL. Set `VITE_API_BASE_URL` when starting `npm run dev`, or fix the backend's CORS config if you're hitting it directly.
+- **SignalR fails to connect after deploy** - your reverse proxy isn't forwarding WebSocket upgrade headers. Add `proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade";` to Nginx.
+- **App boots to an error about `/config.json`** - the runtime config file is missing or unreachable. In containers, check the `FSH_*` env vars (the entrypoint refuses to start without `FSH_API_URL`); on static hosts, make sure `config.json` deployed next to `index.html`.
+- **HMR not updating in Aspire** - `dotnet watch` doesn't always proxy WebSocket upgrades for Vite. Run `npm run dev` separately in that case.
 
 ## Related
 
-- [Admin console](/docs/frontend/admin/) — the operator app.
-- [Tenant dashboard](/docs/frontend/dashboard/) — the end-user app.
-- [Frontend architecture](/docs/frontend/architecture/) — shared patterns.
-- [Deployment](/docs/deployment/) — production wiring across services.
+- [Admin console](/docs/frontend/admin/) - the operator app.
+- [Tenant dashboard](/docs/frontend/dashboard/) - the end-user app.
+- [Frontend architecture](/docs/frontend/architecture/) - shared patterns.
+- [Deployment](/docs/deployment/) - production wiring across services.

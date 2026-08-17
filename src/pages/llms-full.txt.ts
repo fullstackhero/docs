@@ -3,7 +3,7 @@ import { getCollection } from 'astro:content';
 import siteConfig from '../data/site';
 
 /**
- * /llms-full.txt — the entire documentation corpus concatenated as
+ * /llms-full.txt - the entire documentation corpus concatenated as
  * a single plain-text file for AI ingestion.
  *
  * Why: llms.txt (small summary) is the public-facing index; llms-full.txt
@@ -23,7 +23,7 @@ export const GET: APIRoute = async () => {
   const sorted = [...entries].sort((a, b) => a.id.localeCompare(b.id));
 
   const intro =
-    `# fullstackhero — .NET 10 Starter Kit (full documentation)\n\n` +
+    `# fullstackhero - .NET 10 Starter Kit (full documentation)\n\n` +
     `> ${siteConfig.description}\n\n` +
     `Generated from the canonical docs site at ${siteConfig.url}.\n` +
     `Source repository: ${siteConfig.repo}\n` +

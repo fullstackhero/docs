@@ -4,12 +4,12 @@
 /* ════════════════════════════════════════════════════════════════════════
    BRAND TYPOGRAPHY TOKENS
    ────────────────────────────────────────────────────────────────────────
-   Type system (self-hosted via Astro Fonts API — see astro.config.mjs):
-     Display  — Outfit. Modern geometric sans, used for hero typography,
+   Type system (self-hosted via Astro Fonts API - see astro.config.mjs):
+     Display  - Outfit. Modern geometric sans, used for hero typography,
                 h1, h2.
-     Heading  — Outfit. Same family; alias kept for semantic clarity.
-     Body     — Figtree. Long-form reading, UI, navigation.
-     Mono     — JetBrains Mono. Code, kbd, eyebrows.
+     Heading  - Outfit. Same family; alias kept for semantic clarity.
+     Body     - Figtree. Long-form reading, UI, navigation.
+     Mono     - JetBrains Mono. Code, kbd, eyebrows.
 
    The Astro Fonts API populates --font-outfit / --font-figtree /
    --font-jetbrains-mono with the full font-family stack (real font name +

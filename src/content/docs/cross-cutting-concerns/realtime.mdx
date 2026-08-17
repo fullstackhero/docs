@@ -7,12 +7,12 @@ sidebar:
   order: 9
 pageType: concept
 seo:
-  title: 'Realtime in .NET 10 — SignalR + Redis backplane + AppHub'
+  title: 'Realtime in .NET 10 - SignalR + Redis backplane + AppHub'
   description: 'How fullstackhero wires SignalR over a Redis backplane with AppHub group conventions (user:{id}, channel:{id}), post-SaveChanges broadcast from handlers…'
   keywords: 'asp.net core signalr .net 10, signalr redis backplane, signalr group conventions, realtime chat dotnet, signalr authentication query token'
 ---
 
-The kit's realtime surface is a single SignalR hub — `AppHub` in `BuildingBlocks/Web/Realtime/`, mapped at `/api/v1/realtime/hub` — serving every realtime concern. On connect, every user joins their personal `user:{userId}` group, their `tenant:{tenantId}` group, plus every `channel:{channelId}` they belong to. Handlers broadcast via `IHubContext<AppHub>` after `SaveChanges` commits; the **Valkey** (a Redis-compatible, BSD-licensed Redis fork) backplane fans the broadcast across instances.
+The kit's realtime surface is a single SignalR hub - `AppHub` in `BuildingBlocks/Web/Realtime/`, mapped at `/api/v1/realtime/hub` - serving every realtime concern. On connect, every user joins their personal `user:{userId}` group, their `tenant:{tenantId}` group, plus every `channel:{channelId}` they belong to. Handlers broadcast via `IHubContext<AppHub>` after `SaveChanges` commits; the **Valkey** (a Redis-compatible, BSD-licensed Redis fork) backplane fans the broadcast across instances.
 
 <Callout type="tip" title="One hub, many concerns">
 A second hub would mean a second auth pipeline, a second backplane configuration, a second pile of client-side connection state. Keep all realtime traffic on `AppHub`; identify event types via the SignalR method name (`ChatMessageCreated`, `NotificationCreated`, `TicketResolved`).
@@ -25,19 +25,19 @@ builder.AddHeroPlatform(o => o.EnableRealtime = true);
 app.UseHeroPlatform(p => p.MapRealtime = true);
 ```
 
-`AddHeroRealtime` registers SignalR; if `CachingOptions:Redis` is set, it also calls `AddStackExchangeRedis(...)` (channel prefix `fsh-signalr`) so cross-instance message fan-out works. Without Valkey, every instance broadcasts only to its own connected clients — fine for dev, not for multi-instance production. `MapRealtime` maps the hub at `/api/v1/realtime/hub` plus a presence snapshot endpoint at `GET /api/v1/realtime/presence?userIds=a,b,c` that clients poll for initial online status.
+`AddHeroRealtime` registers SignalR; if `CachingOptions:Redis` is set, it also calls `AddStackExchangeRedis(...)` (channel prefix `fsh-signalr`) so cross-instance message fan-out works. Without Valkey, every instance broadcasts only to its own connected clients - fine for dev, not for multi-instance production. `MapRealtime` maps the hub at `/api/v1/realtime/hub` plus a presence snapshot endpoint at `GET /api/v1/realtime/presence?userIds=a,b,c` that clients poll for initial online status.
 
 ## Group conventions
 
 When a user's `HubConnection` lands at `/api/v1/realtime/hub`, the hub's `OnConnectedAsync` joins:
 
-1. `user:{userId}` — for events targeted at this user (notifications, DM events, ticket-assigned).
-2. `tenant:{tenantId}` — scopes tenant-wide broadcasts (like `PresenceChanged`) so one tenant's connect/disconnect churn never fans out to other tenants.
+1. `user:{userId}` - for events targeted at this user (notifications, DM events, ticket-assigned).
+2. `tenant:{tenantId}` - scopes tenant-wide broadcasts (like `PresenceChanged`) so one tenant's connect/disconnect churn never fans out to other tenants.
 3. `channel:{channelId}` for every channel the user belongs to (the kit's `IUserChannelLookup` returns the list).
 
 The result: broadcasting to `Clients.Group($"user:{userId}")` reaches every device that user is signed in on; broadcasting to `Clients.Group($"channel:{channelId}")` reaches every member of the channel.
 
-Connect-time joins only cover channels that existed at connect time. A channel created — or a membership granted — *after* the socket is live is covered by the `JoinChannel(channelId)` hub method: clients call it when they open a conversation and on reconnect. It's membership-checked and idempotent, so calling it freely is safe.
+Connect-time joins only cover channels that existed at connect time. A channel created - or a membership granted - *after* the socket is live is covered by the `JoinChannel(channelId)` hub method: clients call it when they open a conversation and on reconnect. It's membership-checked and idempotent, so calling it freely is safe.
 
 For domain-specific groups (e.g. "everyone watching this dashboard"), invent a stable group name (`dashboard:{tenantId}:{dashboardId}`) and call `Groups.AddToGroupAsync` from a hub method or post-connect logic.
 
@@ -94,7 +94,7 @@ public async Task Typing(Guid channelId)
 }
 ```
 
-The `IDistributedCache` marker key expires after 3 seconds, so the broadcast fires at most once per (channel, user) per window. With Valkey, the throttle is cluster-wide — chatty clients can't bypass it by reconnecting to a different node. Note `OthersInGroup` — the typist doesn't need their own indicator.
+The `IDistributedCache` marker key expires after 3 seconds, so the broadcast fires at most once per (channel, user) per window. With Valkey, the throttle is cluster-wide - chatty clients can't bypass it by reconnecting to a different node. Note `OthersInGroup` - the typist doesn't need their own indicator.
 
 ## Authenticating SignalR connections
 
@@ -107,7 +107,7 @@ const conn = new HubConnectionBuilder()
   .build();
 ```
 
-The factory returns the JWT; the SignalR client appends it as `?access_token=...`. The kit's `ConfigureJwtBearerOptions` has an `OnMessageReceived` handler that accepts `?access_token=` only on a narrow path allow-list — `/api/v1/realtime/hub` and `/notifications` — so query-string tokens can't leak into ordinary endpoints. The standard JWT pipeline validates the token from there.
+The factory returns the JWT; the SignalR client appends it as `?access_token=...`. The kit's `ConfigureJwtBearerOptions` has an `OnMessageReceived` handler that accepts `?access_token=` only on a narrow path allow-list - `/api/v1/realtime/hub` and `/notifications` - so query-string tokens can't leak into ordinary endpoints. The standard JWT pipeline validates the token from there.
 
 ## Reading the user from the hub
 
@@ -124,7 +124,7 @@ private string? GetUserId()
 }
 ```
 
-This is a memory-noted gotcha — `ICurrentUser` in a hub method returns the wrong identity (or null) once the connection has been alive for any length of time. Always go through `Context.User`.
+This is a memory-noted gotcha - `ICurrentUser` in a hub method returns the wrong identity (or null) once the connection has been alive for any length of time. Always go through `Context.User`.
 
 ## Integration testing SignalR
 
@@ -135,7 +135,7 @@ var connection = new HubConnectionBuilder()
     .WithUrl($"http://localhost/api/v1/realtime/hub?access_token={Uri.EscapeDataString(accessToken)}", options =>
     {
         options.HttpMessageHandlerFactory = _ => _factory.Server.CreateHandler();
-        // TestServer has no WebSocket transport — force long-polling.
+        // TestServer has no WebSocket transport - force long-polling.
         options.WebSocketFactory = (_, _) => throw new NotSupportedException();
         options.Transports = HttpTransportType.LongPolling;
         options.Headers["tenant"] = TestConstants.RootTenantId;
@@ -143,7 +143,7 @@ var connection = new HubConnectionBuilder()
     .Build();
 ```
 
-The Chat integration tests (`src/Tests/Integration.Tests/Tests/Chat/` — `RealtimeEventsTests`, `TypingIndicatorTests`, `PresenceTests`) all carry this `ConnectAsync` helper. Use it as the template for any new realtime integration test.
+The Chat integration tests (`src/Tests/Integration.Tests/Tests/Chat/` - `RealtimeEventsTests`, `TypingIndicatorTests`, `PresenceTests`) all carry this `ConnectAsync` helper. Use it as the template for any new realtime integration test.
 
 ## Configuration
 
@@ -161,12 +161,12 @@ The Chat integration tests (`src/Tests/Integration.Tests/Tests/Chat/` — `Realt
 
 Two important config notes:
 
-- **CORS for credentialed requests.** `AllowAnyOrigin()` silently breaks SignalR while REST keeps working — the CORS spec forbids `*` with credentialed requests, and SignalR's negotiate always runs credentialed. The kit's `AddHeroCors` handles this: `AllowAll: true` uses `SetIsOriginAllowed(_ => true) + AllowCredentials()` (echoes the request origin instead of `*`); `AllowAll: false` uses an explicit origin allow-list with `AllowCredentials()`. Use the allow-list in prod.
+- **CORS for credentialed requests.** `AllowAnyOrigin()` silently breaks SignalR while REST keeps working - the CORS spec forbids `*` with credentialed requests, and SignalR's negotiate always runs credentialed. The kit's `AddHeroCors` handles this: `AllowAll: true` uses `SetIsOriginAllowed(_ => true) + AllowCredentials()` (echoes the request origin instead of `*`); `AllowAll: false` uses an explicit origin allow-list with `AllowCredentials()`. Use the allow-list in prod.
 - **Sticky sessions / connection affinity.** Long-polling fallback needs sticky sessions on the load balancer; WebSockets don't. Configure both layers to be safe.
 
 ## Related
 
-- [Chat module](/docs/modules/chat/) — the canonical consumer of every realtime feature listed here.
-- [Notifications module](/docs/modules/notifications/) — `NotificationCreated` push.
-- [Server-Sent Events](/docs/cross-cutting-concerns/server-sent-events/) — one-way streaming when SignalR is overkill.
-- [Caching](/docs/cross-cutting-concerns/caching/) — the Valkey backplane is shared with the cache.
+- [Chat module](/docs/modules/chat/) - the canonical consumer of every realtime feature listed here.
+- [Notifications module](/docs/modules/notifications/) - `NotificationCreated` push.
+- [Server-Sent Events](/docs/cross-cutting-concerns/server-sent-events/) - one-way streaming when SignalR is overkill.
+- [Caching](/docs/cross-cutting-concerns/caching/) - the Valkey backplane is shared with the cache.

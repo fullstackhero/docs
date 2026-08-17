@@ -1,4 +1,4 @@
-# Dashboard — World-Class Readiness Audit
+# Dashboard - World-Class Readiness Audit
 
 **Scope:** `clients/dashboard` (tenant-side React app).
 **Date:** 2026-05-21.
@@ -16,21 +16,21 @@
 
 ---
 
-## TL;DR — what shipped vs what's still in the way
+## TL;DR - what shipped vs what's still in the way
 
 **What's already world-class.** Token architecture is textbook three-layer oklch with the untinted-neutrals fix held (zero `text-gray-*`/`bg-zinc-*` leaks anywhere). View-Transitions theme crossfade via `flushSync` is genuinely advanced. Cross-app version drift is **zero**. JWT refresh has stampede protection. Every route is lazy-loaded (31/31). nginx cache strategy is canonical (1y immutable on hashed assets + no-store on `index.html`/`config.json`). No TODO/FIXME/HACK/debugger anywhere in `src/`. ESLint `jsx-a11y/recommended` is enforced.
 
 **The four things blocking "best-in-class 2026":**
 
-1. **Command palette is navigation-only.** It carries Overview/Activity/Invoices/Health/Audits/Settings — but not Identity, Catalog, Tickets, Files, or Chat. No "Create…" group. No record search. This is the single biggest perceived-completeness gap vs Linear/Stripe/Vercel.
-2. **No URL state for filters/sort/page on any list.** Every page (Audits, Users, Products, Tickets, Sessions, Trash) keeps state in `useState`. Bookmarks, share-with-a-teammate, browser back/forward — all broken. Stripe/Linear/Vercel/Resend all do this.
+1. **Command palette is navigation-only.** It carries Overview/Activity/Invoices/Health/Audits/Settings - but not Identity, Catalog, Tickets, Files, or Chat. No "Create…" group. No record search. This is the single biggest perceived-completeness gap vs Linear/Stripe/Vercel.
+2. **No URL state for filters/sort/page on any list.** Every page (Audits, Users, Products, Tickets, Sessions, Trash) keeps state in `useState`. Bookmarks, share-with-a-teammate, browser back/forward - all broken. Stripe/Linear/Vercel/Resend all do this.
 3. **No bulk actions anywhere.** No checkbox column, no sticky multi-select bar. Sessions admin can only revoke one or "all". Trash has no bulk-restore. Tickets/Users/Products all force per-row mutations. Table-stakes for any admin tool.
-4. **Form errors silent for screen readers, half the chrome below WCAG 2.2 AA.** Zero `aria-invalid`/`aria-describedby` usage. No `aria-current="page"` on NavLinks. Muted text in dark mode at `oklch(0.680 0 0)` already borderline, then alpha-multiplied to ~2.8:1 for placeholders/chevrons — **fails AA**. No `<table>` semantics anywhere — every list is a `<div>` grid. Touch targets `h-5 w-5` (20×20) on multiple icon-only controls fail WCAG 2.2 SC 2.5.8.
+4. **Form errors silent for screen readers, half the chrome below WCAG 2.2 AA.** Zero `aria-invalid`/`aria-describedby` usage. No `aria-current="page"` on NavLinks. Muted text in dark mode at `oklch(0.680 0 0)` already borderline, then alpha-multiplied to ~2.8:1 for placeholders/chevrons - **fails AA**. No `<table>` semantics anywhere - every list is a `<div>` grid. Touch targets `h-5 w-5` (20×20) on multiple icon-only controls fail WCAG 2.2 SC 2.5.8.
 
 **Three quick visual fixes that change the room temperature:**
 
 - Define a 4-step type scale; today h1 sizes drift across `EntityPageHeader` (22px), `PageHero` (26px), `OverviewPage` (28px), `ListHero` (32px), `NotFoundPage` (32px). Same role, four sizes.
-- Drop `backdrop-grayscale` from the Dialog scrim — the page going greyscale behind modals reads as a system error, not focal contrast.
+- Drop `backdrop-grayscale` from the Dialog scrim - the page going greyscale behind modals reads as a system error, not focal contrast.
 - Light-mode elevation is flat: `--surface-3`, `--card`, `--popover` all equal `--neutral-0`. Dark mode is correctly layered. Re-introduce a one-step difference so cards float again.
 
 **One signature move worth committing to:** the rose→saffron 1px gradient strip at the top of `EntityDetailHero` is the only place the brand actually paints on a page surface. Promote it to **every** page header (list + detail + settings + chat channel header) and to the page-count chip color. Two repeated identity moves are enough.
@@ -51,7 +51,7 @@
 | UX patterns vs Linear/Vercel/Stripe | C+ | Strong primitives, but command palette, URL state, bulk actions, optimistic UI, inline editing all materially behind. |
 | Packages / security | A− | 1 transitive moderate advisory, auto-fixable. Zero cross-app drift. |
 
-**Overall: B/B+** — a polished foundation that's punching below its potential because the high-leverage UX patterns (URL state, palette, bulk actions, undo) haven't been built.
+**Overall: B/B+** - a polished foundation that's punching below its potential because the high-leverage UX patterns (URL state, palette, bulk actions, undo) haven't been built.
 
 ---
 
@@ -59,7 +59,7 @@
 
 Ordered by **value-per-hour**, not by category. Effort estimates assume Mukesh + Claude pair work.
 
-### P0 — Ship in the next two weeks (highest visible/ROI per hour)
+### P0 - Ship in the next two weeks (highest visible/ROI per hour)
 
 | # | Title | Effort | Source | Why it's P0 |
 |---|---|---|---|---|
@@ -82,7 +82,7 @@ Ordered by **value-per-hour**, not by category. Effort estimates assume Mukesh +
 | 17 | **Use `useUserDisplay` on tickets list + detail** (`tickets.tsx:399-413`, `ticket-detail.tsx:223-329`) instead of `.slice(0, 8) + "…"` user-id rendering | 40 min | UX | Hook exists; tickets surface looks unfinished without it. |
 | 18 | **Bring back light-mode elevation** in `globals.css:123-128`: `--surface-3 ≠ --card ≠ --background` (e.g. `--surface-3 = oklch(0.992 0 0)`) | 20 min | Style | Cards regain "sheet on desk"; today they're hairline-flat. |
 
-### P1 — Sprint 1 (next 2–4 weeks)
+### P1 - Sprint 1 (next 2–4 weeks)
 
 | # | Title | Effort |
 |---|---|---|
@@ -92,15 +92,15 @@ Ordered by **value-per-hour**, not by category. Effort estimates assume Mukesh +
 | 22 | **Action-with-undo toast pattern** in `App.tsx` + sample callers (deleteRole/deleteUser/deleteProduct/deleteChannel/deleteMessage) | 0.5 d |
 | 23 | **Migrate list surfaces to `<table>` semantics** (or at minimum `role="table"/row/columnheader/cell` in `entity-shell.tsx:267-333`); Users/Roles/Groups/Audits/Sessions/Trash/Invoices/Tickets/Products/Brands/Categories | 1–2 d |
 | 24 | **`role="log" aria-live="polite"` on `MessageList` + Activity feed; `role="status" aria-live="polite"` on typing indicator** | 0.5 d |
-| 25 | **ARIA 1.2 combobox pattern** on mention picker (`pages/chat/composer.tsx:380-420` + `mention-picker.tsx:32-39`), `UserPicker`, and `Combobox` primitive — `role="combobox"`, `aria-controls`, `aria-expanded`, `aria-activedescendant` | 1 d per widget = ~3 d |
+| 25 | **ARIA 1.2 combobox pattern** on mention picker (`pages/chat/composer.tsx:380-420` + `mention-picker.tsx:32-39`), `UserPicker`, and `Combobox` primitive - `role="combobox"`, `aria-controls`, `aria-expanded`, `aria-activedescendant` | 1 d per widget = ~3 d |
 | 26 | **Reactions popover + composer-attachment chip + reply-quote insertion** focus-management pass: close on Esc + outside-click, return focus to trigger, move focus to composer when reply is added | 0.5 d |
-| 27 | **Focus-visible single source of truth**: keep the global `:focus-visible` outline at `globals.css:536-539` OR strip per-component `focus-visible:ring-[3px]` from Button/Input/Combobox — not both | 0.5 d |
+| 27 | **Focus-visible single source of truth**: keep the global `:focus-visible` outline at `globals.css:536-539` OR strip per-component `focus-visible:ring-[3px]` from Button/Input/Combobox - not both | 0.5 d |
 | 28 | **Cull dead list primitives**: delete `density-toggle.tsx`, `empty-state.tsx`, `list-hero.tsx`, `pagination.tsx`, `sort-chips.tsx`, `stat.tsx`; prune barrel re-exports in `components/list/index.ts` | 30 min |
 | 29 | **Wire functional density toggle into `pages/settings/appearance.tsx`** (provider + tokens exist; UI missing) | 1 h |
 | 30 | **Field-error model: `FormField` primitive owning id + `aria-invalid` + `aria-describedby` + error-region rendering**; migrate login/forgot/reset + 4 main dialogs | 2 d |
-| 31 | **Virtualize**: `audits.tsx`, `sessions.tsx`, notifications inbox dropdown, `my-files.tsx`, `activity.tsx`/`live-feed.tsx` (already a dep — `@tanstack/react-virtual`) | 0.5 d each |
+| 31 | **Virtualize**: `audits.tsx`, `sessions.tsx`, notifications inbox dropdown, `my-files.tsx`, `activity.tsx`/`live-feed.tsx` (already a dep - `@tanstack/react-virtual`) | 0.5 d each |
 | 32 | **`React.memo` on list row components**: `NotificationRow`, `RecentAuditRow`, `FeedRow`, `DesktopRow`/`MobileCard`, chat `Message` (after Sse split lands) | 0.5 d |
-| 33 | **`PresenceDot` primitive** (size + userId; calls `usePresence`) — apply to user-detail, sessions, tickets list, audits user column | 0.5 d |
+| 33 | **`PresenceDot` primitive** (size + userId; calls `usePresence`) - apply to user-detail, sessions, tickets list, audits user column | 0.5 d |
 | 34 | **`isDirty` nav guard via `useBlocker`** on role-detail and user-detail editors | 0.5 d |
 | 35 | **`Pagination` consolidation**: pick one primitive (recommend `EntityPager`); delete the other; replace catalog/products' hand-rolled pager | 1 h |
 | 36 | **Show 2FA recovery codes after enroll** (`security.tsx:482-503`); server returns codes, UI presents copy + download | 0.5 d (after server lands) |
@@ -109,11 +109,11 @@ Ordered by **value-per-hour**, not by category. Effort estimates assume Mukesh +
 | 39 | **Promote brand gradient rule into `EntityPageHeader`, `PageHero`, settings layout header, chat channel header** | 1 h |
 | 40 | **Wave-3 majors, one at a time:** `@vitejs/plugin-react` 6, `eslint-plugin-react-hooks` 7, `lucide-react` 1, `recharts` 3 (only after we decide whether to keep it), `@hookform/resolvers` 5 (admin only), `zod` 4 (admin only) | 1 PR/major ~ 5 d total |
 
-### P2 — Sprint 2+
+### P2 - Sprint 2+
 
 | # | Title |
 |---|---|
-| 41 | **`BroadcastChannel`-shared SignalR connection across tabs** — leader election, cut N tabs → 1 server connection. |
+| 41 | **`BroadcastChannel`-shared SignalR connection across tabs** - leader election, cut N tabs → 1 server connection. |
 | 42 | **CSP + HSTS + Permissions-Policy headers** in `docker/nginx.conf`. |
 | 43 | **Self-host Geist + JetBrains Mono** as woff2 with `preload`; deprecate Google Fonts CDN entirely. |
 | 44 | **Inline editing primitive** + roll to product price/name, brand/category name, role description, ticket title, channel description. |
@@ -138,7 +138,7 @@ Ordered by **value-per-hour**, not by category. Effort estimates assume Mukesh +
 
 ## Per-dimension highlights
 
-Each subsection is a compressed reference to the full agent finding. Cite line numbers verbatim — they're the source of truth.
+Each subsection is a compressed reference to the full agent finding. Cite line numbers verbatim - they're the source of truth.
 
 ### Visual style + design system
 
@@ -149,8 +149,8 @@ Each subsection is a compressed reference to the full agent finding. Cite line n
 - **No coherent type scale.** Same-role h1s render at 22 / 26 / 28 / 32 / 32 px across pages. Define `--text-display-page/section/hero/stat`; migrate every primitive.
 - **`fsh-sheet-in-left/right/top/bottom` keyframes are referenced but undefined** in `dialog.tsx:143-146`. Mobile drawer snaps open without animation. Add to `globals.css` or rebind to existing `fsh-dialog-in/out`.
 - **`recharts ^2.15.0` declared in `package.json:34` but zero `src/` imports.** Pure dead weight. Either wire (Usage row in `overview.tsx:1009-1064` is a candidate) or remove.
-- **`shadow-[0_1px_2px_oklch(0_0_0_/_0.04)]` literal repeated 7+ times** (`tickets.tsx:315`, `ticket-detail.tsx:699/831/860`, `entity-shell.tsx:91/253/348/484`, `entity-detail.tsx:66/291`) instead of `shadow-xs` (which uses 0.05 alpha — the literal doesn't even match). Sed-able fix.
-- **Hover-border trick `oklch(from var(--color-border) l c h / 1.4)`** in `overview.tsx:175/638/836` clips alpha to 1.0 silently — no visible hover effect. Use `var(--color-border-strong)`.
+- **`shadow-[0_1px_2px_oklch(0_0_0_/_0.04)]` literal repeated 7+ times** (`tickets.tsx:315`, `ticket-detail.tsx:699/831/860`, `entity-shell.tsx:91/253/348/484`, `entity-detail.tsx:66/291`) instead of `shadow-xs` (which uses 0.05 alpha - the literal doesn't even match). Sed-able fix.
+- **Hover-border trick `oklch(from var(--color-border) l c h / 1.4)`** in `overview.tsx:175/638/836` clips alpha to 1.0 silently - no visible hover effect. Use `var(--color-border-strong)`.
 - **DropdownMenuLabel composition produces two visual sizes** because `dropdown-menu.tsx:99` AND `topbar.tsx:297` both apply mono-uppercase-tracked classes. Lock label rendering inside the primitive.
 - **Skeleton shimmer (2.4s sweep) feels anxious** with 10+ rows; stagger animation-delay per child.
 - **5 of 13 list/ primitives are dead**: `ListHero`, `Stat`/`StatStrip`, `SortChips`, `DensityToggle`, `Pagination`, `EmptyState` have zero page consumers. The framework looks bigger than it is.
@@ -168,7 +168,7 @@ Each subsection is a compressed reference to the full agent finding. Cite line n
 2. **Forms never link errors to fields.** Zero `aria-invalid`/`aria-describedby` app-wide. SC 3.3.1, 3.3.3, 4.1.3.
 3. **Muted-foreground contrast** fails AA. Dark `oklch(0.680 0 0)` × 0.6 alpha for placeholders/chevrons → ~2.8:1. Light `oklch(0.575 0 0)` × 0.5 alpha on `text-[10px]` micro-labels → ~2.3:1. SC 1.4.3.
 4. **Icon-only buttons under 24×24** at `composer.tsx:524-536/609-621/677-688`, `channel-rail.tsx:131/228-237`, settings nav `Plus`. SC 2.5.8 (new in 2.2).
-5. **Mention picker has `role="listbox"` but textarea isn't `role="combobox"`** — no `aria-controls`, no `aria-expanded`, no `aria-activedescendant`. SC 4.1.2.
+5. **Mention picker has `role="listbox"` but textarea isn't `role="combobox"`** - no `aria-controls`, no `aria-expanded`, no `aria-activedescendant`. SC 4.1.2.
 
 **High-leverage quick wins:** `aria-current="page"` on NavLinks (5 min), `aria-label` on cmdk input + composer textarea (10 min), wire `aria-invalid`/`aria-describedby` on login + reset/forgot (1 h), make reaction picker close on Esc + outside-click (45 min), bump h-5 w-5 buttons (1 h sweep), `role="status"` (not `aria-live`) on RealtimeStatusPill (20 min), `role="log"` on Activity feed + chat MessageList (30 min), conditional render of empty `DialogDescription` (5 min), give Field required-dot an `sr-only` "required" sibling + `aria-required` (20 min), drop chat header `<h1>` to `<h2>` (5 min).
 
@@ -187,7 +187,7 @@ Codebase is **remarkably clean**: 0 TODO/FIXME/HACK, 0 debugger, 1 legitimate `c
 - Unused npm deps: `@hookform/resolvers`, `react-hook-form`, `recharts`, `zod`, `@types/lodash`, `autoprefixer` (Tailwind v4 doesn't need it; there's no `postcss.config.*`).
 - Unused custom CSS: `.chat-empty-hero` (globals.css:1298-1300).
 
-**Important false-positives avoided:** `.accent-rose/.accent-indigo/.accent-violet/.accent-sky/.accent-emerald/.accent-amber` rules (globals.css:204-283) ARE used — applied dynamically via `accent-${id}` template strings in `index.html:63` bootstrap, `theme-provider.tsx:159`, `command-palette.tsx:259`.
+**Important false-positives avoided:** `.accent-rose/.accent-indigo/.accent-violet/.accent-sky/.accent-emerald/.accent-amber` rules (globals.css:204-283) ARE used - applied dynamically via `accent-${id}` template strings in `index.html:63` bootstrap, `theme-provider.tsx:159`, `command-palette.tsx:259`.
 
 **Tooling:** add `knip` (config: `entry: ["src/main.tsx", "tests/**/*.spec.ts"]`, `ignoreExportsUsedInFile: true`) as dev dep + CI gate; add `eslint-plugin-unused-imports` set to `error`.
 
@@ -200,7 +200,7 @@ Codebase is **remarkably clean**: 0 TODO/FIXME/HACK, 0 debugger, 1 legitimate `c
 - Total CSS gzip: **20.3 KB** (single chunk, OK).
 - Number of chunks: **78** (1 main + 1 CSS + 76 route/icon chunks).
 - Largest chunk: `assets/index-BZ3i0yJ6.js` **196.7 KB gzip / 650 KB raw** (above 500 KB warning).
-- Routes lazy: **31/31** — perfect.
+- Routes lazy: **31/31** - perfect.
 - Estimated cold TTI on Fast 3G: **~3.5–4.5 s**.
 
 **Main shell top contributors (gzip):** react-dom 96, react-router 46, app code 43, **@microsoft/signalr 37 (should be lazy)**, @tanstack/query 19, tailwind-merge 16, lucide 16, sonner 13, @radix-ui/* ~32, @floating-ui ~18, cmdk 4.6 (should be lazy), react-remove-scroll 4.7.
@@ -208,17 +208,17 @@ Codebase is **remarkably clean**: 0 TODO/FIXME/HACK, 0 debugger, 1 legitimate `c
 **Top 5 quick wins:**
 
 1. **Lazy SignalR** → −37 KB main (~19% TTI).
-2. **Move SseProvider + RealtimeProvider out of AppShell** — only mount on routes that subscribe (`/chat`, `/activity`, `/overview`, where notification-bell renders). Stops opening hub on settings/files/health/etc.
+2. **Move SseProvider + RealtimeProvider out of AppShell** - only mount on routes that subscribe (`/chat`, `/activity`, `/overview`, where notification-bell renders). Stops opening hub on settings/files/health/etc.
 3. **Lazy CommandPaletteRoot** → −4.6 KB main + 12 KB raw; mount on first ⌘K.
 4. **Split SseContext** so `OverviewPage`'s 1156-line tree doesn't re-render on every SSE event.
-5. **Remove dead deps** (recharts, react-hook-form, @hookform/resolvers) from `package.json` — 120 KB install savings + future foot-gun prevention.
+5. **Remove dead deps** (recharts, react-hook-form, @hookform/resolvers) from `package.json` - 120 KB install savings + future foot-gun prevention.
 
-**TanStack Query hygiene:** 270 useQuery/useMutation calls across 43 files. Global `staleTime: 30_000` + `refetchOnWindowFocus: false` defaults at `lib/query-client.ts:13` are sound. `keepPreviousData` used in 7 list pages. No N+1 waterfalls found. `select` not used anywhere — could narrow MessageList subscription.
+**TanStack Query hygiene:** 270 useQuery/useMutation calls across 43 files. Global `staleTime: 30_000` + `refetchOnWindowFocus: false` defaults at `lib/query-client.ts:13` are sound. `keepPreviousData` used in 7 list pages. No N+1 waterfalls found. `select` not used anywhere - could narrow MessageList subscription.
 
 **Re-render hotspots:**
 
 1. `SseContext` value identity changes on every event (`sse-context.tsx:186-189`) → `OverviewPage`/`LiveFeed`/`ActivityPage`/`notification-bell` all re-render.
-2. `ThemeContext` value bundles 12 fields and setters (`theme-provider.tsx:321-336`) — every theme toggle re-renders every Avatar/Button/row touching `useTheme`.
+2. `ThemeContext` value bundles 12 fields and setters (`theme-provider.tsx:321-336`) - every theme toggle re-renders every Avatar/Button/row touching `useTheme`.
 3. **Zero `React.memo` usage app-wide** (`grep memo\(` returns nothing). Row components in long lists are prime candidates.
 4. `RealtimeProvider` rebuilds the SignalR hub on every token change.
 5. `ActivityPage` slices on every SSE event, no virtualization → 200 DOM rows update per event burst.
@@ -229,9 +229,9 @@ Codebase is **remarkably clean**: 0 TODO/FIXME/HACK, 0 debugger, 1 legitimate `c
 - **INP:** ⌘K open mounts cmdk + palette synchronously; theme toggle via `flushSync` + view-transition; audits filter chip click triggers full re-fetch + summary re-fetch + 50-row re-render.
 - **CLS:** Avatars without explicit width/height (`avatar.tsx:94`); late-loading impersonation banner; Google Fonts swap-in.
 
-**Network/realtime cost:** API client is solid — AbortController + timeout + JWT refresh stampede protection. SignalR backoff `[2s, 5s, 10s, 30s]` then 60s cap with jitter. SSE backoff 1s → 30s exponential. Neither shares connections across tabs (every tab opens its own); add `BroadcastChannel` leader election in P2 for power users.
+**Network/realtime cost:** API client is solid - AbortController + timeout + JWT refresh stampede protection. SignalR backoff `[2s, 5s, 10s, 30s]` then 60s cap with jitter. SSE backoff 1s → 30s exponential. Neither shares connections across tabs (every tab opens its own); add `BroadcastChannel` leader election in P2 for power users.
 
-**Dev/prod parity:** No sourcemaps emitted (verified `ls dist/assets/*.map`). nginx caches hashed assets `1y immutable`, `index.html` no-cache, `config.json` no-store — canonical. Missing: CSP, HSTS, Permissions-Policy.
+**Dev/prod parity:** No sourcemaps emitted (verified `ls dist/assets/*.map`). nginx caches hashed assets `1y immutable`, `index.html` no-cache, `config.json` no-store - canonical. Missing: CSP, HSTS, Permissions-Policy.
 
 ### UX patterns
 
@@ -252,18 +252,18 @@ Codebase is **remarkably clean**: 0 TODO/FIXME/HACK, 0 debugger, 1 legitimate `c
 - **Identity User-detail:** Roles editor has no dirty-nav guard; sessions list shows IP but no geo; profile rows read-only when an operator commonly needs to fix typos; delete dialog doesn't require typing the email.
 - **Role detail:** No per-resource preset (only Basic/All/Clear globally); tri-state toggles all permissions even when filtering.
 - **Catalog Products:** No bulk-edit price/stock; filters not URL-synced; edit/delete on hover-only (broken on touch); no image upload in create dialog; SKU validation client-side only.
-- **Tickets:** Status workflow invisible (no status picker); no SLA countdown; assignee/reporter shown as id-slice (`useUserDisplay` exists, unused); comment box is plain textarea (chat composer has all the features — port).
+- **Tickets:** Status workflow invisible (no status picker); no SLA countdown; assignee/reporter shown as id-slice (`useUserDisplay` exists, unused); comment box is plain textarea (chat composer has all the features - port).
 - **Files:** Drag-drop only inside dropzone, not global; no folders; no bulk download/delete/move/share; share dialog doesn't exist (only public/private toggle); no keyboard nav between files.
 - **Chat:** No emoji picker beyond 6 quick-reactions; composer plain-text only; threads only show reply context inline, no inline expand under parent (Mukesh's preferred Teams pattern not yet implemented per the memory note); `markRead` fires even when user is scrolled away; reaction toggle is round-tripped, not optimistic; no image lightbox.
 - **Invoices:** No filter pills, no PDF download, no detail drill-in, tenant chip is dead code.
 - **Audits:** Filters not URL-synced; no correlation-id deep link from row; no JSON diff for `EntityChange` events; no realtime mode despite SSE; no saved views; no CSV export; severity tone identical for Error and Critical.
-- **Health:** 24-tick ring buffer (2 min at 5s poll) — bump to 360 for 30 min; no alert subscription; no per-check runbook URL.
+- **Health:** 24-tick ring buffer (2 min at 5s poll) - bump to 360 for 30 min; no alert subscription; no per-check runbook URL.
 - **System Sessions:** No per-user revoke; no filter for current device / expiring soon; no geo.
 - **System Trash:** No bulk-restore; no "permanent delete" (GDPR scenario); tab counts hidden; no auto-purge policy display.
-- **Settings:** `notifications` and `api-keys` are placeholders ("coming soon") — hide or move to a disclosure; password change doesn't invalidate other sessions; 2FA enroll doesn't show recovery codes; no preview pane in Appearance.
+- **Settings:** `notifications` and `api-keys` are placeholders ("coming soon") - hide or move to a disclosure; password change doesn't invalidate other sessions; 2FA enroll doesn't show recovery codes; no preview pane in Appearance.
 - **Auth:** Tenant is free-text (subdomain detection / recent tenants dropdown is the norm); no OIDC provider buttons despite stack support.
 - **Shell / palette / navigation:** Palette is navigation-only and misses Identity/Catalog/Tickets/Files/Chat; no Create group; no `?` overlay; no breadcrumbs; sidebar accordion single-select; no tenant switcher; mobile is drawer-only (not bottom tabs).
-- **Toasts:** Zero use of `action` prop in 153 `toast.*` calls — no undo pattern; errors that need recovery routed to toasts (auto-dismiss in 4.2s, user loses context).
+- **Toasts:** Zero use of `action` prop in 153 `toast.*` calls - no undo pattern; errors that need recovery routed to toasts (auto-dismiss in 4.2s, user loses context).
 - **Realtime:** `usePresence` only feeds chat avatars; user pickers/ticket-assignee/sessions/audit user columns all show names without presence dots.
 - **RouteError:** Dumps `error.stack` to end users (should be DEV-only); no offline detection; no token-expired UX (just boots to login with no message).
 
@@ -274,7 +274,7 @@ Codebase is **remarkably clean**: 0 TODO/FIXME/HACK, 0 debugger, 1 legitimate `c
 - **Security advisories:** 1 moderate, transitive (`brace-expansion` via `@typescript-eslint/typescript-estree`), auto-fixable with `npm audit fix`. Zero high/critical.
 - **Cross-app version drift: ZERO.** Every shared package resolves to the identical installed version. Major win.
 
-**Wave 1 (zero risk, do now — one PR):** react 19.2.6, @tanstack/react-query 5.100.11, @tanstack/react-virtual 3.13.25 (dashboard only), react-router 7.15.1, react-hook-form 7.76 (only if kept), typescript-eslint 8.59.4, tailwindcss 4.3.0 (+ @tailwindcss/vite 4.3.0 lockstep), tailwind-merge 3.6, vite 7.3.3 (NOT v8 yet), `npm audit fix`.
+**Wave 1 (zero risk, do now - one PR):** react 19.2.6, @tanstack/react-query 5.100.11, @tanstack/react-virtual 3.13.25 (dashboard only), react-router 7.15.1, react-hook-form 7.76 (only if kept), typescript-eslint 8.59.4, tailwindcss 4.3.0 (+ @tailwindcss/vite 4.3.0 lockstep), tailwind-merge 3.6, vite 7.3.3 (NOT v8 yet), `npm audit fix`.
 
 **Wave 3 (one PR per major):**
 
@@ -289,9 +289,9 @@ Codebase is **remarkably clean**: 0 TODO/FIXME/HACK, 0 debugger, 1 legitimate `c
 | 7 | `zod` 3 → 4 (admin only) | 2–4 h | Significant rewrite; touch every schema. |
 | 8 | `recharts` 2 → 3 (dashboard) | 3–5 h | Only after we decide whether to keep it (1 file uses it). |
 
-**Holds (await ecosystem):** vite 8 (released today, 2026-05-21 — wait 2–4 weeks for plugin certification), typescript 6 (await typescript-eslint 9), eslint 10 (await typescript-eslint 9), @types/node 25 (pin to Node 22 LTS runtime).
+**Holds (await ecosystem):** vite 8 (released today, 2026-05-21 - wait 2–4 weeks for plugin certification), typescript 6 (await typescript-eslint 9), eslint 10 (await typescript-eslint 9), @types/node 25 (pin to Node 22 LTS runtime).
 
-**Recommended Renovate config** at repo root (`renovate.json`) — groups patch/minor + auto-merges, holds majors for review, dedicated groups for `@radix-ui/*` and `@tanstack/*`, weekly lockfile maintenance, security auto-merge:
+**Recommended Renovate config** at repo root (`renovate.json`) - groups patch/minor + auto-merges, holds majors for review, dedicated groups for `@radix-ui/*` and `@tanstack/*`, weekly lockfile maintenance, security auto-merge:
 
 ```json
 {
@@ -318,22 +318,22 @@ Codebase is **remarkably clean**: 0 TODO/FIXME/HACK, 0 debugger, 1 legitimate `c
 }
 ```
 
-**Strategic:** worth moving `clients/` to a pnpm workspace (4–6 h effort, high long-term ROI — single resolved copy of React/Radix/Tailwind/Vite, no future drift, makes a shared `packages/ui` trivial).
+**Strategic:** worth moving `clients/` to a pnpm workspace (4–6 h effort, high long-term ROI - single resolved copy of React/Radix/Tailwind/Vite, no future drift, makes a shared `packages/ui` trivial).
 
 ---
 
 ## Suggested PR sequence (next 2 weeks)
 
-1. **`chore: dashboard dependency hygiene`** — `npm audit fix`, Wave-1 bumps, remove dead deps (recharts/react-hook-form/@hookform/resolvers/zod/@types/lodash/autoprefixer). Verify `npm run build` + `npm run lint` + Playwright. ~1 h.
-2. **`chore: dashboard dead code cleanup`** — delete the 4 orphan files + 6 dead list primitives + prune `components/list/index.ts`. ~30 min.
-3. **`perf(dashboard): lazy SignalR + scope realtime providers + lazy cmdk`** — −41 KB main shell. ~2–3 h.
-4. **`perf(dashboard): cull eager fonts to 3`** — 200–400 KB cold-load savings. ~1 h.
-5. **`feat(dashboard): command palette navigates everywhere + Create group`** — biggest perceived-completeness win. ~2 h.
-6. **`a11y(dashboard): aria-current, aria-label, focus indicators, target sizes`** — bundle the dozen quick wins. ~3 h.
-7. **`style(dashboard): type scale + transitionDuration tokens + drop backdrop-grayscale + light-mode elevation + brand gradient`** — visual cohesion pass. ~2 h.
-8. **`feat(dashboard): URL-synced filters on /audits (template)`** — then roll to other lists in subsequent PRs. ~6 h template + 2 h/page.
-9. **`feat(dashboard): EntityBulkBar primitive`** — then roll to Sessions, Trash, Users, Products. ~1 d primitive + 0.5 d/page.
-10. **`feat(dashboard): keyboard shortcuts overlay + global hotkeys`** — `?`, `c`, `/`, `j/k`. ~1 d.
+1. **`chore: dashboard dependency hygiene`** - `npm audit fix`, Wave-1 bumps, remove dead deps (recharts/react-hook-form/@hookform/resolvers/zod/@types/lodash/autoprefixer). Verify `npm run build` + `npm run lint` + Playwright. ~1 h.
+2. **`chore: dashboard dead code cleanup`** - delete the 4 orphan files + 6 dead list primitives + prune `components/list/index.ts`. ~30 min.
+3. **`perf(dashboard): lazy SignalR + scope realtime providers + lazy cmdk`** - −41 KB main shell. ~2–3 h.
+4. **`perf(dashboard): cull eager fonts to 3`** - 200–400 KB cold-load savings. ~1 h.
+5. **`feat(dashboard): command palette navigates everywhere + Create group`** - biggest perceived-completeness win. ~2 h.
+6. **`a11y(dashboard): aria-current, aria-label, focus indicators, target sizes`** - bundle the dozen quick wins. ~3 h.
+7. **`style(dashboard): type scale + transitionDuration tokens + drop backdrop-grayscale + light-mode elevation + brand gradient`** - visual cohesion pass. ~2 h.
+8. **`feat(dashboard): URL-synced filters on /audits (template)`** - then roll to other lists in subsequent PRs. ~6 h template + 2 h/page.
+9. **`feat(dashboard): EntityBulkBar primitive`** - then roll to Sessions, Trash, Users, Products. ~1 d primitive + 0.5 d/page.
+10. **`feat(dashboard): keyboard shortcuts overlay + global hotkeys`** - `?`, `c`, `/`, `j/k`. ~1 d.
 
 ---
 

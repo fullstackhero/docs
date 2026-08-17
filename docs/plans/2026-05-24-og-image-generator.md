@@ -279,7 +279,7 @@ html, body {
   filter: drop-shadow(0 24px 36px rgba(0, 0, 0, 0.5));
 }
 
-/* Centered (no right column) — used by 404 */
+/* Centered (no right column) - used by 404 */
 .frame.centered { grid-template-columns: 1fr; }
 .frame.centered .copy { align-items: center; text-align: center; padding: 72px 80px; }
 .frame.centered .eyebrow, .frame.centered .brand { justify-content: center; }
@@ -377,13 +377,13 @@ test('renderDocsTemplate (overview) shows a pages badge only when count > 0', ()
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `node --test scripts/og/template.test.mjs`
-Expected: FAIL — cannot resolve `./template.mjs` (module not found).
+Expected: FAIL - cannot resolve `./template.mjs` (module not found).
 
 - [ ] **Step 3: Implement the builder**
 
 ```js
 // scripts/og/template.mjs
-// Pure HTML builders for OG cards. No I/O — the caller injects the inlined
+// Pure HTML builders for OG cards. No I/O - the caller injects the inlined
 // CSS and the base64 logo. Three data-driven variants: home / overview / doc.
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -500,7 +500,7 @@ export function renderDocsTemplate({
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `node --test scripts/og/template.test.mjs`
-Expected: PASS — all 8 tests pass.
+Expected: PASS - all 8 tests pass.
 
 - [ ] **Step 5: Commit**
 
@@ -760,7 +760,7 @@ These are rendered from disk via `page.goto(file://…)`, so they link the real
           </span>
           <div class="main">
             <h1 class="wordmark">FullStackHero</h1>
-            <p class="description">Production-ready .NET 10 + React starter kit. Modular monolith, vertical slice, multitenant — ship features on day one.</p>
+            <p class="description">Production-ready .NET 10 + React starter kit. Modular monolith, vertical slice, multitenant - ship features on day one.</p>
             <div class="meta"><span class="pages">MIT licensed · free forever</span></div>
           </div>
         </div>
@@ -941,4 +941,4 @@ git commit -m "Generate OG images for all docs pages + landing + 404"
 
 **Placeholder scan:** No TBDs; every code step has complete code; every command has expected output. ✓
 
-**Type/name consistency:** `renderDocsTemplate({ variant, eyebrow, title, description, badge, accent, count, logoSrc })` — same shape in tests (Task 3), builder (Task 3), and all call sites (Task 4). `slugOf`/`variantOf`/`listDocIds`/`sectionLabels`/`buildDocsJobs`/`buildSiteJobs`/`render` all defined and used in Task 4. `_og.css` created in Task 2, read by `template.mjs` (Task 3) and linked by site templates (Task 5). ✓
+**Type/name consistency:** `renderDocsTemplate({ variant, eyebrow, title, description, badge, accent, count, logoSrc })` - same shape in tests (Task 3), builder (Task 3), and all call sites (Task 4). `slugOf`/`variantOf`/`listDocIds`/`sectionLabels`/`buildDocsJobs`/`buildSiteJobs`/`render` all defined and used in Task 4. `_og.css` created in Task 2, read by `template.mjs` (Task 3) and linked by site templates (Task 5). ✓

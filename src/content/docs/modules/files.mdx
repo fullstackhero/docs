@@ -7,36 +7,36 @@ sidebar:
   order: 4
 pageType: reference
 seo:
-  title: 'Tenant-Scoped File Storage in .NET 10 — Presigned URLs'
+  title: 'Tenant-Scoped File Storage in .NET 10 - Presigned URLs'
   description: 'How the Files module mints presigned upload and download URLs, gates access via per-OwnerType policies, runs a finalize state machine, soft-deletes with a…'
   keywords: '.net file upload s3, minio presigned upload .net, tenant scoped storage dotnet, file access policy .net, dotnet file lifecycle module'
 ---
 
-The Files module is the kit's shared object-storage layer. Any other module that needs file uploads (Catalog product images, Chat attachments, user avatars) goes through it. Files are owned by an `OwnerType` (e.g. `Product`, `ChatChannel`, `User`) and an `OwnerId`; per-OwnerType `IFileAccessPolicy` implementations decide who can attach, read, delete, and change visibility. Storage is MinIO / S3 via presigned URLs — the API never proxies bytes. (The Storage building block also ships a local-disk provider with emulated presign tokens for environments without object storage.)
+The Files module is the kit's shared object-storage layer. Any other module that needs file uploads (Catalog product images, Chat attachments, user avatars) goes through it. Files are owned by an `OwnerType` (e.g. `Product`, `ChatChannel`, `User`) and an `OwnerId`; per-OwnerType `IFileAccessPolicy` implementations decide who can attach, read, delete, and change visibility. Storage is MinIO / S3 via presigned URLs - the API never proxies bytes. (The Storage building block also ships a local-disk provider with emulated presign tokens for environments without object storage.)
 
 <Callout type="tip" title="One module, one storage policy">
-If your module owns files, ship a `FileAccessPolicy : IFileAccessPolicy` next to the rest of its code. Register it during your module's `ConfigureServices`. The Files module never knows about your domain — your domain knows what's allowed.
+If your module owns files, ship a `FileAccessPolicy : IFileAccessPolicy` next to the rest of its code. Register it during your module's `ConfigureServices`. The Files module never knows about your domain - your domain knows what's allowed.
 </Callout>
 
 ## What ships in v10
 
-- **Presigned upload flow** — `POST /files/upload-url` mints a presigned PUT URL with a 15-minute TTL (configurable). Client uploads directly to MinIO / S3. `POST /files/{id}/finalize` flips the file from `PendingUpload` to `Available`.
-- **Pluggable access policies** — `IFileAccessPolicy` interface registered per `OwnerType`. Catalog ships `ProductFileAccessPolicy`, Chat ships `ChatChannelFileAccessPolicy`, the Files module itself registers `DefaultUploaderOnlyPolicy` for the built-in `MyFiles` and `User` owner types.
-- **Per-category validation** — extension whitelist + size cap per category (`Image` 10 MB, `Document` 25 MB, `Archive` 50 MB), configured in `appsettings`.
-- **Visibility** — files are `Public` or `Private`; `PATCH /files/{id}/visibility` flips it after upload (policy-gated, only on `Available` files). `GET /files/shared` lists the tenant's public free-standing files (`MyFiles` / `User` owner types) for a "Shared in tenant" surface.
-- **File scanner hook** — `IFileScanner.ScanAsync(storageKey)` with `NoOpFileScanner` as the default (always `Clean`). Implement it to plug in ClamAV / GuardDuty / VirusTotal; an `Infected` scan result transitions the file to `Quarantined` instead of `Available`.
-- **Soft delete + retention** — deleted files go to trash; `PurgeDeletedFilesJob` (Hangfire, daily 03:30 UTC) hard-deletes after 30 days. The tenant dashboard's Trash page restores from here (permission-gated tab).
-- **Orphan cleanup** — `PurgeOrphanedFilesJob` (hourly) deletes `PendingUpload` rows whose upload deadline passed without a finalize call.
-- **Storage quota metering** — finalize records the uploaded bytes against the tenant's `StorageBytes` quota.
-- **`FileFinalizedIntegrationEvent`** — published when a file is finalized (`Available` or `Quarantined`), carrying owner type/id, content type, size, and final status. No built-in consumer ships today — Catalog and Chat attach files via explicit commands carrying the `fileAssetId` + URL — but it's the hook for search indexing, notifications, and the like.
-- **5 permissions** — `Files.Upload`, `DeleteOwn`, `DeleteAny`, `ViewTrash`, `Restore`.
+- **Presigned upload flow** - `POST /files/upload-url` mints a presigned PUT URL with a 15-minute TTL (configurable). Client uploads directly to MinIO / S3. `POST /files/{id}/finalize` flips the file from `PendingUpload` to `Available`.
+- **Pluggable access policies** - `IFileAccessPolicy` interface registered per `OwnerType`. Catalog ships `ProductFileAccessPolicy`, Chat ships `ChatChannelFileAccessPolicy`, the Files module itself registers `DefaultUploaderOnlyPolicy` for the built-in `MyFiles` and `User` owner types.
+- **Per-category validation** - extension whitelist + size cap per category (`Image` 10 MB, `Document` 25 MB, `Archive` 50 MB), configured in `appsettings`.
+- **Visibility** - files are `Public` or `Private`; `PATCH /files/{id}/visibility` flips it after upload (policy-gated, only on `Available` files). `GET /files/shared` lists the tenant's public free-standing files (`MyFiles` / `User` owner types) for a "Shared in tenant" surface.
+- **File scanner hook** - `IFileScanner.ScanAsync(storageKey)` with `NoOpFileScanner` as the default (always `Clean`). Implement it to plug in ClamAV / GuardDuty / VirusTotal; an `Infected` scan result transitions the file to `Quarantined` instead of `Available`.
+- **Soft delete + retention** - deleted files go to trash; `PurgeDeletedFilesJob` (Hangfire, daily 03:30 UTC) hard-deletes after 30 days. The tenant dashboard's Trash page restores from here (permission-gated tab).
+- **Orphan cleanup** - `PurgeOrphanedFilesJob` (hourly) deletes `PendingUpload` rows whose upload deadline passed without a finalize call.
+- **Storage quota metering** - finalize records the uploaded bytes against the tenant's `StorageBytes` quota.
+- **`FileFinalizedIntegrationEvent`** - published when a file is finalized (`Available` or `Quarantined`), carrying owner type/id, content type, size, and final status. No built-in consumer ships today - Catalog and Chat attach files via explicit commands carrying the `fileAssetId` + URL - but it's the hook for search indexing, notifications, and the like.
+- **5 permissions** - `Files.Upload`, `DeleteOwn`, `DeleteAny`, `ViewTrash`, `Restore`.
 
 ## Architecture at a glance
 
 ```
 src/Modules/Files/
 ├── Modules.Files/                               ~1,600 LoC
-│   ├── FilesModule.cs                           IModule entry — order 350
+│   ├── FilesModule.cs                           IModule entry - order 350
 │   ├── FilesOptions.cs                          Bound from the "Files" appsettings section
 │   ├── Domain/FileAsset.cs                      AggregateRoot, state machine, ISoftDeletable
 │   ├── Data/FilesDbContext.cs                   Schema: files
@@ -155,9 +155,9 @@ The `PresignedUploadResponse` returned by `RequestUploadUrl` carries `FileAssetI
 | Verb | Route | Permission | What it does |
 |---|---|---|---|
 | POST | `/api/v1/files/upload-url` | `Files.Upload` | Mint presigned PUT URL |
-| POST | `/api/v1/files/{id}/finalize` | — (policy) | Flip to Available, trigger scan |
-| GET | `/api/v1/files/{id}` | — (policy) | File metadata (not content) |
-| GET | `/api/v1/files/{id}/url` | — (policy) | Mint presigned GET URL |
+| POST | `/api/v1/files/{id}/finalize` | - (policy) | Flip to Available, trigger scan |
+| GET | `/api/v1/files/{id}` | - (policy) | File metadata (not content) |
+| GET | `/api/v1/files/{id}/url` | - (policy) | Mint presigned GET URL |
 | PATCH | `/api/v1/files/{id}/visibility` | `Files.Upload` | Flip Public ↔ Private |
 | DELETE | `/api/v1/files/{id}` | `Files.DeleteOwn` | Soft delete |
 | POST | `/api/v1/files/{id}/restore` | `Files.Restore` | Restore from trash |
@@ -165,7 +165,7 @@ The `PresignedUploadResponse` returned by `RequestUploadUrl` carries `FileAssetI
 | GET | `/api/v1/files/shared` | `Files.Upload` | Public tenant-wide files |
 | GET | `/api/v1/files/trash` | `Files.ViewTrash` | Paginated trash |
 
-Endpoints marked "— (policy)" require authentication only; the per-OwnerType `IFileAccessPolicy` makes the call.
+Endpoints marked "- (policy)" require authentication only; the per-OwnerType `IFileAccessPolicy` makes the call.
 
 ## Configuration
 
@@ -188,7 +188,7 @@ Endpoints marked "— (policy)" require authentication only; the per-OwnerType `
 
 The section binds to `FilesOptions` (`Modules.Files/FilesOptions.cs`); category names are matched case-insensitively.
 
-The S3 / MinIO target is configured in the [Storage building block](/docs/building-blocks/storage/) — the Files module is the policy + lifecycle layer on top.
+The S3 / MinIO target is configured in the [Storage building block](/docs/building-blocks/storage/) - the Files module is the policy + lifecycle layer on top.
 
 ## How to extend
 
@@ -228,24 +228,24 @@ public sealed class FileFinalizedNotifyHandler(/* ... */)
     public async Task HandleAsync(FileFinalizedIntegrationEvent evt, CancellationToken ct = default)
     {
         if (evt.OwnerType != "Product") return;
-        // react to the upload completing — index it, notify someone, etc.
+        // react to the upload completing - index it, notify someone, etc.
     }
 }
 ```
 
-No module ships a consumer today — Catalog and Chat attach files by passing the `fileAssetId` + public URL through their own commands (`AddProductImageCommand`, `SendMessageCommand` attachments). The event is the seam for anything that should *react* to an upload completing.
+No module ships a consumer today - Catalog and Chat attach files by passing the `fileAssetId` + public URL through their own commands (`AddProductImageCommand`, `SendMessageCommand` attachments). The event is the seam for anything that should *react* to an upload completing.
 
 ## Tests
 
 - Domain + service tests at `src/Tests/Files.Tests/`:
-  - `FileAssetTests` — state transitions
-  - `DefaultUploaderOnlyPolicyTests` — policy enforcement
-  - `FileAccessPolicyRegistryTests` — registry lookup
-  - `StorageKeyBuilderTests` — tenant + category path generation
+  - `FileAssetTests` - state transitions
+  - `DefaultUploaderOnlyPolicyTests` - policy enforcement
+  - `FileAccessPolicyRegistryTests` - registry lookup
+  - `StorageKeyBuilderTests` - tenant + category path generation
 - Integration tests at `src/Tests/Integration.Tests/Tests/Files/` (ten files) cover the presigned round-trip (`RequestAndFinalizeUploadTests`, `StorageFlowTests`), upload validation, finalize edge cases, visibility + sharing, soft delete + restore, the purge jobs, and tenant isolation against Testcontainers MinIO.
 
 ## Related
 
-- [Storage building block](/docs/building-blocks/storage/) — the S3 / MinIO abstraction this module sits on top of.
-- [Catalog module](/docs/modules/catalog/) — product images use the policy hook.
-- [Chat module](/docs/modules/chat/) — channel attachments use the policy hook.
+- [Storage building block](/docs/building-blocks/storage/) - the S3 / MinIO abstraction this module sits on top of.
+- [Catalog module](/docs/modules/catalog/) - product images use the policy hook.
+- [Chat module](/docs/modules/chat/) - channel attachments use the policy hook.

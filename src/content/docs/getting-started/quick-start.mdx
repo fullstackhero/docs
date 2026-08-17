@@ -6,7 +6,7 @@ sidebar:
   order: 3
 pageType: guide
 seo:
-  title: 'Quick Start — clone and run the .NET 10 starter kit'
+  title: 'Quick Start - clone and run the .NET 10 starter kit'
   description: 'Clone the fullstackhero repo and run the full stack locally via .NET Aspire: Postgres, Valkey, MinIO, migrations, the API, and both React apps with one command.'
   keywords: 'fullstackhero quick start, clone .NET 10 starter kit, .NET Aspire local development, fsh CLI'
 ---
@@ -14,7 +14,7 @@ seo:
 <Callout type="tip" title="Want a renamed project? Use the CLI">
 This page clones the repo as-is (keeping its `FSH.Starter` names). To scaffold a
 fully renamed project in one command, install the `fsh` CLI and run
-`fsh new MyApp` instead — see [Install](/docs/getting-started/install/) for every
+`fsh new MyApp` instead - see [Install](/docs/getting-started/install/) for every
 path.
 </Callout>
 
@@ -27,7 +27,7 @@ git clone https://github.com/fullstackhero/dotnet-starter-kit.git MyApp
 cd MyApp
 ```
 
-A clone keeps the original `FSH.Starter` project names — it doesn't rename the solution. To get a fully renamed project instead, use `fsh new MyApp` (see [Install](/docs/getting-started/install/)).
+A clone keeps the original `FSH.Starter` project names - it doesn't rename the solution. To get a fully renamed project instead, use `fsh new MyApp` (see [Install](/docs/getting-started/install/)).
 
 ## 2. Install frontend dependencies (one time)
 
@@ -47,7 +47,7 @@ Skip this if you only want the API.
 dotnet run --project src/Host/FSH.Starter.AppHost
 ```
 
-Aspire brings up Postgres (with pgAdmin), Valkey, and MinIO in containers, runs the DbMigrator (migrations + seed) and the demo seeder, then starts the API and both React apps — all wired together with connection strings and OTLP export. Watch everything come up in the Aspire dashboard.
+Aspire brings up Postgres (with pgAdmin), Valkey, and MinIO in containers, runs the DbMigrator (migrations + seed) and the demo seeder, then starts the API and both React apps - all wired together with connection strings and OTLP export. Watch everything come up in the Aspire dashboard.
 
 Once it's green:
 
@@ -57,12 +57,12 @@ Once it's green:
 | Admin app | `http://localhost:5173` |
 | Dashboard app | `http://localhost:5174` |
 
-Log in with one of the seeded [demo accounts](/docs/getting-started/demo-accounts/) — the dashboard login page has a persona picker in dev.
+Log in with one of the seeded [demo accounts](/docs/getting-started/demo-accounts/) - the dashboard login page has a persona picker in dev.
 
 ## Next
 
-- **[Demo accounts](/docs/getting-started/demo-accounts/)** — the seeded tenants, personas, and what each one demonstrates.
-- **[Troubleshooting](/docs/getting-started/troubleshooting/)** — fixes for the common first-run failures (containers, volumes, ports, migrations).
-- **[Install](/docs/getting-started/install/)** — every install path (GitHub template, Codespaces, the CLI, and the `dotnet new` template).
-- **[Architecture](/docs/architecture/)** — the modular monolith + VSA mental model.
-- **[CLI](/docs/cli/)** — the `fsh` commands for scaffolding and managing a project.
+- **[Demo accounts](/docs/getting-started/demo-accounts/)** - the seeded tenants, personas, and what each one demonstrates.
+- **[Troubleshooting](/docs/getting-started/troubleshooting/)** - fixes for the common first-run failures (containers, volumes, ports, migrations).
+- **[Install](/docs/getting-started/install/)** - every install path (GitHub template, Codespaces, the CLI, and the `dotnet new` template).
+- **[Architecture](/docs/architecture/)** - the modular monolith + VSA mental model.
+- **[CLI](/docs/cli/)** - the `fsh` commands for scaffolding and managing a project.

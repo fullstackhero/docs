@@ -1,29 +1,29 @@
 ---
 title: Storage building block
 lastUpdated: 2026-06-11
-description: File storage abstraction — local filesystem or S3-compatible (MinIO / AWS S3) — with presigned URLs, tenant isolation, and optional quota metering.
+description: File storage abstraction - local filesystem or S3-compatible (MinIO / AWS S3) - with presigned URLs, tenant isolation, and optional quota metering.
 sidebar:
   label: Storage
   order: 10
 pageType: reference
 seo:
-  title: 'S3 / MinIO file storage in .NET 10 — IStorageService'
+  title: 'S3 / MinIO file storage in .NET 10 - IStorageService'
   description: 'How the Storage building block exposes IStorageService with two implementations (local filesystem, S3-compatible via AWS SDK), tenant-isolated paths…'
   keywords: '.net s3 storage, minio dotnet, presigned url .net, aws sdk dotnet storage, tenant scoped file paths'
 ---
 
-The Storage block is the kit's blob-storage abstraction. One interface (`IStorageService`), two implementations — `LocalStorageService` (filesystem) and `S3StorageService` (AWS S3 + MinIO compatible) — with presigned URL support and an optional `QuotaMeteredStorageService` decorator that meters per-tenant usage against the Quota block.
+The Storage block is the kit's blob-storage abstraction. One interface (`IStorageService`), two implementations - `LocalStorageService` (filesystem) and `S3StorageService` (AWS S3 + MinIO compatible) - with presigned URL support and an optional `QuotaMeteredStorageService` decorator that meters per-tenant usage against the Quota block.
 
 <Callout type="tip" title="Presigned URLs keep bytes out of your API">
-Clients PUT directly to S3 / MinIO using a short-lived presigned URL minted by your API. Your API never proxies bytes. Same on the read side — `GenerateDownloadUrlAsync` mints a presigned GET URL the browser hits directly.
+Clients PUT directly to S3 / MinIO using a short-lived presigned URL minted by your API. Your API never proxies bytes. Same on the read side - `GenerateDownloadUrlAsync` mints a presigned GET URL the browser hits directly.
 </Callout>
 
 ## What it ships
 
 ### Extensions
 
-- **`AddHeroLocalFileStorage(services)`** — registers `LocalStorageService` for `wwwroot`-based file I/O. Useful for dev.
-- **`AddHeroStorage(services, configuration)`** — reads `Storage:Provider` **eagerly at registration time**. `"s3"` registers a shared `IAmazonS3` client + `S3StorageService`; anything else falls back to `LocalStorageService`. Wraps the chosen provider with `QuotaMeteredStorageService` when `QuotaOptions:Enabled` is true (also read at registration).
+- **`AddHeroLocalFileStorage(services)`** - registers `LocalStorageService` for `wwwroot`-based file I/O. Useful for dev.
+- **`AddHeroStorage(services, configuration)`** - reads `Storage:Provider` **eagerly at registration time**. `"s3"` registers a shared `IAmazonS3` client + `S3StorageService`; anything else falls back to `LocalStorageService`. Wraps the chosen provider with `QuotaMeteredStorageService` when `QuotaOptions:Enabled` is true (also read at registration).
 
 ### Interface
 
@@ -55,21 +55,21 @@ public interface IStorageService
 
 ### Implementations
 
-- **`LocalStorageService`** — stores under `wwwroot/uploads/{owner-type}/{guid}_{sanitized-filename}` and validates extension + size against `FileTypeMetadata.GetRules(fileType)`. Presigning is a **dev-only token fallback**: `GenerateUploadUrlAsync` issues a `local://upload/{token}` URL backed by `LocalPresignTokenStore`; `GenerateDownloadUrlAsync` and `BuildPublicUrl` return server-relative `/uploads/...` paths (no signing needed).
-- **`S3StorageService`** — uses `AWSSDK.S3` with a singleton `IAmazonS3` client. A custom `ServiceUrl` (MinIO etc.) switches to path-style addressing per `ForcePathStyle`; presigned PUT/GET URLs come from the SDK's request signer.
-- **`QuotaMeteredStorageService`** — decorator. `CheckAndRecordAsync(tenantId, QuotaResource.StorageBytes, bytes, ct)` on upload (throws 507 when exceeded, rolls back the charge if the write fails); refunds the object's size on `RemoveAsync`. Requests with no resolved tenant pass through unmetered.
+- **`LocalStorageService`** - stores under `wwwroot/uploads/{owner-type}/{guid}_{sanitized-filename}` and validates extension + size against `FileTypeMetadata.GetRules(fileType)`. Presigning is a **dev-only token fallback**: `GenerateUploadUrlAsync` issues a `local://upload/{token}` URL backed by `LocalPresignTokenStore`; `GenerateDownloadUrlAsync` and `BuildPublicUrl` return server-relative `/uploads/...` paths (no signing needed).
+- **`S3StorageService`** - uses `AWSSDK.S3` with a singleton `IAmazonS3` client. A custom `ServiceUrl` (MinIO etc.) switches to path-style addressing per `ForcePathStyle`; presigned PUT/GET URLs come from the SDK's request signer.
+- **`QuotaMeteredStorageService`** - decorator. `CheckAndRecordAsync(tenantId, QuotaResource.StorageBytes, bytes, ct)` on upload (throws 507 when exceeded, rolls back the charge if the write fails); refunds the object's size on `RemoveAsync`. Requests with no resolved tenant pass through unmetered.
 
 ### Request / response
 
-- **`FileUploadRequest`** — `FileName`, `ContentType`, `Data`.
-- **`FileDownloadResponse`** — `Stream`, `ContentType`, `FileName`, `ContentLength?`.
-- **`PresignedUploadUrl`** — `Url`, `RequiredHeaders` (headers the browser must send verbatim, e.g. Content-Type), `ExpiresAt`.
-- **`StoredObjectMetadata`** — `SizeBytes`, `ContentType`, `LastModified`, `ETag` (from HEAD).
-- **`FileType`** enum — `Image`, `Document`, `Pdf`; `FileTypeMetadata` maps each to an extension whitelist + max size.
+- **`FileUploadRequest`** - `FileName`, `ContentType`, `Data`.
+- **`FileDownloadResponse`** - `Stream`, `ContentType`, `FileName`, `ContentLength?`.
+- **`PresignedUploadUrl`** - `Url`, `RequiredHeaders` (headers the browser must send verbatim, e.g. Content-Type), `ExpiresAt`.
+- **`StoredObjectMetadata`** - `SizeBytes`, `ContentType`, `LastModified`, `ETag` (from HEAD).
+- **`FileType`** enum - `Image`, `Document`, `Pdf`; `FileTypeMetadata` maps each to an extension whitelist + max size.
 
 ### Options
 
-- **`S3StorageOptions`** — `Bucket`, `Region`, `Prefix`, `PublicRead` (default true), `PublicBaseUrl` (for non-expiring public URLs), `ServiceUrl` (custom endpoint for MinIO etc.), `AccessKey` / `SecretKey` (leave empty to use the AWS SDK credential chain), `ForcePathStyle` (only applies when `ServiceUrl` is set).
+- **`S3StorageOptions`** - `Bucket`, `Region`, `Prefix`, `PublicRead` (default true), `PublicBaseUrl` (for non-expiring public URLs), `ServiceUrl` (custom endpoint for MinIO etc.), `AccessKey` / `SecretKey` (leave empty to use the AWS SDK credential chain), `ForcePathStyle` (only applies when `ServiceUrl` is set).
 
 ## How modules consume Storage
 
@@ -98,7 +98,7 @@ public sealed class UploadAvatarHandler(IStorageService storage, ICurrentUser cu
 }
 ```
 
-The generic `T` names the owning type — local storage uses it as the folder segment (`uploads/useravatar/...`).
+The generic `T` names the owning type - local storage uses it as the folder segment (`uploads/useravatar/...`).
 
 ## Configuration
 
@@ -147,11 +147,11 @@ The Files module ships an `IFileScanner` hook. If you're using `IStorageService`
 
 ## Gotchas
 
-- **MinIO needs `ForcePathStyle = true`.** Virtual-hosted-style addressing puts the bucket name in the subdomain, which MinIO can't service without DNS gymnastics. The option defaults to `false` and only takes effect when `ServiceUrl` is set — set it explicitly for MinIO and other self-hosted S3-compatible services.
+- **MinIO needs `ForcePathStyle = true`.** Virtual-hosted-style addressing puts the bucket name in the subdomain, which MinIO can't service without DNS gymnastics. The option defaults to `false` and only takes effect when `ServiceUrl` is set - set it explicitly for MinIO and other self-hosted S3-compatible services.
 - **Presigned URLs have a TTL.** Once it expires, the URL is dead. Use `BuildPublicUrl` for non-expiring public URLs (and a bucket policy that grants public-read on that prefix).
 - **`QuotaMeteredStorageService` is scoped.** It depends on `IQuotaService` which is scoped per request. Don't resolve it from a singleton or a hosted service without creating a scope.
-- **Local storage paths are not tenant-segmented.** Files land under `wwwroot/uploads/{owner-type}/`, and anything `BuildPublicUrl` points at is served statically without policy enforcement. Don't use `LocalStorageService` in multi-tenant production — it exists for dev and tests.
-- **`AddHeroStorage` reads configuration eagerly.** The provider choice and the quota toggle are evaluated once, at registration. Integration tests that swap config after host build must re-register/rewire `IStorageService` post-registration — changing `Storage:Provider` later does nothing.
+- **Local storage paths are not tenant-segmented.** Files land under `wwwroot/uploads/{owner-type}/`, and anything `BuildPublicUrl` points at is served statically without policy enforcement. Don't use `LocalStorageService` in multi-tenant production - it exists for dev and tests.
+- **`AddHeroStorage` reads configuration eagerly.** The provider choice and the quota toggle are evaluated once, at registration. Integration tests that swap config after host build must re-register/rewire `IStorageService` post-registration - changing `Storage:Provider` later does nothing.
 
 ## Critical files
 
@@ -163,6 +163,6 @@ The Files module ships an `IFileScanner` hook. If you're using `IStorageService`
 
 ## Related
 
-- [Files module](/docs/modules/files/) — the policy + lifecycle layer on top of this block.
-- [Quota](/docs/building-blocks/quota/) — usage metering wrapper.
-- [Catalog module](/docs/modules/catalog/) — product images flow through here.
+- [Files module](/docs/modules/files/) - the policy + lifecycle layer on top of this block.
+- [Quota](/docs/building-blocks/quota/) - usage metering wrapper.
+- [Catalog module](/docs/modules/catalog/) - product images flow through here.

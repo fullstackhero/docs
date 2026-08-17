@@ -7,12 +7,12 @@ sidebar:
   order: 4
 pageType: guide
 seo:
-  title: 'Test fixtures in .NET 10 — Testcontainers + seed data'
+  title: 'Test fixtures in .NET 10 - Testcontainers + seed data'
   description: 'How fullstackhero shares Testcontainers + WebApplicationFactory + the seeded root tenant across the integration test project so per-test cost…'
   keywords: 'iclassfixture testcontainers, webapplicationfactory shared, seed data integration tests, xunit collection fixture'
 ---
 
-The single `Integration.Tests` project shares one factory — and therefore one set of containers, one host, and one seeded database — across every test in the suite. Each test runs in milliseconds once the containers are warm. This page is how the sharing works. Everything described here lives in `src/Tests/Integration.Tests/Infrastructure/`.
+The single `Integration.Tests` project shares one factory - and therefore one set of containers, one host, and one seeded database - across every test in the suite. Each test runs in milliseconds once the containers are warm. This page is how the sharing works. Everything described here lives in `src/Tests/Integration.Tests/Infrastructure/`.
 
 <Callout type="tip" title="Read this before adding a test that creates shared state">
 The whole suite shares one database across hundreds of tests. Give everything your test inserts a unique name (a `Guid` suffix does fine) so tests stay independent of each other and of execution order.
@@ -43,7 +43,7 @@ builder.ConfigureAppConfiguration((_, config) =>
         ["DatabaseOptions:Provider"] = "POSTGRESQL",
         ["DatabaseOptions:ConnectionString"] = _postgres.GetConnectionString(),
         ["DatabaseOptions:MigrationsAssembly"] = "FSH.Starter.Migrations.PostgreSQL",
-        ["CachingOptions:Redis"] = "",          // HybridCache in-memory fallback — no cache container
+        ["CachingOptions:Redis"] = "",          // HybridCache in-memory fallback - no cache container
         ["JwtOptions:SigningKey"] = TestConstants.JwtSigningKey,
         ["RateLimitingOptions:Enabled"] = "false",
         ["SecurityHeadersOptions:Enabled"] = "false",
@@ -55,7 +55,7 @@ builder.ConfigureAppConfiguration((_, config) =>
 ```
 
 <Callout type="warning" title="One overlay doesn't reach everything">
-`AddHeroStorage` reads `Storage:Provider` **eagerly**, before this overlay applies — so the factory also removes the registered `IStorageService` and re-registers the S3 stack against the MinIO container in `ConfigureServices` (`RewireStorageForS3`). Config-only overrides aren't enough for eagerly-bound services.
+`AddHeroStorage` reads `Storage:Provider` **eagerly**, before this overlay applies - so the factory also removes the registered `IStorageService` and re-registers the S3 stack against the MinIO container in `ConfigureServices` (`RewireStorageForS3`). Config-only overrides aren't enough for eagerly-bound services.
 </Callout>
 
 The factory also swaps Hangfire to `Hangfire.InMemory` (with a real server polling every second, so jobs actually run), replaces mail with `NoOpMailService`, and removes hosted services that would race the test migrations (role-permission sync, outbox dispatcher).
@@ -66,7 +66,7 @@ On first initialization the factory provisions the database through the **produc
 
 1. Migrates the tenant catalog (`TenantDbContext.Database.MigrateAsync()`).
 2. Seeds the **root tenant** if missing.
-3. Runs every module's `IDbInitializer.MigrateAsync` and `SeedAsync` under the root tenant context — which creates the root admin, roles, permissions, and groups.
+3. Runs every module's `IDbInitializer.MigrateAsync` and `SeedAsync` under the root tenant context - which creates the root admin, roles, permissions, and groups.
 4. Runs the `RolePermissionSyncer` so permissions match the live permission catalog.
 
 What you can rely on from `TestConstants`:
@@ -75,14 +75,14 @@ What you can rely on from `TestConstants`:
 TestConstants.RootTenantId      // "root"
 TestConstants.RootAdminEmail    // "admin@root.com"
 TestConstants.DefaultPassword   // the seeded admin password
-TestConstants.CatalogBasePath   // "/api/v1/catalog" — and friends per module
+TestConstants.CatalogBasePath   // "/api/v1/catalog" - and friends per module
 ```
 
-That's it — **no demo tenants, no seeded brands or products**. Tests that need an `acme`-style tenant, a low-privilege user, or catalog rows create them through the API in their own Arrange step. That keeps every test self-describing and safe to run in parallel.
+That's it - **no demo tenants, no seeded brands or products**. Tests that need an `acme`-style tenant, a low-privilege user, or catalog rows create them through the API in their own Arrange step. That keeps every test self-describing and safe to run in parallel.
 
 ## Authentication helpers
 
-`AuthHelper` doesn't mint JWTs by hand — it logs in through the real identity endpoint, so the token has been through the production issuing path:
+`AuthHelper` doesn't mint JWTs by hand - it logs in through the real identity endpoint, so the token has been through the production issuing path:
 
 ```csharp
 var auth = new AuthHelper(factory);
@@ -93,7 +93,7 @@ using var admin = await auth.CreateRootAdminClientAsync();
 // Any user your test created
 using var user = await auth.CreateAuthenticatedClientAsync(email, password, tenant);
 
-// Anonymous (for 401 tests) — set the tenant header yourself
+// Anonymous (for 401 tests) - set the tenant header yourself
 using var anon = factory.CreateClient();
 anon.DefaultRequestHeaders.Add("tenant", TestConstants.RootTenantId);
 ```
@@ -102,7 +102,7 @@ Both authenticated helpers set the `Authorization: Bearer` **and** `tenant` head
 
 ## When tests need their own state
 
-Tests should **insert**, not **mutate** shared rows — and insert with unique names:
+Tests should **insert**, not **mutate** shared rows - and insert with unique names:
 
 ```csharp
 [Fact]
@@ -110,7 +110,7 @@ public async Task MyTest()
 {
     using var client = await _auth.CreateRootAdminClientAsync();
 
-    // Arrange — unique name avoids parallel-test collisions
+    // Arrange - unique name avoids parallel-test collisions
     var name = $"test-brand-{Guid.NewGuid():N}"[..20];
     var createResponse = await client.PostAsJsonAsync(
         $"{TestConstants.CatalogBasePath}/brands",
@@ -120,27 +120,27 @@ public async Task MyTest()
 }
 ```
 
-Prefer going through the API. When a test must reach into the database directly, create a scope from `factory.Services` — and mind the tenant-context gotcha below.
+Prefer going through the API. When a test must reach into the database directly, create a scope from `factory.Services` - and mind the tenant-context gotcha below.
 
 <Callout type="warning" title="Set the tenant context inline (AsyncLocal)">
-Finbuckle's `IMultiTenantContextSetter` writes an `AsyncLocal`. Set it **in the same method** as the `UserManager`/DbContext call that needs it — a helper that sets it and is then awaited loses the value on return, and the tenant query filter throws. Several tests carry this exact comment (`Tests/Authentication/PasswordResetTests.cs`).
+Finbuckle's `IMultiTenantContextSetter` writes an `AsyncLocal`. Set it **in the same method** as the `UserManager`/DbContext call that needs it - a helper that sets it and is then awaited loses the value on return, and the tenant query filter throws. Several tests carry this exact comment (`Tests/Authentication/PasswordResetTests.cs`).
 </Callout>
 
 ## When to add to the harness
 
-- **New shared infrastructure.** If you need RabbitMQ, Elasticsearch, etc., add the container as another field on `FshWebApplicationFactory`, start it in `InitializeAsync`, and overlay its connection details — same shape as the MinIO wiring. For something only one test class needs (like the Valkey container in `HybridCacheRedisTests`), keep it local to that class via `IAsyncLifetime` instead.
-- **New always-present seed data.** Extend the module's `IDbInitializer` seed — that's the production path, and the factory runs it automatically.
+- **New shared infrastructure.** If you need RabbitMQ, Elasticsearch, etc., add the container as another field on `FshWebApplicationFactory`, start it in `InitializeAsync`, and overlay its connection details - same shape as the MinIO wiring. For something only one test class needs (like the Valkey container in `HybridCacheRedisTests`), keep it local to that class via `IAsyncLifetime` instead.
+- **New always-present seed data.** Extend the module's `IDbInitializer` seed - that's the production path, and the factory runs it automatically.
 - **One-off setup per test class.** Don't touch the harness; arrange it in the test class constructor or the test itself.
 
 ## Common mistakes
 
-- **Sharing a `DbContext` across tests.** Each scope should be its own — use `factory.Services.CreateScope()` inside the test; don't reach into the factory's root provider.
+- **Sharing a `DbContext` across tests.** Each scope should be its own - use `factory.Services.CreateScope()` inside the test; don't reach into the factory's root provider.
 - **Mutating shared rows.** The root admin and root tenant are read-only in spirit; a test that disables the root admin breaks every test after it.
 - **Forgetting the `tenant` header.** Without it, Finbuckle resolves no tenant and tenant-aware endpoints fail. The `AuthHelper` clients set it for you; raw `factory.CreateClient()` does not.
 - **`Thread.Sleep(...)` in tests.** "Wait 200 ms for the job to run" is the smell of a missing signal. Find the deterministic completion (a poll with timeout, a hub event, a domain assertion) and assert against that.
 
 ## Related
 
-- [Integration tests](/docs/testing/integration-tests/) — the test layer that uses this harness.
-- [Running tests](/docs/testing/running-tests/) — how to invoke the suite locally + in CI.
-- [Writing new tests](/docs/testing/writing-new-tests/) — recipes for each layer.
+- [Integration tests](/docs/testing/integration-tests/) - the test layer that uses this harness.
+- [Running tests](/docs/testing/running-tests/) - how to invoke the suite locally + in CI.
+- [Writing new tests](/docs/testing/writing-new-tests/) - recipes for each layer.

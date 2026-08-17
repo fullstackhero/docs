@@ -29,7 +29,7 @@ const overridesDir = path.join(templatesDir, 'docs');
 const ogDir = path.join(root, 'public', 'og');
 
 // 1200×630 is the canonical OG size (1.91:1). Scale 1 keeps the output at
-// exactly 1200×630 — text is vector-rasterised at target size, so it stays crisp.
+// exactly 1200×630 - text is vector-rasterised at target size, so it stays crisp.
 const WIDTH = 1200;
 const HEIGHT = 630;
 const DEVICE_SCALE = 1;

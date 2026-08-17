@@ -6,7 +6,7 @@ sidebar:
   order: 2
 pageType: guide
 seo:
-  title: 'Prerequisites — .NET 10 SDK, Docker, Node setup'
+  title: 'Prerequisites - .NET 10 SDK, Docker, Node setup'
   description: 'Tools you need before running fullstackhero locally: .NET 10 SDK, Docker (for Postgres, Valkey, and MinIO containers), and optional Node 20+ for the React frontends.'
   keywords: '.NET 10 SDK install, fullstackhero prerequisites, .NET development environment'
 ---
@@ -15,17 +15,17 @@ A short checklist. The rest of Getting Started assumes these are in place.
 
 ## Required
 
-- **.NET 10 SDK** — from [dotnet.microsoft.com/download](https://dotnet.microsoft.com/download). The repo's `global.json` pins SDK `10.0.100` (rolling forward to the latest feature band).
-- **Docker** — used for the Postgres, Valkey, and MinIO containers (Aspire and the integration tests rely on it). Docker Desktop on macOS / Windows, Docker Engine on Linux.
-- **Git** — for cloning the repo.
+- **.NET 10 SDK** - from [dotnet.microsoft.com/download](https://dotnet.microsoft.com/download). The repo's `global.json` pins SDK `10.0.100` (rolling forward to the latest feature band).
+- **Docker** - used for the Postgres, Valkey, and MinIO containers (Aspire and the integration tests rely on it). Docker Desktop on macOS / Windows, Docker Engine on Linux.
+- **Git** - for cloning the repo.
 
 No separate Aspire install is needed: the AppHost project pulls the Aspire SDK (`Aspire.AppHost.Sdk`) from NuGet during restore.
 
 ## Optional
 
-- **Node 20+** — only if you'll run the React + Vite frontends in `clients/admin` and `clients/dashboard` (both declare `"node": ">=20"`).
-- **PostgreSQL** — install locally only if you'd rather not run Postgres in a container. Otherwise Aspire provisions one for you (the kit's containers run Postgres 18).
-- **Valkey** — same. The kit runs Valkey 9 in its containers (a Redis-compatible, BSD-licensed Redis fork); any Redis-protocol server also works.
+- **Node 20+** - only if you'll run the React + Vite frontends in `clients/admin` and `clients/dashboard` (both declare `"node": ">=20"`).
+- **PostgreSQL** - install locally only if you'd rather not run Postgres in a container. Otherwise Aspire provisions one for you (the kit's containers run Postgres 18).
+- **Valkey** - same. The kit runs Valkey 9 in its containers (a Redis-compatible, BSD-licensed Redis fork); any Redis-protocol server also works.
 
 ## Verify
 
@@ -35,7 +35,7 @@ docker info            # should print server info, not error
 git --version
 ```
 
-If `dotnet --version` reports 9.x or older, install the .NET 10 SDK before continuing — the kit targets `net10.0` and won't build on earlier SDKs.
+If `dotnet --version` reports 9.x or older, install the .NET 10 SDK before continuing - the kit targets `net10.0` and won't build on earlier SDKs.
 
 ## Next
 

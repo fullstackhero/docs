@@ -14,7 +14,7 @@
 
 **Reference design spec:** `docs/superpowers/specs/2026-05-19-docs-site-rebuild-design.md` (commit `5c00d18b`).
 
-**Note on testing:** This is a static site rebuild. "Tests" in this plan are explicit `dev` server checks and `astro build` runs that must succeed cleanly. Where useful, a Playwright smoke check is included at the end. There are no unit tests for component visuals — that's verified by eye against the blog.
+**Note on testing:** This is a static site rebuild. "Tests" in this plan are explicit `dev` server checks and `astro build` runs that must succeed cleanly. Where useful, a Playwright smoke check is included at the end. There are no unit tests for component visuals - that's verified by eye against the blog.
 
 ---
 
@@ -106,7 +106,7 @@ npm install -D @astrojs/check @types/node prettier prettier-plugin-astro prettie
 
 - [ ] **Step 3: Verify package.json populated and lockfile generated**
 
-Run `npm ls --depth=0` — expect a clean list with no peer warnings beyond known React 19 noise.
+Run `npm ls --depth=0` - expect a clean list with no peer warnings beyond known React 19 noise.
 
 - [ ] **Step 4: Commit**
 
@@ -487,7 +487,7 @@ Copy-Item "C:\Users\mukesh\repos\codewithmukesh\blog\remark-modified-time.mjs" "
 ```ts
 const siteConfig = {
   url: 'https://docs.fullstackhero.net',
-  title: 'FullStackHero — .NET Starter Kit',
+  title: 'FullStackHero - .NET Starter Kit',
   description:
     'Production-ready modular .NET starter kit. Modular monolith + VSA, multitenancy-first, identity built in.',
   repo: 'https://github.com/fullstackhero/dotnet-starter-kit',
@@ -586,7 +586,7 @@ interface Props {
 }
 
 const { title, description, image, noindex } = Astro.props;
-const pageTitle = title ? `${title} — ${siteConfig.title}` : siteConfig.title;
+const pageTitle = title ? `${title} - ${siteConfig.title}` : siteConfig.title;
 const pageDescription = description ?? siteConfig.description;
 const pageImage = new URL(image ?? siteConfig.ogImage, Astro.site ?? siteConfig.url).toString();
 const canonicalURL = new URL(Astro.url.pathname, Astro.site ?? siteConfig.url).toString();
@@ -636,7 +636,7 @@ Note: the inline `<script>` block duplicates `theme-init.js` because Astro's `is
 
 - [ ] **Step 3: Delete the placeholder `<script src=...>` line**
 
-Remove the line `<script is:inline src="/theme-init-placeholder.js"></script>` from the head — it was a scaffold artifact.
+Remove the line `<script is:inline src="/theme-init-placeholder.js"></script>` from the head - it was a scaffold artifact.
 
 - [ ] **Step 4: Commit**
 
@@ -664,7 +664,7 @@ Identify the file (likely `ThemeToggle.tsx` or similar). Read it.
 
 Port verbatim, including: View Transitions API flip (`document.startViewTransition`), `localStorage.setItem('theme', ...)`, `classList.toggle('dark')`, ARIA labels, Sun/Moon icons from `lucide-react`. Strip any blog-specific analytics (e.g. PostHog event tracking) if present.
 
-If the blog uses a different filename or framework split, adapt — the goal is functional + visual parity, not exact file naming.
+If the blog uses a different filename or framework split, adapt - the goal is functional + visual parity, not exact file naming.
 
 - [ ] **Step 3: Sanity check by adding a temp test page**
 
@@ -716,19 +716,19 @@ Note: classes, structure, breakpoints, sticky behavior, blur, border, height tok
 2. **Desktop nav items**: replace blog's nav items with exactly:
    - `<a href="/docs/">Docs</a>`
    - `<a href={siteConfig.repo} target="_blank" rel="noopener">GitHub</a>` (with `Github` icon from lucide)
-3. **Right-side controls**: keep the search button trigger (wires to SearchModal in Task 19 — for now use a placeholder `<button aria-label="Search">…</button>`), keep the ThemeToggle island, drop any newsletter/login buttons.
+3. **Right-side controls**: keep the search button trigger (wires to SearchModal in Task 19 - for now use a placeholder `<button aria-label="Search">…</button>`), keep the ThemeToggle island, drop any newsletter/login buttons.
 
 Mobile drawer: keep the blog's drawer markup (`#astro-header-drawer` element + `[data-open]` toggling), but its content lists Docs + GitHub only.
 
 - [ ] **Step 3: Verify visually**
 
-Add a temporary `<Header />` import to a probe page or to the eventual `MarketingLayout` (Task 14). Run dev server. Resize from desktop to mobile (< 768px) — confirm drawer animation works (uses `fadeSlideUp` from globals.css), confirm sticky-on-scroll matches blog feel.
+Add a temporary `<Header />` import to a probe page or to the eventual `MarketingLayout` (Task 14). Run dev server. Resize from desktop to mobile (< 768px) - confirm drawer animation works (uses `fadeSlideUp` from globals.css), confirm sticky-on-scroll matches blog feel.
 
 - [ ] **Step 4: Commit**
 
 ```bash
 git add docs/src/components/shell/Header.astro
-git commit -m "feat(docs): Header — visual twin of blog with docs nav"
+git commit -m "feat(docs): Header - visual twin of blog with docs nav"
 ```
 
 ---
@@ -756,7 +756,7 @@ Keep blog's footer chrome: top border, padding, grid, copyright line at bottom w
 
 ```bash
 git add docs/src/components/shell/Footer.astro
-git commit -m "feat(docs): Footer — visual twin with project-relevant links"
+git commit -m "feat(docs): Footer - visual twin with project-relevant links"
 ```
 
 ---
@@ -878,7 +878,7 @@ import Hero from '../components/landing/Hero.astro';
 cd docs && npm run dev
 ```
 
-Visit `http://localhost:4321/`. Expect: warm paper bg in light mode, header sticky on top, gradient-green headline, two CTAs, footer at bottom. Toggle theme — expect View Transitions flip.
+Visit `http://localhost:4321/`. Expect: warm paper bg in light mode, header sticky on top, gradient-green headline, two CTAs, footer at bottom. Toggle theme - expect View Transitions flip.
 
 - [ ] **Step 4: Commit**
 
@@ -919,11 +919,11 @@ FullStackHero is a production-ready, modular .NET starter kit. Use these docs to
 
 ## Where to start
 
-- **[Install](/docs/getting-started/install/)** — get a project running locally in under a minute.
-- **[Concepts](/docs/concepts/)** — modular monolith, vertical slice architecture, multitenancy, eventing.
-- **[Modules](/docs/modules/)** — Identity, Multitenancy, Auditing.
-- **[Recipes](/docs/recipes/)** — task-oriented how-tos.
-- **[Reference](/docs/reference/)** — config keys, permissions, exceptions.
+- **[Install](/docs/getting-started/install/)** - get a project running locally in under a minute.
+- **[Concepts](/docs/concepts/)** - modular monolith, vertical slice architecture, multitenancy, eventing.
+- **[Modules](/docs/modules/)** - Identity, Multitenancy, Auditing.
+- **[Recipes](/docs/recipes/)** - task-oriented how-tos.
+- **[Reference](/docs/reference/)** - config keys, permissions, exceptions.
 ```
 
 - [ ] **Step 2: `docs/src/content/docs/getting-started/index.mdx`**
@@ -1531,9 +1531,9 @@ cd docs && npm run dev
 ```
 
 Visit:
-- `http://localhost:4321/docs/` — should render the overview page with sidebar visible on lg+, no TOC (page has no H2s yet)
-- `http://localhost:4321/docs/getting-started/install/` — should render the install page with sidebar highlight on "Getting Started > Install" and TOC visible on xl+ showing "Prerequisites", "Clone", "Build", "Run"
-- `http://localhost:4321/docs/concepts/` — should render the "Coming soon" stub
+- `http://localhost:4321/docs/` - should render the overview page with sidebar visible on lg+, no TOC (page has no H2s yet)
+- `http://localhost:4321/docs/getting-started/install/` - should render the install page with sidebar highlight on "Getting Started > Install" and TOC visible on xl+ showing "Prerequisites", "Clone", "Build", "Run"
+- `http://localhost:4321/docs/concepts/` - should render the "Coming soon" stub
 
 - [ ] **Step 4: Commit**
 
@@ -1586,7 +1586,7 @@ export default function SearchModal({ open, onOpenChange }: Props) {
         const mod = await import('@orama/plugin-astro/client');
         // The plugin exposes a search function; the exact name depends on version.
         // Likely candidates: `search`, `oramaSearch`, or `searchOrama`. Adapt to installed API.
-        // Pseudocode below — replace with the real export.
+        // Pseudocode below - replace with the real export.
         const searchFn = (mod as any).search ?? (mod as any).default;
         const result = await searchFn({ term: q, limit: 8 });
         if (!cancelled) {
@@ -1710,7 +1710,7 @@ import SearchTrigger from '../docs/SearchTrigger.astro';
 
 - [ ] **Step 5: Verify in dev**
 
-Run `npm run dev`. Press `Ctrl+K` — modal opens. Type "install" — expect at least one hit pointing to `/docs/getting-started/install/`. Click hit — modal closes, route navigates.
+Run `npm run dev`. Press `Ctrl+K` - modal opens. Type "install" - expect at least one hit pointing to `/docs/getting-started/install/`. Click hit - modal closes, route navigates.
 
 If the Orama API call shape is wrong, this is the task to fix it. Confirm `node_modules/@orama/plugin-astro/dist/client.{d.ts,js,mjs}` to find the real export and update `SearchModal.tsx`.
 
@@ -1723,7 +1723,7 @@ git commit -m "feat(docs): Orama-powered search modal + Ctrl+K shortcut"
 
 ---
 
-## Task 22: Marketing polish — Hero (full), FeatureGrid, InstallSnippet, FinalCta
+## Task 22: Marketing polish - Hero (full), FeatureGrid, InstallSnippet, FinalCta
 
 **Files:**
 - Modify: `docs/src/components/landing/Hero.astro`
@@ -1766,7 +1766,7 @@ import siteConfig from '../../data/site';
 ```astro
 ---
 const features = [
-  { icon: 'lucide:layers',         title: 'Modular Monolith',     body: 'Bounded contexts as modules — explicit Contracts boundaries, swap out later if you really need to.' },
+  { icon: 'lucide:layers',         title: 'Modular Monolith',     body: 'Bounded contexts as modules - explicit Contracts boundaries, swap out later if you really need to.' },
   { icon: 'lucide:slice',          title: 'Vertical Slice',       body: 'Each feature is one folder: endpoint, handler, validator. No layered ceremony.' },
   { icon: 'lucide:building-2',     title: 'Multitenant by default', body: 'Tenant isolation is the default. Opt out via IGlobalEntity when you actually need cross-tenant data.' },
   { icon: 'lucide:shield',         title: 'Identity built in',    body: 'JWT bearer + ASP.NET Identity + permission-gated endpoints. No glue code.' },
@@ -1849,7 +1849,7 @@ import FinalCta from '../components/landing/FinalCta.astro';
 
 - [ ] **Step 6: Verify and commit**
 
-Run `npm run dev`, visit `/`. Expect: hero with green gradient text + brand-shadow blur in background, 6 feature cards with shimmer-on-hover, install snippet block, final CTA. Toggle theme — all surfaces adapt cleanly.
+Run `npm run dev`, visit `/`. Expect: hero with green gradient text + brand-shadow blur in background, 6 feature cards with shimmer-on-hover, install snippet block, final CTA. Toggle theme - all surfaces adapt cleanly.
 
 ```bash
 git add docs/src/pages/index.astro docs/src/components/landing/
@@ -1916,7 +1916,7 @@ cd docs
 npm run build
 ```
 
-Expect: `dist/` produced, no errors. If any Cloudflare-adapter warning appears about React 19 server.edge — the alias in `astro.config.mjs` should already handle it.
+Expect: `dist/` produced, no errors. If any Cloudflare-adapter warning appears about React 19 server.edge - the alias in `astro.config.mjs` should already handle it.
 
 - [ ] **Step 3: Local preview**
 
@@ -1925,10 +1925,10 @@ npm run preview
 ```
 
 Visit the preview URL printed in stdout. Smoke-test:
-- `/` — landing renders
-- `/docs/` — docs home renders, sidebar visible
-- `/docs/getting-started/install/` — page + TOC + breadcrumbs + prev/next render
-- `/this-does-not-exist` — 404 page renders
+- `/` - landing renders
+- `/docs/` - docs home renders, sidebar visible
+- `/docs/getting-started/install/` - page + TOC + breadcrumbs + prev/next render
+- `/this-does-not-exist` - 404 page renders
 - Theme toggle works
 - Ctrl+K opens search
 
@@ -1983,7 +1983,7 @@ Add a new doc page by creating an MDX file under `src/content/docs/<section>/`. 
 Tokens, prose styles, and code-block themes are forked from `codewithmukesh/blog` (see provenance comments in `src/styles/*.css`). Brand primary is `#15803d` (green-700); the user-facing brand color `#16a34a` lives in `--primary-soft`.
 ```
 
-- [ ] **Step 2: Final smoke test — build clean from scratch**
+- [ ] **Step 2: Final smoke test - build clean from scratch**
 
 ```bash
 cd docs

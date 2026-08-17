@@ -1,26 +1,26 @@
 ---
 title: Add a page to the tenant dashboard
 lastUpdated: 2026-06-11
-description: End-to-end recipe for adding a new page to the tenant dashboard app — API module, page component, lazy route, sidebar nav entry, permission gating, and a route-mocked Playwright test.
+description: End-to-end recipe for adding a new page to the tenant dashboard app - API module, page component, lazy route, sidebar nav entry, permission gating, and a route-mocked Playwright test.
 sidebar:
   label: Add a dashboard page
   order: 3
 pageType: recipe
 seo:
-  title: 'Add a page to the fullstackhero tenant dashboard — full recipe'
-  description: 'Step-by-step guide to adding a new screen to the React tenant dashboard in fullstackhero — hand-written API module, TanStack Query, lazy route, nav…'
+  title: 'Add a page to the fullstackhero tenant dashboard - full recipe'
+  description: 'Step-by-step guide to adding a new screen to the React tenant dashboard in fullstackhero - hand-written API module, TanStack Query, lazy route, nav…'
   keywords: 'react dashboard add page, tanstack query recipe, fullstackhero dashboard guide, playwright route mocking, vite react page tutorial'
 ---
 
-This recipe walks a new screen into `clients/dashboard` end-to-end: the API module, the page component, the lazy route, the sidebar entry, permission gating, and the Playwright test. The running example is a **Projects** list-plus-create page; swap in your own resource. For the surrounding context — app shell, providers, design tokens — see the [frontend architecture](/docs/frontend/architecture/) and [dashboard app](/docs/frontend/dashboard/) pages.
+This recipe walks a new screen into `clients/dashboard` end-to-end: the API module, the page component, the lazy route, the sidebar entry, permission gating, and the Playwright test. The running example is a **Projects** list-plus-create page; swap in your own resource. For the surrounding context - app shell, providers, design tokens - see the [frontend architecture](/docs/frontend/architecture/) and [dashboard app](/docs/frontend/dashboard/) pages.
 
 <Callout type="note" title="The two apps deliberately diverge">
 The dashboard (tenant-facing) and admin (operator-facing) apps share a stack but differ on purpose: the dashboard hand-rolls forms (no react-hook-form/zod), uses camelCase query params, and has **no per-route permission guard**. If you're adding an admin page instead, the differences are summarized [at the end](#how-the-admin-app-differs).
 </Callout>
 
-## Step 1 — API module (`src/api/projects.ts`)
+## Step 1 - API module (`src/api/projects.ts`)
 
-Types are **hand-written** — there is no codegen step. One file per feature in `src/api/`, exporting DTO types and thin async functions over `apiFetch` (from `@/lib/api-client`, which handles the bearer token, the `tenant` header, single-flight 401 refresh, and throws `ApiRequestError` on problem-details responses).
+Types are **hand-written** - there is no codegen step. One file per feature in `src/api/`, exporting DTO types and thin async functions over `apiFetch` (from `@/lib/api-client`, which handles the bearer token, the `tenant` header, single-flight 401 refresh, and throws `ApiRequestError` on problem-details responses).
 
 Condensed from the real `src/api/tickets.ts`:
 
@@ -59,9 +59,9 @@ export function createProject(input: CreateProjectInput): Promise<string> {
 }
 ```
 
-Dashboard conventions to match (they differ from admin): **camelCase** query params (`pageNumber`, `search`), create mutations usually return `Promise<string>` (the new id), and `PagedResponse<T>` is either re-declared inline or imported from an existing api module — there's no central `api-types` file here.
+Dashboard conventions to match (they differ from admin): **camelCase** query params (`pageNumber`, `search`), create mutations usually return `Promise<string>` (the new id), and `PagedResponse<T>` is either re-declared inline or imported from an existing api module - there's no central `api-types` file here.
 
-## Step 2 — Page component (`src/pages/projects/projects.tsx`)
+## Step 2 - Page component (`src/pages/projects/projects.tsx`)
 
 Pages are **named exports** (no default exports anywhere) and keep `useQuery`/`useMutation` inline. Query keys are hierarchical literal arrays with the params object last; paginated lists use `placeholderData: keepPreviousData`.
 
@@ -92,13 +92,13 @@ export function ProjectsPage() {
 
 UI building blocks:
 
-- **Primitives** live in `src/components/ui/` — cva-based, shadcn-style (`button`, `card`, `dialog`, `input`, `badge`, `dropdown-menu`, …). List/page furniture (the `Entity*` family like `EntityPageHeader`) lives in `src/components/list/`.
-- **Tailwind v4 is CSS-first** — no `tailwind.config`; tokens are CSS variables in `src/styles/globals.css`. Don't hard-code colors, and keep dashboard neutrals at chroma 0.
+- **Primitives** live in `src/components/ui/` - cva-based, shadcn-style (`button`, `card`, `dialog`, `input`, `badge`, `dropdown-menu`, …). List/page furniture (the `Entity*` family like `EntityPageHeader`) lives in `src/components/list/`.
+- **Tailwind v4 is CSS-first** - no `tailwind.config`; tokens are CSS variables in `src/styles/globals.css`. Don't hard-code colors, and keep dashboard neutrals at chroma 0.
 - Long lists should use `@tanstack/react-virtual`.
 
 ### Forms: hand-rolled, not react-hook-form
 
-The dashboard does **not** depend on react-hook-form or zod — that's an admin-only stack. Use controlled inputs with local `useState` and a plain `onSubmit`. List + create typically live in **one file**, with the editor in a `<Dialog>` (see `CreateTicketDialog` in the tickets page):
+The dashboard does **not** depend on react-hook-form or zod - that's an admin-only stack. Use controlled inputs with local `useState` and a plain `onSubmit`. List + create typically live in **one file**, with the editor in a `<Dialog>` (see `CreateTicketDialog` in the tickets page):
 
 ```tsx
 function CreateProjectDialog({ open, onClose, onCreated }: Props) {
@@ -132,7 +132,7 @@ The parent invalidates the list when the dialog reports success:
 ```
 
 <Callout type="warning" title="Golden rule: per-call data rides through mutate(arg)">
-`useMutation` reads its options at execute time. Any value produced at call time — the form payload, a `crypto.randomUUID()` client id, the id of the row being acted on — must be passed **through `mutate(arg)`** and read from the `variables` argument of `onMutate`/`onSuccess`/`onError`. Never read it from component state the callbacks close over: two rapid calls collide, and an `onMutate` that `setState`s the value the next `mutationFn` closes over fires the request with the wrong data.
+`useMutation` reads its options at execute time. Any value produced at call time - the form payload, a `crypto.randomUUID()` client id, the id of the row being acted on - must be passed **through `mutate(arg)`** and read from the `variables` argument of `onMutate`/`onSuccess`/`onError`. Never read it from component state the callbacks close over: two rapid calls collide, and an `onMutate` that `setState`s the value the next `mutationFn` closes over fires the request with the wrong data.
 
 ```tsx
 mutation.mutate({ text, clientId: crypto.randomUUID() });
@@ -142,9 +142,9 @@ mutation.mutate({ text, clientId: crypto.randomUUID() });
 ```
 </Callout>
 
-## Step 3 — Register the lazy route (`src/routes.tsx`)
+## Step 3 - Register the lazy route (`src/routes.tsx`)
 
-Every page is code-split via the `lazyNamed` helper (adapts named exports to `React.lazy`'s default contract) and wrapped in `withSuspense` for a per-route skeleton fallback. Add the child route under `AppShell` — which already sits inside `ProtectedRoute`:
+Every page is code-split via the `lazyNamed` helper (adapts named exports to `React.lazy`'s default contract) and wrapped in `withSuspense` for a per-route skeleton fallback. Add the child route under `AppShell` - which already sits inside `ProtectedRoute`:
 
 ```tsx
 const ProjectsPage = lazyNamed(() => import("@/pages/projects/projects"), "ProjectsPage");
@@ -153,9 +153,9 @@ const ProjectsPage = lazyNamed(() => import("@/pages/projects/projects"), "Proje
 { path: "projects", element: withSuspense(<ProjectsPage />) },
 ```
 
-There is **no per-route permission guard** in the dashboard — `ProtectedRoute` is auth-only. Don't port admin's `RouteGuard` here; the server returns 403 for anything the user can't do, and the nav hides entries they can't reach (next step).
+There is **no per-route permission guard** in the dashboard - `ProtectedRoute` is auth-only. Don't port admin's `RouteGuard` here; the server returns 403 for anything the user can't do, and the nav hides entries they can't reach (next step).
 
-## Step 4 — Sidebar nav entry (`src/components/layout/nav-data.ts`)
+## Step 4 - Sidebar nav entry (`src/components/layout/nav-data.ts`)
 
 Nav is data-driven. Add a `NavSpec` to one of the `sections` (or `topNavTop`/`topNavBottom`), with a lucide icon:
 
@@ -173,27 +173,27 @@ Nav is data-driven. Add a `NavSpec` to one of the `sections` (or `topNavTop`/`to
 
 Two optional gates control visibility:
 
-- `perm: "Permissions.Projects.View"` — hidden unless the user holds that exact permission.
-- `anyPerm: [...]` — visible if the user holds **any** of the listed permissions. Used by the Trash entry, which fronts five independently-gated tabs.
+- `perm: "Permissions.Projects.View"` - hidden unless the user holds that exact permission.
+- `anyPerm: [...]` - visible if the user holds **any** of the listed permissions. Used by the Trash entry, which fronts five independently-gated tabs.
 
 `visibleSections()` filters items by the user's permission list and drops sections left empty, so a gated entry never leads to a guaranteed 403.
 
-## Step 5 — Permission gating (nav + actions, not routes)
+## Step 5 - Permission gating (nav + actions, not routes)
 
 How permissions actually flow in the dashboard (verified in `src/auth/auth-context.tsx`):
 
 1. The JWT carries only role names, **not** permissions. After sign-in (and on every subject change, including impersonation), `AuthProvider` fetches `GET /api/v1/identity/permissions` and caches the list in the token store (`fsh.dashboard.permissions`).
 2. Components read it via `useAuth()`: `user.permissions` plus a `permissionsHydrated` flag so gated UI doesn't flash while the fetch is in flight.
-3. Permission **strings are mirrored by hand** where the UI needs them, following the server registry convention `Permissions.{Resource}.{Action}`. The pattern to copy is `src/lib/trash-permissions.ts` — a small `as const` map with a comment naming the server permission each value mirrors.
+3. Permission **strings are mirrored by hand** where the UI needs them, following the server registry convention `Permissions.{Resource}.{Action}`. The pattern to copy is `src/lib/trash-permissions.ts` - a small `as const` map with a comment naming the server permission each value mirrors.
 
-Gate the nav entry (step 4) and any in-page actions (hide a Restore button, hide a tab) with `user.permissions.includes(...)`. The server keeps enforcing everything as defence-in-depth — client gating is UX, not security.
+Gate the nav entry (step 4) and any in-page actions (hide a Restore button, hide a tab) with `user.permissions.includes(...)`. The server keeps enforcing everything as defence-in-depth - client gating is UX, not security.
 
-## Step 6 — Playwright test (`tests/projects/projects.spec.ts`)
+## Step 6 - Playwright test (`tests/projects/projects.spec.ts`)
 
-Tests are **route-mocked and JWT-seeded** — no real backend. `playwright.config.ts` auto-boots `npm run dev`. The harness (in `tests/helpers/`):
+Tests are **route-mocked and JWT-seeded** - no real backend. `playwright.config.ts` auto-boots `npm run dev`. The harness (in `tests/helpers/`):
 
-- `seedAuthedSession(page, TEST_USER)` writes a fake JWT (junk signature — the client never validates it) into the `fsh.dashboard.*` localStorage keys via `addInitScript`, before React boots.
-- `installShellMocks(page)` stubs **every call the authenticated AppShell fires on load** — notifications, chat badge, profile, permissions, tenant status — and aborts the SSE/SignalR transports.
+- `seedAuthedSession(page, TEST_USER)` writes a fake JWT (junk signature - the client never validates it) into the `fsh.dashboard.*` localStorage keys via `addInitScript`, before React boots.
+- `installShellMocks(page)` stubs **every call the authenticated AppShell fires on load** - notifications, chat badge, profile, permissions, tenant status - and aborts the SSE/SignalR transports.
 - `mockJsonResponse` / `mockProblemDetails` (in `api-mocks.ts`) mock individual endpoints; `paged([...])` builds a paged response body.
 
 Condensed from `tests/tickets/tickets-list.spec.ts`:
@@ -207,7 +207,7 @@ import { installShellMocks, paged } from "../helpers/shell-mocks";
 test.beforeEach(async ({ page }) => {
   await seedAuthedSession(page, TEST_USER);
   await installShellMocks(page);
-  // Page-specific mocks AFTER shell mocks — Playwright matches the most
+  // Page-specific mocks AFTER shell mocks - Playwright matches the most
   // recently registered route first, so these win over the broad defaults.
   await mockJsonResponse(page, "**/api/v1/projects**", paged([SAMPLE_PROJECT]));
 });
@@ -219,7 +219,7 @@ test("renders the list", async ({ page }) => {
 ```
 
 <Callout type="warning" title="Mock every endpoint the page fires on load">
-Mock everything the page touches when it mounts — not just the endpoint you're asserting on. An unmocked call hangs or 401s, and a 401 triggers the client's refresh-then-logout path, bouncing the test to `/login` at a timing that depends on elapsed time. That's the classic source of "flaky only sometimes" specs. If your page opens a dialog that searches users, mock `**/api/v1/identity/users/search**` too, even if the test never opens it.
+Mock everything the page touches when it mounts - not just the endpoint you're asserting on. An unmocked call hangs or 401s, and a 401 triggers the client's refresh-then-logout path, bouncing the test to `/login` at a timing that depends on elapsed time. That's the classic source of "flaky only sometimes" specs. If your page opens a dialog that searches users, mock `**/api/v1/identity/users/search**` too, even if the test never opens it.
 </Callout>
 
 Two more harness gotchas, both verified in the existing suite:
@@ -227,7 +227,7 @@ Two more harness gotchas, both verified in the existing suite:
 - **Permission-gated UI**: the shell mock returns `[]` for `GET /identity/permissions`, so gated entries are hidden by default. Re-mock it with the permissions your test needs (see `tests/system/trash.spec.ts`).
 - **Strict-mode double match**: list pages render a mobile card list and a desktop table of the same data. Scope assertions to one of them (the tickets spec filters to the desktop card) or `getByText` will find two elements.
 
-## Step 7 — Verify
+## Step 7 - Verify
 
 ```bash
 cd clients/dashboard && npm run lint && npm run test:e2e
@@ -235,7 +235,7 @@ cd clients/dashboard && npm run lint && npm run test:e2e
 
 ## How the admin app differs
 
-Same skeleton, different conventions — don't cross-pollinate:
+Same skeleton, different conventions - don't cross-pollinate:
 
 - **Routes are permission-gated**: admin wraps elements in `<RouteGuard perms={[CatalogPermissions.Products.View]}>` instead of `withSuspense` alone, and every permission is mirrored as a constant in `src/lib/permissions.ts`.
 - **Forms use react-hook-form + zod** (`useForm` + `zodResolver`), not controlled state.
@@ -246,17 +246,17 @@ See the [admin app reference](/docs/frontend/admin/) for the full set.
 
 ## Checklist
 
-1. API module in `src/api/{feature}.ts` — hand-written types, `apiFetch`, camelCase params, `PagedResponse<T>` inline or imported from an existing module.
-2. Page in `src/pages/{area}/{name}.tsx` — **named export**; hierarchical query key with params object last; `placeholderData: keepPreviousData`.
+1. API module in `src/api/{feature}.ts` - hand-written types, `apiFetch`, camelCase params, `PagedResponse<T>` inline or imported from an existing module.
+2. Page in `src/pages/{area}/{name}.tsx` - **named export**; hierarchical query key with params object last; `placeholderData: keepPreviousData`.
 3. Mutations pass per-call data through `mutate(arg)`; invalidate the list key in `onSuccess`; hand-rolled controlled form in a `<Dialog>`.
-4. Route registered in `src/routes.tsx` via `lazyNamed` + `withSuspense`, under `AppShell` — no route-level permission guard.
+4. Route registered in `src/routes.tsx` via `lazyNamed` + `withSuspense`, under `AppShell` - no route-level permission guard.
 5. Nav entry in `src/components/layout/nav-data.ts`, gated with `perm`/`anyPerm` if the server endpoint requires a permission; mirror the permission string `Permissions.{Resource}.{Action}` style (pattern: `src/lib/trash-permissions.ts`).
-6. Playwright spec in `tests/{area}/{name}.spec.ts` — `seedAuthedSession` + `installShellMocks` first, page mocks after; every on-load endpoint mocked; assertions scoped against the mobile/desktop double render.
+6. Playwright spec in `tests/{area}/{name}.spec.ts` - `seedAuthedSession` + `installShellMocks` first, page mocks after; every on-load endpoint mocked; assertions scoped against the mobile/desktop double render.
 7. `npm run lint && npm run test:e2e` green.
 
 ## Related
 
-- [Frontend architecture](/docs/frontend/architecture/) — shared stack, API client, runtime config, providers.
-- [Dashboard app](/docs/frontend/dashboard/) — tenant app divergences: SSE, impersonation, theming.
-- [Frontend development](/docs/frontend/development/) — dev server, proxy, testing workflow.
-- **AI route**: point your coding agent at `.agents/skills/add-react-page/SKILL.md` in the repo — it scaffolds this exact recipe for either app.
+- [Frontend architecture](/docs/frontend/architecture/) - shared stack, API client, runtime config, providers.
+- [Dashboard app](/docs/frontend/dashboard/) - tenant app divergences: SSE, impersonation, theming.
+- [Frontend development](/docs/frontend/development/) - dev server, proxy, testing workflow.
+- **AI route**: point your coding agent at `.agents/skills/add-react-page/SKILL.md` in the repo - it scaffolds this exact recipe for either app.

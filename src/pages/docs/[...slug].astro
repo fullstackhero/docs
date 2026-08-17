@@ -33,7 +33,7 @@ const currentHref = Astro.url.pathname.endsWith('/') ? Astro.url.pathname : `${A
 const slugForCrumb = entry.id.replace(/\.mdx$/, '').replace(/\/index$/, '');
 // Repo-relative path to this page's source MDX, for the "Edit on GitHub" link.
 // Prefer the glob loader's `filePath` (already root-relative, e.g.
-// "src/content/docs/security/index.mdx") — the `id` strips `/index`, so it
+// "src/content/docs/security/index.mdx") - the `id` strips `/index`, so it
 // can't distinguish "security.mdx" from "security/index.mdx". Fall back to an
 // id-based reconstruction only if filePath is somehow absent.
 const sourcePath =
@@ -65,7 +65,7 @@ const breadcrumbItems = buildBreadcrumbItems(
 const breadcrumbSchema = buildBreadcrumbSchema(breadcrumbItems);
 
 // TechArticle covers all docs page types (guide, reference, concept, recipe)
-// — it's the most generic schema Google + AI engines understand for
+// - it's the most generic schema Google + AI engines understand for
 // technical documentation.
 const articleSchema = {
   '@context': 'https://schema.org',
