@@ -123,7 +123,7 @@ Set `TrustedProxyOptions` to your ingress so forwarded headers are honoured - an
 {
   "TrustedProxyOptions": {
     "KnownNetworks": [ "10.0.0.0/8" ],   // your ingress CIDR(s), or KnownProxies for individual IPs
-    "ForwardLimit": 2                      // real hop count (cloudflared → Caddy → app = 2)
+    "ForwardLimit": 2                      // real hop count, minimum 1 (cloudflared → Caddy → app = 2)
   }
 }
 ```
