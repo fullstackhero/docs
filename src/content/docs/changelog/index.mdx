@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-07-13
+lastUpdated: 2026-08-17
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -10,6 +10,11 @@ seo:
 ---
 
 Notable changes to the kit, newest first.
+
+## 2026-08-17
+
+- **Identity: two people editing the same profile no longer silently overwrite each other (fix).** `PUT /api/v1/identity/profile` replaces the whole representation and carried no concurrency token, so overlapping saves resolved as last-write-wins with the losing change gone and no error raised anywhere - and because both front-ends compensate with a client-side read-modify-write, a save built on a stale read confidently echoed every old field back over the newer write. `GET /profile` now returns the user's `ConcurrencyStamp` as a strong `ETag`, and `PUT /profile` honours `If-Match`: a stale token is answered with `412 Precondition Failed` and nothing is written. The header is optional, so existing callers are unaffected; `If-Match: *` is accepted, a weak validator never matches (`If-Match` mandates strong comparison), and a malformed header is a `400` rather than a `412` that would trap a client in an unwinnable retry loop. The precondition runs before any storage call, so a rejected update never orphans an uploaded avatar nor clears the current one. Two smaller fixes came with it: Identity's own `ConcurrencyFailure` result, previously surfacing as a generic `500`, now maps to the same `412`, and the sign-in refresh no longer runs when the update failed. No migration - `AspNetUsers.ConcurrencyStamp` was already an EF Core concurrency token. The tenant dashboard sends the header and retries once on `412`, since the stamp also rotates on writes a user doesn't think of as profile edits (a password change, a new avatar, a failed sign-in). See [Identity](/docs/modules/identity/).
+- **CORS: the framework now exposes `ETag` and allows `If-Match`.** An `ETag`/`If-Match` contract is invisible to a browser on another origin unless the server says so: `ETag` is not a CORS-safelisted response header, and the kit's policy never called `WithExposedHeaders`, so a front-end read `null` and silently stopped sending the precondition. The policy now exposes `ETag` on both the permissive and restricted branches, and `if-match` ships in `CorsOptions.AllowedHeaders` in `appsettings.json` and `appsettings.Production.json`. If you replace the policy with your own, keep both, otherwise the profile precondition above degrades back to a lost update with no error to notice.
 
 ## 2026-07-13
 
