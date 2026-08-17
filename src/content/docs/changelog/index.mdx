@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-07-13
+lastUpdated: 2026-07-20
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -10,6 +10,10 @@ seo:
 ---
 
 Notable changes to the kit, newest first.
+
+## 2026-07-20
+
+- **Internationalization (i18n): the kit is now localized end-to-end, with per-user language and `en-US` / `pt-BR` included.** A user's language lives on their account (`User.Locale`, a nullable BCP 47 tag) and rides on the JWT as a `locale` claim, so a signed-in user gets the same language in the UI and in server-produced messages across any browser. **Backend** localizes through `IStringLocalizer` (neutral-culture `SharedResources` resx in the Core building block, so `pt-BR`/`pt`/`pt-PT` all resolve via culture-parent fallback) and a `RequestLocalization` pipeline (`AddHeroLocalization` / `UseHeroLocalization`) whose culture-resolution chain tries, in order, an explicit `?culture=`/cookie override, the JWT `locale` claim, `Accept-Language`, the configurable `LocalizationOptions:DefaultCulture`, and finally a guaranteed `en-US`; problem-details and FluentValidation messages come out in the resolved culture. **Both React apps** localize with `react-i18next` + `i18next-browser-languagedetector` (JSON catalogs per namespace under `src/locales/<locale>/`, detection cached in `localStorage`), send the active language on `apiFetch`'s `Accept-Language`, format dates/numbers/currency locale-aware, and expose a topbar **language switcher** that persists the choice to `User.Locale` and refreshes the token. Per-deployment default is set via `LocalizationOptions:DefaultCulture` (backend) and `config.json` `defaultLanguage` (front-ends). Because a localized `detail` can no longer be pattern-matched, `GlobalExceptionHandler` now emits the exception's `MessageKey` as a **`code` ProblemDetails extension** - a stable, culture-independent discriminator clients branch on instead of the prose. See [Internationalization](/docs/cross-cutting-concerns/internationalization/) and [Error handling](/docs/cross-cutting-concerns/error-handling/#code---the-machine-readable-discriminator).
 
 ## 2026-07-13
 
