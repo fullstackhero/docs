@@ -75,7 +75,7 @@ The value is emitted as the JWT `locale` claim **only when it is set** - a user 
 
 Two server-produced message surfaces are localized through the active culture:
 
-- **Problem details** - `GlobalExceptionHandler` localizes the messages it renders into the RFC 7807 `ProblemDetails` body, so an error returned to the client is in the caller's language. Because `detail` is culture-dependent, the handler also emits the exception's `MessageKey` as a stable `code` extension - a client that branches on a specific error keys off the code, never off the prose. See [Error handling](/docs/cross-cutting-concerns/error-handling/#code--the-machine-readable-discriminator).
+- **Problem details** - `GlobalExceptionHandler` localizes the messages it renders into the RFC 7807 `ProblemDetails` body, so an error returned to the client is in the caller's language. Because `detail` is culture-dependent, the handler also emits the exception's `MessageKey` as a stable `code` extension - a client that branches on a specific error keys off the code, never off the prose. See [Error handling](/docs/cross-cutting-concerns/error-handling/#code---the-machine-readable-discriminator).
 - **Validation** - FluentValidation's built-in messages are localized automatically because the framework picks them by `CultureInfo.CurrentUICulture`, which `RequestLocalization` has already set for the request. Custom validation messages are localized explicitly by resolving them through `IStringLocalizer`. See [Vertical Slice architecture](/docs/architecture/vertical-slice/) for where validators live.
 
 ## Frontend (admin and dashboard)
