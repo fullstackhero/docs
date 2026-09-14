@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-07-13
+lastUpdated: 2026-09-14
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -10,6 +10,10 @@ seo:
 ---
 
 Notable changes to the kit, newest first.
+
+## 2026-09-14
+
+- **MinIO now comes from quay.io instead of Docker Hub.** MinIO withdrew `minio/minio` from Docker Hub: the repository is gone, and a pull fails with `pull access denied for minio/minio, repository does not exist or may require 'docker login'`. That broke everything in the kit that boots MinIO - the Testcontainers integration-test harness (every test in the project fails at container start), the Aspire AppHost, and the Docker Compose deployment under `deploy/docker/`. The image is still published at `quay.io/minio/minio`, so only the registry changes. **Action for deployments:** if you copied the compose file or pinned `minio/minio` anywhere of your own, repoint it at `quay.io/minio/minio`. Nothing else changes; it is the same image.
 
 ## 2026-07-13
 

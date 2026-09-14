@@ -1,6 +1,6 @@
 ---
 title: Integration tests
-lastUpdated: 2026-06-11
+lastUpdated: 2026-09-14
 description: WebApplicationFactory in-process API tests against Testcontainers Postgres + MinIO - one container set, all modules, real round trips.
 sidebar:
   label: Integration tests
@@ -23,7 +23,7 @@ Splitting integration tests into per-module projects would mean per-project cont
 | Layer | Library | Purpose |
 |---|---|---|
 | Host | `Microsoft.AspNetCore.Mvc.Testing` | `WebApplicationFactory<Program>` for the in-process API |
-| Containers | `Testcontainers.PostgreSql` / `Testcontainers.Minio` 4.11 | `postgres:17-alpine` + `minio/minio:latest` per test run |
+| Containers | `Testcontainers.PostgreSql` / `Testcontainers.Minio` 4.11 | `postgres:17-alpine` + `quay.io/minio/minio:latest` per test run |
 | HTTP | `HttpClient` from `factory.CreateClient()` | Real HTTP calls through the full middleware pipeline |
 | Assertions | Shouldly, NSubstitute, AutoFixture | Same as unit tests |
 
