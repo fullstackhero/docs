@@ -22,7 +22,7 @@ The whole suite shares one database across hundreds of tests. Give everything yo
 
 | Piece | Type | Role |
 |---|---|---|
-| `FshWebApplicationFactory` | `WebApplicationFactory<Program>, IAsyncLifetime` | Owns the `postgres:17-alpine` + `quay.io/minio/minio:latest` Testcontainers, builds the in-process host, migrates + seeds |
+| `FshWebApplicationFactory` | `WebApplicationFactory<Program>, IAsyncLifetime` | Owns the `postgres:17-alpine` + `quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z` Testcontainers, builds the in-process host, migrates + seeds |
 | `FshCollectionDefinition` | `ICollectionFixture<FshWebApplicationFactory>` | Shares **one** factory instance across the whole suite (`[Collection(FshCollectionDefinition.Name)]`) |
 | `AuthHelper` | Plain class, wraps the factory | Issues real tokens via `POST /token/issue` and builds authenticated `HttpClient`s |
 | `TestConstants` | Static class | Root tenant id, root admin credentials, JWT settings, per-module base paths |
