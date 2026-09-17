@@ -11,7 +11,9 @@ directory = './dist'
 binding = 'ASSETS'
 not_found_handling = '404-page'
 
-# D1 - page view counters. Run once locally to create:
+# D1 - page view counters (`views`) and per-IP+UA 1h dedup (`seen`).
+# Dedup used to live in KV; it moved to D1 because the KV free tier caps
+# writes at 1,000/day. Run once locally to create:
 #   npx wrangler d1 create fsh-docs-views
 # then paste the returned database_id below.
 [[d1_databases]]
@@ -19,10 +21,3 @@ binding = 'DB'
 database_name = 'fsh-docs-views'
 database_id = '98427699-353c-4b33-b09e-4cdc782cdd1e'
 migrations_dir = './migrations'
-
-# KV - per-IP dedup with 1h TTL. Run once locally to create:
-#   npx wrangler kv namespace create DEDUPE
-# then paste the returned id below.
-[[kv_namespaces]]
-binding = 'DEDUPE'
-id = '66993241e3d14a64945ce8a9d3530cef'
