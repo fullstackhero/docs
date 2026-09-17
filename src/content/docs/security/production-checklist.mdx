@@ -1,6 +1,6 @@
 ---
 title: Production security checklist
-lastUpdated: 2026-06-11
+lastUpdated: 2026-09-17
 description: Ten configuration items you must check before shipping fullstackhero to production. Skip none.
 sidebar:
   label: Production checklist
@@ -58,6 +58,8 @@ Adjust for your industry. Healthcare (HIPAA) and finance (PCI-DSS) tend to requi
 ## 3. Allowlist CORS origins
 
 `CorsOptions:AllowAll = true` (and the `SetIsOriginAllowed(_ => true)` policy it enables) is **dev only**. Production needs the explicit lists - and note that `appsettings.Production.json` ships `AllowedOrigins` empty, which means **no CORS middleware mounts at all** until you fill it in; your front-ends on other origins will be blocked by the browser. See [CORS & security headers](/docs/security/cors-and-headers/).
+
+Separately, set **`FrontendOptions`** (`AllowedOrigins` + `DefaultOrigin`) - the allowlist and default origin the Identity module uses to build password-reset and e-mail-confirmation links. It ships empty in production too. The host still boots without it, logging a startup `Error`, but link building has no fallback: confirm-email, resend-confirmation, forgot-password and reset-password answer `500` until `DefaultOrigin` is set. The two candidates an earlier revision fell back to are both unacceptable - the request host is caller-supplied, so a reset link built from it hands a live token to an attacker-chosen domain, and the API's own origin returns `404` for the SPA pages these links target. `DefaultOrigin` is the tenant SPA: it's the fallback for non-browser callers and the target for operator-driven register/resend links. The two shipped deployment paths fill this in for you - `deploy/docker/docker-compose.yml` from `FSH_ADMIN_URL` / `FSH_DASHBOARD_URL`, and the AWS Terraform stack from the resolved SPA URLs - so this item is about deployments that roll their own hosting.
 
 ```jsonc
 {

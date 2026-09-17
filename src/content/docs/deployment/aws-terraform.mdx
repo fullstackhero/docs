@@ -1,6 +1,6 @@
 ---
 title: Deploy to AWS with Terraform
-lastUpdated: 2026-06-06
+lastUpdated: 2026-09-14
 description: End-to-end AWS deployment - prerequisites, bootstrapping the state backend, configuring an environment, and the one-command deploy that ships the API and both React apps.
 sidebar:
   label: AWS (Terraform)
@@ -223,7 +223,11 @@ terraform output admin_site
 ```
 
 Open the CloudFront `url` from each site output to reach the apps. The API's
-CORS allow-list is wired automatically to include both SPA origins.
+CORS allow-list is wired automatically to include both SPA origins, and so is
+`FrontendOptions` - the separate allow-list that decides which origin a
+password-reset or e-mail-confirmation link may point at, with the dashboard as
+`DefaultOrigin`. Extra origins passed through `api_extra_cors_origins` land on
+both lists.
 
 ## Layout reference
 
