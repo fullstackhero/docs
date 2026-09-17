@@ -28,10 +28,11 @@ npm run check      # astro check - type + content-schema validation
 npx wrangler deploy                       # deploy worker + dist assets
 npx wrangler types                        # regenerates worker-configuration.d.ts (gitignored)
 npx wrangler d1 execute fsh-docs-views --file ./migrations/0001_init.sql --remote
+npx wrangler d1 execute fsh-docs-views --file ./migrations/0002_seen.sql --remote
 ```
 
-`.dev.vars` holds `DEDUPE_SALT` for local worker runs (gitignored). D1 (`DB`) and KV (`DEDUPE`)
-binding IDs live in `wrangler.toml`.
+`.dev.vars` holds `DEDUPE_SALT` for local worker runs (gitignored). The D1 (`DB`) binding ID
+lives in `wrangler.toml`. There is no KV binding.
 
 ## Architecture: the two-part build
 
@@ -48,7 +49,9 @@ Consequences:
 - `src/worker.ts` is **excluded from `tsconfig.json`** and typed against `@cloudflare/workers-types`,
   not Astro types. `npm run check` does **not** validate it. Edit it carefully.
 - The page-view counter (`/api/views`) writes to D1 (`views` table, see `migrations/0001_init.sql`)
-  and dedups per IP+UA via KV with a 1h TTL. Slugs are whitelisted to `/docs/*` only.
+  and dedups per IP+UA with a 1h TTL in the D1 `seen` table (`migrations/0002_seen.sql`), all in
+  one batch. Don't move dedup back to KV: its free tier caps writes at 1,000/day and real
+  traffic hit 83% of that. Slugs are whitelisted to `/docs/*` only.
 - Anything dynamic must go through the worker; you cannot add an SSR Astro route and expect it
   to run - the build is static.
 
