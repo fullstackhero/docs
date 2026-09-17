@@ -1,6 +1,6 @@
 ---
 title: Production security checklist
-lastUpdated: 2026-06-11
+lastUpdated: 2026-07-13
 description: Ten configuration items you must check before shipping fullstackhero to production. Skip none.
 sidebar:
   label: Production checklist
@@ -114,8 +114,21 @@ Adjust `Auth` to your traffic profile: relax for high-volume consumer apps on sh
 `UseHttpsRedirection` is on by default. Verify:
 
 - Reverse proxy / load balancer terminates TLS with a valid certificate.
-- `X-Forwarded-Proto: https` forwards to the kit so the redirect middleware doesn't double-redirect - and so the HSTS header (emitted only on HTTPS requests) actually fires.
+- `X-Forwarded-Proto: https` forwards to the kit so the redirect middleware doesn't double-redirect - and so the HSTS header (emitted only on HTTPS requests) actually fires. **This requires `TrustedProxyOptions` (below):** the kit only honours `X-Forwarded-Proto` / `X-Forwarded-For` from a configured trusted proxy, so with it unset the scheme stays `http` and the real client IP never reaches rate limiting or audit.
 - HTTP/2 or HTTP/3 enabled at the LB for performance.
+
+Set `TrustedProxyOptions` to your ingress so forwarded headers are honoured - and only from your proxy, never a direct client (which could otherwise forge its IP/scheme):
+
+```jsonc
+{
+  "TrustedProxyOptions": {
+    "KnownNetworks": [ "10.0.0.0/8" ],   // your ingress CIDR(s), or KnownProxies for individual IPs
+    "ForwardLimit": 2                      // real hop count, minimum 1 (cloudflared → Caddy → app = 2)
+  }
+}
+```
+
+Both lists ship empty (trust loopback only), so this is opt-in - see [CORS & security headers](/docs/security/cors-and-headers/#reverse-proxy--forwarded-headers).
 
 If you're behind Cloudflare / a CDN, also enable "Always Use HTTPS" + "HSTS" at the CDN.
 
