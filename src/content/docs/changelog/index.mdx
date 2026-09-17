@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-08-07
+lastUpdated: 2026-09-14
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -10,6 +10,12 @@ seo:
 ---
 
 Notable changes to the kit, newest first.
+
+## 2026-09-14
+
+- **MinIO now comes from quay.io instead of Docker Hub.** MinIO withdrew `minio/minio` from Docker Hub: the repository is gone, and a pull fails with `pull access denied for minio/minio, repository does not exist or may require 'docker login'`. That broke everything in the kit that boots MinIO - the Testcontainers integration-test harness (every test in the project fails at container start), the Aspire AppHost, and the Docker Compose deployment under `deploy/docker/`. The image is still published at `quay.io/minio/minio`, and the kit now pins an explicit tag, `RELEASE.2025-09-07T16-13-09Z`, instead of `:latest` - quay has not moved `:latest` since September 2025, so the two resolve to the same digest today and the pin only removes the surprise of a silent move later. **Action for deployments:** if you copied the compose file or pinned `minio/minio` anywhere of your own, repoint it at `quay.io/minio/minio` with that tag. It is the same image; nothing else changes.
+
+- **The `Testcontainers.*` packages move 4.11.0 to 4.14.0.** 4.11.0 depends on `SSH.NET` 2025.1.0, which carries GHSA-q939-rpr3-3284 and fails `dotnet restore` for the whole solution under `TreatWarningsAsErrors`. 4.14.0 already depends on the patched `SSH.NET` 2026.0.0. Test-only; no runtime surface moves.
 
 ## 2026-08-07
 
