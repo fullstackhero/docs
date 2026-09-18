@@ -94,7 +94,7 @@ for example `src/locales/en-US/common.json` and `src/locales/pt-BR/common.json`.
 
 ### Language detection and normalization
 
-The browser language detector caches the resolved language in **`localStorage`** (no cookie is written). Detected values are passed through a `convertDetectedLanguage` step that **normalizes variants** to a supported locale - for instance `pt-PT` is mapped to `pt-BR` - so a browser advertising a regional variant the app doesn't ship still lands on a language it does.
+The browser language detector caches the resolved language in **`localStorage`** (no cookie is written), under a per-app key rather than the library default: **`fsh.admin.lng`** and **`fsh.dashboard.lng`**, matching every other value the apps persist (`fsh.admin.accessToken`, `fsh.theme`, and so on). The default `i18nextLng` would be claimed by both apps on a shared origin and by any other i18next app deployed beside them. Detected values are passed through a `convertDetectedLanguage` step that **normalizes variants** to a supported locale - for instance `pt-PT` is mapped to `pt-BR` - so a browser advertising a regional variant the app doesn't ship still lands on a language it does.
 
 ### Talking to the backend
 
