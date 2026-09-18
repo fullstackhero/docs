@@ -30,6 +30,20 @@ endpoints.MapPost("/orders", handler)
          .WithIdempotency();
 ```
 
+An endpoint whose response goes stale on its own schedule passes its own window:
+
+```csharp
+// A presigned URL is good for FilesOptions.UploadUrlTtlMinutes, so the replay must not out-live it.
+var uploadUrlTtl = TimeSpan.FromMinutes(
+    endpoints.ServiceProvider.GetRequiredService<IOptions<FilesOptions>>().Value.UploadUrlTtlMinutes);
+
+endpoints.MapPost("/upload-url", handler)
+         .RequirePermission(perm)
+         .WithIdempotency(uploadUrlTtl);
+```
+
+Without it the entry keeps `DefaultTtl`, and a retry an hour later would get a `200` carrying a URL that expired forty-five minutes earlier, with no way out except inventing a new key. Read the value at map time from the same option the handler mints the response with, so the two cannot drift. A non-positive TTL throws at startup: it would expire every entry on write, leaving the endpoint advertising an idempotency it no longer has.
+
 That's the whole opt-in. The kit's `IdempotencyEndpointFilter` (an `IEndpointFilter`) wraps the handler:
 
 1. **Before**: read the `Idempotency-Key` header. If present, build the cache key from the tenant (the resolved tenant context, the caller's `tenant` claim as a fallback, `"global"` when neither is available), the **caller** (the user id; `anon` when unauthenticated, which is why idempotency does not belong on an anonymous endpoint, see below), the **operation** (HTTP method + route pattern + resolved route values) and the key itself, then probe the cache.
@@ -107,7 +121,7 @@ Most HTTP client libraries can generate keys automatically; for `HttpClientFacto
 ## What it doesn't do
 
 - **It doesn't dedupe content.** If the client sends two requests with **different** keys and identical bodies, both create resources. Idempotency keys are per-request-attempt identifiers, not content hashes. (Use a content hash + lookup if you want content dedupe - but it's a different feature.)
-- **It doesn't span the request boundary forever.** After `DefaultTtl` expires, a replayed request runs again. Set the TTL to whatever is realistic for your client retry strategy - 24 h is the default; longer is reasonable for batch / async flows.
+- **It doesn't span the request boundary forever.** After the entry's TTL expires, a replayed request runs again. `DefaultTtl` is 24 h; set it to whatever is realistic for your client retry strategy, and give an individual endpoint a shorter window with `WithIdempotency(ttl)` when what it returns goes stale sooner than that.
 - **It doesn't catch partial failures.** If the handler runs, mutates state, then throws before the response is captured, the cache won't have an entry. The retry runs again. Combine idempotency with idempotent domain operations for true safety. (A client that hangs up *after* the handler committed is covered - the store happens before the body is written to the client.)
 - **It doesn't replay failures.** Only 2xx responses are stored, so a retry after an error re-runs the handler rather than replaying the error.
 
