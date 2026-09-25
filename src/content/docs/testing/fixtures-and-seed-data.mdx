@@ -1,6 +1,6 @@
 ---
 title: Fixtures & seed data
-lastUpdated: 2026-06-11
+lastUpdated: 2026-09-25
 description: The shared test factory (containers, host, seeded root tenant + admin) used across the integration suite, and the service swaps that keep tests deterministic.
 sidebar:
   label: Fixtures & seed data
@@ -22,7 +22,7 @@ The whole suite shares one database across hundreds of tests. Give everything yo
 
 | Piece | Type | Role |
 |---|---|---|
-| `FshWebApplicationFactory` | `WebApplicationFactory<Program>, IAsyncLifetime` | Owns the `postgres:17-alpine` + `minio/minio:latest` Testcontainers, builds the in-process host, migrates + seeds |
+| `FshWebApplicationFactory` | `WebApplicationFactory<Program>, IAsyncLifetime` | Owns the `postgres:17-alpine` + `rustfs/rustfs:1.0.0` (generic `ContainerBuilder`) Testcontainers, builds the in-process host, migrates + seeds |
 | `FshCollectionDefinition` | `ICollectionFixture<FshWebApplicationFactory>` | Shares **one** factory instance across the whole suite (`[Collection(FshCollectionDefinition.Name)]`) |
 | `AuthHelper` | Plain class, wraps the factory | Issues real tokens via `POST /token/issue` and builds authenticated `HttpClient`s |
 | `TestConstants` | Static class | Root tenant id, root admin credentials, JWT settings, per-module base paths |
@@ -48,14 +48,14 @@ builder.ConfigureAppConfiguration((_, config) =>
         ["RateLimitingOptions:Enabled"] = "false",
         ["SecurityHeadersOptions:Enabled"] = "false",
         ["Storage:Provider"] = "s3",
-        ["Storage:S3:ServiceUrl"] = _minio.GetConnectionString(),
+        ["Storage:S3:ServiceUrl"] = S3ServiceUrl,
         // ... bucket, keys, region
     });
 });
 ```
 
 <Callout type="warning" title="One overlay doesn't reach everything">
-`AddHeroStorage` reads `Storage:Provider` **eagerly**, before this overlay applies - so the factory also removes the registered `IStorageService` and re-registers the S3 stack against the MinIO container in `ConfigureServices` (`RewireStorageForS3`). Config-only overrides aren't enough for eagerly-bound services.
+`AddHeroStorage` reads `Storage:Provider` **eagerly**, before this overlay applies - so the factory also removes the registered `IStorageService` and re-registers the S3 stack against the RustFS container in `ConfigureServices` (`RewireStorageForS3`). Config-only overrides aren't enough for eagerly-bound services.
 </Callout>
 
 The factory also swaps Hangfire to `Hangfire.InMemory` (with a real server polling every second, so jobs actually run), replaces mail with `NoOpMailService`, and removes hosted services that would race the test migrations (role-permission sync, outbox dispatcher).
@@ -128,7 +128,7 @@ Finbuckle's `IMultiTenantContextSetter` writes an `AsyncLocal`. Set it **in the 
 
 ## When to add to the harness
 
-- **New shared infrastructure.** If you need RabbitMQ, Elasticsearch, etc., add the container as another field on `FshWebApplicationFactory`, start it in `InitializeAsync`, and overlay its connection details - same shape as the MinIO wiring. For something only one test class needs (like the Valkey container in `HybridCacheRedisTests`), keep it local to that class via `IAsyncLifetime` instead.
+- **New shared infrastructure.** If you need RabbitMQ, Elasticsearch, etc., add the container as another field on `FshWebApplicationFactory`, start it in `InitializeAsync`, and overlay its connection details - same shape as the RustFS wiring. For something only one test class needs (like the Valkey container in `HybridCacheRedisTests`), keep it local to that class via `IAsyncLifetime` instead.
 - **New always-present seed data.** Extend the module's `IDbInitializer` seed - that's the production path, and the factory runs it automatically.
 - **One-off setup per test class.** Don't touch the harness; arrange it in the test class constructor or the test itself.
 

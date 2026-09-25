@@ -1,7 +1,7 @@
 ---
 title: Files module
-lastUpdated: 2026-06-11
-description: Presigned-URL file lifecycle with pluggable per-OwnerType access policies, soft delete + retention purge, optional scanner hook, and S3 / MinIO storage.
+lastUpdated: 2026-09-25
+description: Presigned-URL file lifecycle with pluggable per-OwnerType access policies, soft delete + retention purge, optional scanner hook, and S3-compatible storage.
 sidebar:
   label: Files
   order: 4
@@ -12,7 +12,7 @@ seo:
   keywords: '.net file upload s3, minio presigned upload .net, tenant scoped storage dotnet, file access policy .net, dotnet file lifecycle module'
 ---
 
-The Files module is the kit's shared object-storage layer. Any other module that needs file uploads (Catalog product images, Chat attachments, user avatars) goes through it. Files are owned by an `OwnerType` (e.g. `Product`, `ChatChannel`, `User`) and an `OwnerId`; per-OwnerType `IFileAccessPolicy` implementations decide who can attach, read, delete, and change visibility. Storage is MinIO / S3 via presigned URLs - the API never proxies bytes. (The Storage building block also ships a local-disk provider with emulated presign tokens for environments without object storage.)
+The Files module is the kit's shared object-storage layer. Any other module that needs file uploads (Catalog product images, Chat attachments, user avatars) goes through it. Files are owned by an `OwnerType` (e.g. `Product`, `ChatChannel`, `User`) and an `OwnerId`; per-OwnerType `IFileAccessPolicy` implementations decide who can attach, read, delete, and change visibility. Storage is any S3-compatible store (AWS S3 in production, RustFS in local dev) via presigned URLs - the API never proxies bytes. (The Storage building block also ships a local-disk provider with emulated presign tokens for environments without object storage.)
 
 <Callout type="tip" title="One module, one storage policy">
 If your module owns files, ship a `FileAccessPolicy : IFileAccessPolicy` next to the rest of its code. Register it during your module's `ConfigureServices`. The Files module never knows about your domain - your domain knows what's allowed.
@@ -20,7 +20,7 @@ If your module owns files, ship a `FileAccessPolicy : IFileAccessPolicy` next to
 
 ## What ships in v10
 
-- **Presigned upload flow** - `POST /files/upload-url` mints a presigned PUT URL with a 15-minute TTL (configurable). Client uploads directly to MinIO / S3. `POST /files/{id}/finalize` flips the file from `PendingUpload` to `Available`.
+- **Presigned upload flow** - `POST /files/upload-url` mints a presigned PUT URL with a 15-minute TTL (configurable). Client uploads directly to S3 (RustFS locally). `POST /files/{id}/finalize` flips the file from `PendingUpload` to `Available`.
 - **Pluggable access policies** - `IFileAccessPolicy` interface registered per `OwnerType`. Catalog ships `ProductFileAccessPolicy`, Chat ships `ChatChannelFileAccessPolicy`, the Files module itself registers `DefaultUploaderOnlyPolicy` for the built-in `MyFiles` and `User` owner types.
 - **Per-category validation** - extension whitelist + size cap per category (`Image` 10 MB, `Document` 25 MB, `Archive` 50 MB), configured in `appsettings`.
 - **Visibility** - files are `Public` or `Private`; `PATCH /files/{id}/visibility` flips it after upload (policy-gated, only on `Available` files). `GET /files/shared` lists the tenant's public free-standing files (`MyFiles` / `User` owner types) for a "Shared in tenant" surface.
@@ -188,7 +188,7 @@ Endpoints marked "- (policy)" require authentication only; the per-OwnerType `IF
 
 The section binds to `FilesOptions` (`Modules.Files/FilesOptions.cs`); category names are matched case-insensitively.
 
-The S3 / MinIO target is configured in the [Storage building block](/docs/building-blocks/storage/) - the Files module is the policy + lifecycle layer on top.
+The S3 target is configured in the [Storage building block](/docs/building-blocks/storage/) - the Files module is the policy + lifecycle layer on top.
 
 ## How to extend
 
@@ -242,10 +242,10 @@ No module ships a consumer today - Catalog and Chat attach files by passing the 
   - `DefaultUploaderOnlyPolicyTests` - policy enforcement
   - `FileAccessPolicyRegistryTests` - registry lookup
   - `StorageKeyBuilderTests` - tenant + category path generation
-- Integration tests at `src/Tests/Integration.Tests/Tests/Files/` (ten files) cover the presigned round-trip (`RequestAndFinalizeUploadTests`, `StorageFlowTests`), upload validation, finalize edge cases, visibility + sharing, soft delete + restore, the purge jobs, and tenant isolation against Testcontainers MinIO.
+- Integration tests at `src/Tests/Integration.Tests/Tests/Files/` (ten files) cover the presigned round-trip (`RequestAndFinalizeUploadTests`, `StorageFlowTests`), upload validation, finalize edge cases, visibility + sharing, soft delete + restore, the purge jobs, and tenant isolation against Testcontainers RustFS.
 
 ## Related
 
-- [Storage building block](/docs/building-blocks/storage/) - the S3 / MinIO abstraction this module sits on top of.
+- [Storage building block](/docs/building-blocks/storage/) - the S3-compatible abstraction this module sits on top of.
 - [Catalog module](/docs/modules/catalog/) - product images use the policy hook.
 - [Chat module](/docs/modules/chat/) - channel attachments use the policy hook.

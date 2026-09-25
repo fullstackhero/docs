@@ -1,6 +1,6 @@
 ---
 title: Health checks
-lastUpdated: 2026-06-11
+lastUpdated: 2026-09-25
 description: Liveness + readiness endpoints - per-module database checks, Valkey, Hangfire, tenant migrations - for Kubernetes / Docker Compose / load balancer probes.
 sidebar:
   label: Health checks
@@ -28,7 +28,7 @@ Liveness asks "is the process alive?" - restart if it fails. Readiness asks "is 
 | `hangfire` | Kit's `HangfireHealthCheck` | When `EnableJobs = true` |
 | `db:tenants-migrations` | Kit's `TenantMigrationsHealthCheck` (Multitenancy module) | Always (with the Multitenancy module) |
 
-There is no storage/MinIO health check - blob storage failures surface through the Files module's own error handling, not readiness.
+There is no storage/S3 health check - blob storage failures surface through the Files module's own error handling, not readiness.
 
 ## How to wire probes
 
