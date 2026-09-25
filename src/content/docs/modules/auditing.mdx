@@ -1,6 +1,6 @@
 ---
 title: Auditing module
-lastUpdated: 2026-06-11
+lastUpdated: 2026-09-25
 description: Entity-change capture via SaveChanges interceptor, HTTP middleware for request/response audit, security events, exception capture, JSON masking, and a retention purge job.
 sidebar:
   label: Auditing
@@ -25,6 +25,8 @@ Seven read-only endpoints expose audits filtered by tenant, user, event type, se
 - **Security events** - `Audit.ForSecurity(SecurityAction.LoginFailed).WithUser(...).WriteAsync()` for login attempts, permission denials, policy failures.
 - **Exception capture** - `Audit.ForException(ex).WithSeverity(...)` with `ExceptionSeverityClassifier` that maps common .NET exception types to sensible severities (e.g. `OperationCanceledException` → Information, `UnauthorizedAccessException` → Warning, everything else → Error).
 - **JSON masking** - `IAuditMaskingService` redacts sensitive fields (passwords, tokens, PII) before audits are written. Configurable patterns.
+- **Entity-diff masking** - the entity-change diff masks the value of any property whose name contains `password`, `secret`, `token`, `apikey`, `connectionstring` or `securitystamp` (case-insensitive): old and new values are stored as `"****"` (a `null` stays `null`, so you still see a value being set or cleared) and the change is flagged `IsSensitive`. The row records *that* the value changed, never the value.
+- **`IAuditExempt` marker** - implement `FSH.Modules.Auditing.Contracts.IAuditExempt` on an entity to skip it in entity-change auditing entirely, for entities whose values must live in one table only (confidential reports, health records).
 - **Channel publisher → SQL sink with file DLQ** - audits go through a `System.Threading.Channels` pipeline so the request path isn't blocked. Writes go to PostgreSQL; failures fall back to a local file DLQ.
 - **Trigram GIN indexes** - PostgreSQL `pg_trgm` extension powers free-text search across `Source`, `UserName`, and other audit fields.
 - **Retention job** - opt-in Hangfire `AuditRetentionJob` purges old records on a daily cron, with per-event-type retention windows.
@@ -90,7 +92,7 @@ The entity-change variant is the one **you almost never call directly** - the Sa
 
 Without any code changes, the module captures:
 
-1. Every EF Core entity Insert / Update / Delete with property-level before / after values (`AuditingSaveChangesInterceptor`).
+1. Every EF Core entity Insert / Update / Delete with property-level before / after values (`AuditingSaveChangesInterceptor`) - sensitive-named properties masked to `"****"`, and entities implementing `IAuditExempt` skipped.
 2. Every HTTP request and response with body, status, duration, headers (size-capped via `AuditHttpOptions.MaxRequestBytes` / `MaxResponseBytes`, content-type-filtered to JSON-ish by default).
 3. Every unhandled exception that bubbles to the host's exception handler (severity classified automatically).
 
@@ -198,6 +200,23 @@ endpoints.MapPost("/sensitive", handler)
 ```
 
 …or apply `[NoAudit]` to a handler method.
+
+`[NoAudit]` / `.NoAudit()` only governs **HTTP activity** auditing. It does not stop the SaveChanges interceptor from diffing the entities that endpoint writes.
+
+### Opt an entity out of entity-change auditing
+
+Sensitive-named properties are already masked (see above). When an entity's values must not be copied into `AuditRecords` at all, mark it with `IAuditExempt` - the interceptor then captures no diff for it:
+
+```csharp
+using FSH.Modules.Auditing.Contracts;
+
+public sealed class ConfidentialReport : BaseEntity<Guid>, IAuditExempt
+{
+    // ...
+}
+```
+
+The masking keyword list lives in `EntityDiffBuilder` (substring match on the property name) and is kept in step with `JsonMaskingService`; add a keyword in both places if your entities use another naming.
 
 ### Plug a different sink
 

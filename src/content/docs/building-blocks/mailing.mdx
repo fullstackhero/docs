@@ -1,6 +1,6 @@
 ---
 title: Mailing building block
-lastUpdated: 2026-06-11
+lastUpdated: 2026-09-25
 description: SMTP or SendGrid email abstraction behind a single IMailService, with multi-recipient delivery and HTML body support.
 sidebar:
   label: Mailing
@@ -59,6 +59,27 @@ public class MailRequest(
 Because `Body` always lands in the HTML part, plain text placed there is parsed as markup. Two consequences bite in practice: a bare URL is **not** turned into a link - most clients only auto-link inside `text/plain` - so an action link arrives as dead text the user cannot click; and any interpolated value (a person's name, a tenant's name) is read as markup rather than shown. Build real HTML with an `<a href>`, HTML-encode every interpolated value, and put the plain wording in `TextBody`.
 :::
 
+### `HtmlEmail` helper
+
+`FSH.Framework.Mailing.HtmlEmail` is the shared shell and the single encoder for outbound mail, so no module ships its own weaker escaping:
+
+- **`Encode(value)`** - full HTML encoding (`WebUtility.HtmlEncode`, including quotes and apostrophes), safe in both element content and attributes.
+- **`Shell(heading, innerHtml)`** - wraps markup in the kit's document: doctype, charset, viewport and the centred card. `heading` is encoded; `innerHtml` is **trusted** and inserted verbatim, so build it from literals plus `Encode`d values - never pass user input straight through.
+- **`LinkAction(heading, intro, actionUrl, actionLabel)`** - a single-action message: the link as a real button anchor, with the address repeated as text for clients that strip buttons.
+- **`Notice(heading, message)`** - a short informational message with no link.
+
+```csharp
+string html = HtmlEmail.LinkAction(
+    "Reset your password",
+    "Use the button below to choose a new password.",
+    resetUri,
+    "Reset password");
+
+var mail = new MailRequest(to, "Reset your password", html, textBody: $"Reset your password: {resetUri}");
+```
+
+Always pair it with a `TextBody` alternative.
+
 ### Implementations
 
 - **`SmtpMailService`** - uses MailKit + MimeKit. Reads `MailOptions:Smtp:*` for host, port, credentials; connects with STARTTLS per send.
@@ -82,7 +103,7 @@ var mailRequest = new MailRequest(
 jobService.Enqueue("email", () => mailService.SendAsync(mailRequest, cancellationToken));
 ```
 
-Identity uses this shape for its email flows: email confirmation, password reset, and the welcome mail. Its `EmailBodies` helper renders the HTML - the action link as a real anchor, every interpolated value HTML-encoded - while the `textBody` argument carries the same wording in plain text.
+Identity uses this shape for its email flows: email confirmation, password reset, and the welcome mail. Password reset and the welcome mail render through `HtmlEmail` (`LinkAction` / `Notice`); the confirmation e-mail still builds its own document for now. The billing e-mails in the Notifications module render inside `HtmlEmail.Shell` and encode every value with `HtmlEmail.Encode`. In each case the `textBody` argument carries the same wording in plain text.
 
 ## Configuration
 
@@ -148,6 +169,7 @@ Build a separate `IMailTemplateRenderer` service. Resolve a Razor or Scriban tem
 - `src/BuildingBlocks/Mailing/Services/SmtpMailService.cs`
 - `src/BuildingBlocks/Mailing/Services/SendGridMailService.cs`
 - `src/BuildingBlocks/Mailing/MailOptions.cs`
+- `src/BuildingBlocks/Mailing/HtmlEmail.cs`
 
 ## Related
 
