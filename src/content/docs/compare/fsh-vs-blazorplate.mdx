@@ -1,6 +1,6 @@
 ---
 title: fullstackhero vs BlazorPlate
-lastUpdated: 2026-05-19
+lastUpdated: 2026-09-25
 description: How fullstackhero compares to BlazorPlate - the difference between a free, open-source .NET 10 starter kit and a paid closed-source SaaS template.
 sidebar:
   label: vs BlazorPlate
@@ -32,7 +32,7 @@ BlazorPlate is a paid commercial multi-tenant SaaS starter for .NET, sold as a o
 | Background jobs | Hangfire 1.8 | Hangfire |
 | Observability | Serilog 4 + OpenTelemetry 1.15 (OTLP) | Serilog |
 | Realtime | SignalR (Valkey backplane) + Server-Sent Events | SignalR |
-| File storage | Tenant-scoped MinIO / S3 abstraction | File storage primitives |
+| File storage | Tenant-scoped S3 abstraction (RustFS locally) | File storage primitives |
 | Email | MailKit / SendGrid | Email service |
 | Webhooks | Tenant-scoped subscriptions + HMAC-signed payloads | Not included |
 | API browser | Scalar (OpenAPI 3.1) | Swagger |

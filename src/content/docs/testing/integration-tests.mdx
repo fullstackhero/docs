@@ -1,18 +1,18 @@
 ---
 title: Integration tests
-lastUpdated: 2026-06-11
-description: WebApplicationFactory in-process API tests against Testcontainers Postgres + MinIO - one container set, all modules, real round trips.
+lastUpdated: 2026-09-25
+description: WebApplicationFactory in-process API tests against Testcontainers Postgres + RustFS - one container set, all modules, real round trips.
 sidebar:
   label: Integration tests
   order: 2
 pageType: guide
 seo:
   title: 'Integration tests in .NET 10 - WebApplicationFactory'
-  description: 'How fullstackhero runs integration tests against real Postgres + MinIO via Testcontainers, in-process API tests through WebApplicationFactory…'
-  keywords: 'webapplicationfactory dotnet, testcontainers postgres .net 10, integration test asp.net core, in-process api test, testcontainers minio'
+  description: 'How fullstackhero runs integration tests against real Postgres + RustFS via Testcontainers, in-process API tests through WebApplicationFactory…'
+  keywords: 'webapplicationfactory dotnet, testcontainers postgres .net 10, integration test asp.net core, in-process api test, testcontainers rustfs s3'
 ---
 
-Integration tests in fullstackhero spin up real infrastructure in containers - PostgreSQL 17 and MinIO - and exercise the API end-to-end through `Microsoft.AspNetCore.Mvc.Testing`'s `WebApplicationFactory<T>`. One factory (and therefore one container set) serves the entire `Integration.Tests` project via an xUnit collection fixture, so the startup cost is paid once and the per-test cost is small.
+Integration tests in fullstackhero spin up real infrastructure in containers - PostgreSQL 17 and RustFS (S3-compatible) - and exercise the API end-to-end through `Microsoft.AspNetCore.Mvc.Testing`'s `WebApplicationFactory<T>`. One factory (and therefore one container set) serves the entire `Integration.Tests` project via an xUnit collection fixture, so the startup cost is paid once and the per-test cost is small.
 
 <Callout type="tip" title="One project, one container set, all modules">
 Splitting integration tests into per-module projects would mean per-project container startup. The single project shares one factory + one container set across every test class, runs faster, and you don't have to think about container leakage across boundaries.
@@ -23,7 +23,7 @@ Splitting integration tests into per-module projects would mean per-project cont
 | Layer | Library | Purpose |
 |---|---|---|
 | Host | `Microsoft.AspNetCore.Mvc.Testing` | `WebApplicationFactory<Program>` for the in-process API |
-| Containers | `Testcontainers.PostgreSql` / `Testcontainers.Minio` 4.11 | `postgres:17-alpine` + `minio/minio:latest` per test run |
+| Containers | `Testcontainers.PostgreSql` + generic `Testcontainers` (`ContainerBuilder`) 4.14 | `postgres:17-alpine` + `rustfs/rustfs:1.0.0` per test run |
 | HTTP | `HttpClient` from `factory.CreateClient()` | Real HTTP calls through the full middleware pipeline |
 | Assertions | Shouldly, NSubstitute, AutoFixture | Same as unit tests |
 
@@ -31,7 +31,7 @@ There is **no Redis/Valkey container** in the shared harness - `CachingOptions:R
 
 ## The fixture pattern
 
-`FshWebApplicationFactory` (in `src/Tests/Integration.Tests/Infrastructure/`) extends `WebApplicationFactory<Program>` and owns the Postgres + MinIO containers as fields. It is shared across the whole suite through a **collection fixture**:
+`FshWebApplicationFactory` (in `src/Tests/Integration.Tests/Infrastructure/`) extends `WebApplicationFactory<Program>` and owns the Postgres + RustFS containers as fields. It is shared across the whole suite through a **collection fixture**:
 
 ```csharp
 // Infrastructure/FshCollectionDefinition.cs
@@ -80,7 +80,7 @@ public sealed class BrandsEndpointTests
 }
 ```
 
-On startup (`IAsyncLifetime.InitializeAsync`) the factory starts both containers in parallel, creates the MinIO bucket, then **migrates the tenant catalog, seeds the root tenant, and runs every module's `IDbInitializer` migrate + seed** - including the production `RolePermissionSyncer`. A semaphore stops test classes from racing the migration.
+On startup (`IAsyncLifetime.InitializeAsync`) the factory starts both containers in parallel, creates the S3 bucket, then **migrates the tenant catalog, seeds the root tenant, and runs every module's `IDbInitializer` migrate + seed** - including the production `RolePermissionSyncer`. A semaphore stops test classes from racing the migration.
 
 ## Authenticated test clients
 
@@ -103,10 +103,10 @@ The factory overrides configuration and services so tests are deterministic:
 - **Mail** is a `NoOpMailService` - no SMTP, no retries.
 - **Exceptions** surface through a `DetailedTestExceptionHandler` instead of the generic production error response, so failures tell you what broke.
 - **Rate limiting and security headers** are disabled (they get their own dedicated suite - see below).
-- **Storage** is rewired to S3-against-MinIO *after* registration:
+- **Storage** is rewired to S3-against-RustFS *after* registration:
 
 <Callout type="warning" title="Storage must be rewired post-registration">
-`AddHeroStorage` reads `Storage:Provider` from configuration **eagerly** - before the test config overlay applies - so it wires the local-disk provider. The factory removes the registered `IStorageService` and re-registers the S3 stack pointed at the MinIO container (`RewireStorageForS3`). If you build your own factory, you need the same trick.
+`AddHeroStorage` reads `Storage:Provider` from configuration **eagerly** - before the test config overlay applies - so it wires the local-disk provider. The factory removes the registered `IStorageService` and re-registers the S3 stack pointed at the RustFS container (`RewireStorageForS3`). If you build your own factory, you need the same trick.
 </Callout>
 
 ## Two more harness gotchas

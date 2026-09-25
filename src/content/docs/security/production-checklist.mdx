@@ -1,6 +1,6 @@
 ---
 title: Production security checklist
-lastUpdated: 2026-06-11
+lastUpdated: 2026-09-25
 description: Ten configuration items you must check before shipping fullstackhero to production. Skip none.
 sidebar:
   label: Production checklist
@@ -181,7 +181,7 @@ These aren't blockers, but the sooner the better:
 - **Make 2FA mandatory for admin roles.** A leaked admin password compromises everything; require TOTP.
 - **Add monitoring + alerts** on auth-failure spikes, impersonation events, and 5xx error rates.
 - **Run a vulnerability scan** of the deployed image (Snyk, Trivy, Dependabot) to catch transitive CVEs early.
-- **Set up backup + restore tests** for Postgres + MinIO. Backups you haven't tested restoring are not backups.
+- **Set up backup + restore tests** for Postgres + RustFS. Backups you haven't tested restoring are not backups.
 - **Document an incident-response runbook** - who's on-call, where the alerts go, how to revoke every session (admin revoke-all is built in), how to rotate the JWT signing key in an emergency.
 
 ## Related
