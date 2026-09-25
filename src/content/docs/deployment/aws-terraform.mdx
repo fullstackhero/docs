@@ -1,6 +1,6 @@
 ---
 title: Deploy to AWS with Terraform
-lastUpdated: 2026-09-14
+lastUpdated: 2026-09-25
 description: End-to-end AWS deployment - prerequisites, bootstrapping the state backend, configuring an environment, and the one-command deploy that ships the API and both React apps.
 sidebar:
   label: AWS (Terraform)
@@ -226,8 +226,11 @@ Open the CloudFront `url` from each site output to reach the apps. The API's
 CORS allow-list is wired automatically to include both SPA origins, and so is
 `FrontendOptions` - the separate allow-list that decides which origin a
 password-reset or e-mail-confirmation link may point at, with the dashboard as
-`DefaultOrigin`. Extra origins passed through `api_extra_cors_origins` land on
-both lists.
+`DefaultOrigin` (falling back to the admin URL). Extra origins passed through
+`api_extra_cors_origins` land on the CORS list only - never on `FrontendOptions`,
+so a CORS grant can't become a grant to receive credential links. The API
+refuses to start in Production without `FrontendOptions:DefaultOrigin`, so if
+the stack hosts neither SPA, pass it yourself via `api_extra_environment_variables`.
 
 ## Layout reference
 
