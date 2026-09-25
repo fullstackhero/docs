@@ -1,6 +1,6 @@
 ---
 title: Troubleshooting
-lastUpdated: 2026-06-11
+lastUpdated: 2026-09-25
 description: Symptom → cause → fix for the failure modes you actually hit on first run and in the daily dev loop.
 sidebar:
   order: 6
@@ -16,7 +16,7 @@ form. Resource and volume names come straight from
 `src/Host/FSH.Starter.AppHost/AppHost.cs` - the AppHost derives a per-app prefix from
 its assembly name, so for a stock clone the prefix is **`fsh-starter`** and the Docker
 volumes are `fsh-starter-postgres-data`, `fsh-starter-redis-data`, and
-`fsh-starter-minio-data`. If you renamed the solution, swap the prefix accordingly.
+`fsh-starter-rustfs-data`. If you renamed the solution, swap the prefix accordingly.
 
 ## First run
 
@@ -51,7 +51,7 @@ locally installed Postgres on 5432 won't clash.
 | 5174 | Dashboard app (Vite) |
 | 5050 | pgAdmin |
 | 5540 | RedisInsight |
-| 9000 / 9001 | MinIO API / console |
+| 9000 / 9001 | RustFS S3 API / console |
 | 17273 / 15036 | Aspire dashboard https / http |
 | 4317 | Aspire OTLP ingestion |
 
@@ -70,7 +70,7 @@ kill <pid>
 ## Containers & Aspire
 
 The infrastructure containers (`postgres`, its pgAdmin sidecar, `redis` (Valkey),
-`redis-insight`, `minio`) all use `ContainerLifetime.Persistent` - they survive
+`redis-insight`, `rustfs`) all use `ContainerLifetime.Persistent` - they survive
 AppHost shutdown on purpose. That's what makes restarts fast, and it's also the root
 of the next three entries.
 
@@ -107,7 +107,7 @@ removing the container is safe.
 
 ```bash
 docker ps -a
-docker rm -f <stale-container>   # e.g. the redis / redis-insight / postgres / minio container
+docker rm -f <stale-container>   # e.g. the redis / redis-insight / postgres / rustfs container
 ```
 
 Relaunch the AppHost; it recreates the containers on a fresh network and reattaches
@@ -230,7 +230,7 @@ HangfireOptions__Password=<at-least-12-chars>
 
 **Symptom:** every test in `Integration.Tests` fails fast with `DockerUnavailableException`.
 
-The integration suite runs the real API over Testcontainers (PostgreSQL + MinIO
+The integration suite runs the real API over Testcontainers (PostgreSQL + RustFS
 spun up per test run), so a running Docker daemon is a hard requirement. This is
 environmental, not a regression.
 
