@@ -1,13 +1,13 @@
 ---
 title: Prerequisites
-lastUpdated: 2026-06-11
+lastUpdated: 2026-09-25
 description: What you need installed locally before running a fullstackhero project.
 sidebar:
   order: 2
 pageType: guide
 seo:
   title: 'Prerequisites - .NET 10 SDK, Docker, Node setup'
-  description: 'Tools you need before running fullstackhero locally: .NET 10 SDK, Docker (for Postgres, Valkey, and MinIO containers), and optional Node 20+ for the React frontends.'
+  description: 'Tools you need before running fullstackhero locally: .NET 10 SDK, Docker (for Postgres, Valkey, and RustFS containers), and optional Node 20+ for the React frontends.'
   keywords: '.NET 10 SDK install, fullstackhero prerequisites, .NET development environment'
 ---
 
@@ -16,7 +16,7 @@ A short checklist. The rest of Getting Started assumes these are in place.
 ## Required
 
 - **.NET 10 SDK** - from [dotnet.microsoft.com/download](https://dotnet.microsoft.com/download). The repo's `global.json` pins SDK `10.0.100` (rolling forward to the latest feature band).
-- **Docker** - used for the Postgres, Valkey, and MinIO containers (Aspire and the integration tests rely on it). Docker Desktop on macOS / Windows, Docker Engine on Linux.
+- **Docker** - used for the Postgres, Valkey, and RustFS containers (Aspire and the integration tests rely on it). Docker Desktop on macOS / Windows, Docker Engine on Linux.
 - **Git** - for cloning the repo.
 
 No separate Aspire install is needed: the AppHost project pulls the Aspire SDK (`Aspire.AppHost.Sdk`) from NuGet during restore.

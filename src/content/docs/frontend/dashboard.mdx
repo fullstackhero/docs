@@ -1,6 +1,6 @@
 ---
 title: Tenant dashboard
-lastUpdated: 2026-07-13
+lastUpdated: 2026-09-25
 description: The end-user-facing React + Vite app at clients/dashboard - catalog, chat, files, tickets, invoices, identity admin, plus real-time SignalR + SSE feeds.
 sidebar:
   label: Tenant dashboard
@@ -125,7 +125,7 @@ A product management surface over the Catalog module: paginated product list wit
 `clients/dashboard/src/pages/files/` (with the orchestration in `src/hooks/use-file-upload.ts`) implements the kit's three-step presigned upload:
 
 1. Browser calls `POST /api/v1/files/upload-url` with metadata (file name, size, content type, category) - the server mints a presigned PUT URL and reserves a `FileAsset` row.
-2. Browser uploads bytes directly to MinIO / S3 via the presigned URL - no proxy through the API - with real upload progress.
+2. Browser uploads bytes directly to S3 (RustFS locally) via the presigned URL - no proxy through the API - with real upload progress.
 3. Browser calls `POST /api/v1/files/{id}/finalize` - the server verifies the object and flips the file from `PendingUpload` to `Available`.
 
 <Screenshot src="/screenshots/dashboard/files-upload.png"
