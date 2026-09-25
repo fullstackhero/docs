@@ -1,6 +1,6 @@
 ---
 title: Production security checklist
-lastUpdated: 2026-06-11
+lastUpdated: 2026-09-25
 description: Ten configuration items you must check before shipping fullstackhero to production. Skip none.
 sidebar:
   label: Production checklist
@@ -59,6 +59,8 @@ Adjust for your industry. Healthcare (HIPAA) and finance (PCI-DSS) tend to requi
 
 `CorsOptions:AllowAll = true` (and the `SetIsOriginAllowed(_ => true)` policy it enables) is **dev only**. Production needs the explicit lists - and note that `appsettings.Production.json` ships `AllowedOrigins` empty, which means **no CORS middleware mounts at all** until you fill it in; your front-ends on other origins will be blocked by the browser. See [CORS & security headers](/docs/security/cors-and-headers/).
 
+Separately, set **`FrontendOptions`** (`AllowedOrigins` + `DefaultOrigin`) - the allowlist and default origin the Identity module uses to build password-reset and e-mail-confirmation links. Both ship empty in production too. **`DefaultOrigin` is required: in `Production` the API refuses to start without it** (or with anything but an absolute `http(s)` URL), failing with `Missing required configuration 'FrontendOptions:DefaultOrigin' in Production…` - the same fail-fast the host applies to `DatabaseOptions:ConnectionString`, `CachingOptions:Redis` and `JwtOptions:SigningKey`. Link building has no fallback: the two candidates an earlier revision fell back to are both unacceptable - the request host is caller-supplied, so a reset link built from it hands a live token to an attacker-chosen domain, and the API's own origin returns `404` for the SPA pages these links target. `DefaultOrigin` is the tenant SPA: it's the fallback for non-browser callers and the target for operator-driven register/resend links. The two shipped deployment paths fill this in for you - `deploy/docker/docker-compose.yml` from `FSH_ADMIN_URL` / `FSH_DASHBOARD_URL` (`DefaultOrigin` = `FSH_DASHBOARD_URL`), and the AWS Terraform stack from `dashboard_url` / `admin_url` - so this item is about deployments that roll their own hosting.
+
 ```jsonc
 {
   "CorsOptions": {
@@ -67,8 +69,8 @@ Adjust for your industry. Healthcare (HIPAA) and finance (PCI-DSS) tend to requi
       "https://app.example.com",
       "https://admin.example.com"
     ],
-    "AllowedHeaders": [ "content-type", "authorization" ],
-    "AllowedMethods": [ "GET", "POST", "PUT", "DELETE" ]
+    "AllowedHeaders": [ "content-type", "authorization", "tenant", "x-fsh-app", "idempotency-key", "x-requested-with", "x-signalr-user-agent" ],
+    "AllowedMethods": [ "GET", "POST", "PUT", "PATCH", "DELETE" ]
   }
 }
 ```
@@ -114,8 +116,21 @@ Adjust `Auth` to your traffic profile: relax for high-volume consumer apps on sh
 `UseHttpsRedirection` is on by default. Verify:
 
 - Reverse proxy / load balancer terminates TLS with a valid certificate.
-- `X-Forwarded-Proto: https` forwards to the kit so the redirect middleware doesn't double-redirect - and so the HSTS header (emitted only on HTTPS requests) actually fires.
+- `X-Forwarded-Proto: https` forwards to the kit so the redirect middleware doesn't double-redirect - and so the HSTS header (emitted only on HTTPS requests) actually fires. **This requires `TrustedProxyOptions` (below):** the kit only honours `X-Forwarded-Proto` / `X-Forwarded-For` from a configured trusted proxy, so with it unset the scheme stays `http` and the real client IP never reaches rate limiting or audit.
 - HTTP/2 or HTTP/3 enabled at the LB for performance.
+
+Set `TrustedProxyOptions` to your ingress so forwarded headers are honoured - and only from your proxy, never a direct client (which could otherwise forge its IP/scheme):
+
+```jsonc
+{
+  "TrustedProxyOptions": {
+    "KnownNetworks": [ "10.0.0.0/8" ],   // your ingress CIDR(s), or KnownProxies for individual IPs
+    "ForwardLimit": 2                      // real hop count, minimum 1 (cloudflared → Caddy → app = 2)
+  }
+}
+```
+
+Both lists ship empty (trust loopback only), so this is opt-in - see [CORS & security headers](/docs/security/cors-and-headers/#reverse-proxy--forwarded-headers).
 
 If you're behind Cloudflare / a CDN, also enable "Always Use HTTPS" + "HSTS" at the CDN.
 
@@ -181,7 +196,7 @@ These aren't blockers, but the sooner the better:
 - **Make 2FA mandatory for admin roles.** A leaked admin password compromises everything; require TOTP.
 - **Add monitoring + alerts** on auth-failure spikes, impersonation events, and 5xx error rates.
 - **Run a vulnerability scan** of the deployed image (Snyk, Trivy, Dependabot) to catch transitive CVEs early.
-- **Set up backup + restore tests** for Postgres + MinIO. Backups you haven't tested restoring are not backups.
+- **Set up backup + restore tests** for Postgres + RustFS. Backups you haven't tested restoring are not backups.
 - **Document an incident-response runbook** - who's on-call, where the alerts go, how to revoke every session (admin revoke-all is built in), how to rotate the JWT signing key in an emergency.
 
 ## Related

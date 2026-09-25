@@ -1,13 +1,13 @@
 ---
 title: Quick Start
-lastUpdated: 2026-06-20
+lastUpdated: 2026-09-25
 description: Clone fullstackhero and run the whole stack locally with one command.
 sidebar:
   order: 3
 pageType: guide
 seo:
   title: 'Quick Start - clone and run the .NET 10 starter kit'
-  description: 'Clone the fullstackhero repo and run the full stack locally via .NET Aspire: Postgres, Valkey, MinIO, migrations, the API, and both React apps with one command.'
+  description: 'Clone the fullstackhero repo and run the full stack locally via .NET Aspire: Postgres, Valkey, RustFS, migrations, the API, and both React apps with one command.'
   keywords: 'fullstackhero quick start, clone .NET 10 starter kit, .NET Aspire local development, fsh CLI'
 ---
 
@@ -47,7 +47,7 @@ Skip this if you only want the API.
 dotnet run --project src/Host/FSH.Starter.AppHost
 ```
 
-Aspire brings up Postgres (with pgAdmin), Valkey, and MinIO in containers, runs the DbMigrator (migrations + seed) and the demo seeder, then starts the API and both React apps - all wired together with connection strings and OTLP export. Watch everything come up in the Aspire dashboard.
+Aspire brings up Postgres (with pgAdmin), Valkey, and RustFS in containers, runs the DbMigrator (migrations + seed) and the demo seeder, then starts the API and both React apps - all wired together with connection strings and OTLP export. Watch everything come up in the Aspire dashboard.
 
 Once it's green:
 

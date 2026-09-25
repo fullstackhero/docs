@@ -1,6 +1,6 @@
 ---
 title: Writing new tests
-lastUpdated: 2026-06-11
+lastUpdated: 2026-09-25
 description: Step-by-step recipes for adding a unit test, an integration test, or an architecture rule - copy-paste-ready.
 sidebar:
   label: Writing new tests
@@ -175,7 +175,7 @@ dotnet test src/Tests/Integration.Tests/ \
   --filter "FullyQualifiedName~AdjustProductStockEndpointTests"
 ```
 
-Docker must be running - the suite starts its Postgres + MinIO containers once and shares them across every test.
+Docker must be running - the suite starts its Postgres + RustFS containers once and shares them across every test.
 
 ## Recipe 3 - A new architecture rule
 
