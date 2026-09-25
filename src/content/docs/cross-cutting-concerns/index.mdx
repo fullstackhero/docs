@@ -1,23 +1,23 @@
 ---
 title: Overview
 lastUpdated: 2026-06-11
-description: Platform features that span every module - caching, jobs, observability, idempotency, feature flags, rate limiting, health, realtime, SSE, HTTP resilience, and error handling.
+description: Platform features that span every module - caching, jobs, observability, idempotency, feature flags, rate limiting, health, realtime, SSE, HTTP resilience, error handling, and internationalization.
 sidebar:
   order: 1
 pageType: concept
 seo:
   title: 'Cross-cutting concerns in .NET 10 - fullstackhero platform'
-  description: 'The eleven platform-level features that wire once and apply across every module in fullstackhero - caching, jobs, observability, idempotency, feature…'
+  description: 'The twelve platform-level features that wire once and apply across every module in fullstackhero - caching, jobs, observability, idempotency, feature…'
   keywords: 'cross-cutting concerns .net 10, platform features asp.net core, hybridcache hangfire opentelemetry, idempotency feature flags'
 ---
 
-Eleven platform features span every module in fullstackhero. They wire once at the host layer, then any module consumes them through the same interfaces and conventions - no per-module bespoke setup.
+Twelve platform features span every module in fullstackhero. They wire once at the host layer, then any module consumes them through the same interfaces and conventions - no per-module bespoke setup.
 
 <Callout type="tip" title="Toggle what you need">
 The kit's `FshPlatformOptions` (passed to `AddHeroPlatform`) toggle each optional sub-system. Caching, jobs, mailing, feature flags, SSE, realtime, and quotas are **off by default** - opt in to what you need. CORS, OpenAPI, OpenTelemetry, idempotency, and global exception handling are on by default because the cost is negligible.
 </Callout>
 
-## The eleven concerns
+## The twelve concerns
 
 <SectionIndex section="cross-cutting-concerns" />
 
