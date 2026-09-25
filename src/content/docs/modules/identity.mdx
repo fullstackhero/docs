@@ -145,6 +145,36 @@ endpoints.MapPost("/users", handler)
 
 `EnrollTwoFactorCommand` returns a QR code + secret; `VerifyEnrollTwoFactorCommand(code)` activates; `DisableTwoFactorCommand(currentPassword)` turns it off.
 
+### Profile concurrency
+
+`PUT /profile` replaces the whole representation, so two overlapping saves used to silently overwrite each other: whoever wrote last won, and the other person's change was gone with no error anywhere. The endpoint now supports an optimistic precondition.
+
+`GET /profile` returns the user's `ConcurrencyStamp` as a strong `ETag`. ASP.NET Identity already treats that column as an EF Core concurrency token and rotates it on every write, so no extra column and no migration were needed. Echo the tag back as `If-Match` on the `PUT` and the write is rejected with `412 Precondition Failed` when the stored profile has moved on:
+
+```http
+GET /api/v1/identity/profile
+→ 200 OK
+  ETag: "6f9619ff-8b86-d011-b42d-00cf4fc964ff"
+
+PUT /api/v1/identity/profile
+If-Match: "6f9619ff-8b86-d011-b42d-00cf4fc964ff"
+→ 200 OK       # nobody else wrote in between
+→ 412          # someone did; nothing was written
+```
+
+Details worth knowing:
+
+- **The header is optional.** A `PUT` without `If-Match` behaves exactly as before, so existing callers keep working. `If-Match: *` is accepted for the same reason: it matches any current representation.
+- **Weak validators never match.** `If-Match` mandates the strong comparison function, so `W/"..."` is answered with `412`.
+- **A malformed header is a `400`, not a `412`.** A `412` would send a well-behaved client into a refetch-and-retry loop it can never win, because the broken header is its own bug.
+- **Nothing is written or deleted before the check.** The precondition runs ahead of the storage calls, so a rejected update never orphans an uploaded avatar and never clears the current one.
+- **Do not auto-retry a `412`.** The obvious reflex - refetch the profile and resend against the fresh tag - performs exactly the overwrite the `412` rejected, because the only body the client holds is the one built from the values the user saw. Tell the user the profile changed, keep their edits on screen, adopt the current version, and let them save again deliberately. That is what `clients/dashboard` does.
+
+- **Take the tag from the read that populated the form**, not from a read issued inside the save. The lost update this guards against happens between the moment the user saw the values and the moment they save, so a tag fetched at save time is never stale and therefore never catches anything.
+
+- **The token also rotates on writes the user does not think of as profile edits**, such as a password change, a new avatar, or a failed sign-in. Those show up as a `412` on an otherwise innocent save, which is why the message the user sees should read as "this changed, review and save again" rather than as an error.
+- **CORS is already configured for it.** `ETag` is not a CORS-safelisted response header, so the framework's CORS policy exposes it explicitly and `if-match` ships in `CorsOptions.AllowedHeaders`. Without both, a browser on another origin cannot read the tag and silently stops sending the precondition. Keep them in place if you replace the policy with your own.
+
 ## Endpoints
 
 All 51 endpoints are under `/api/v1/identity/`. The rate-limited `auth` policy covers `POST /token/issue`, `POST /token/refresh`, `GET /confirm-email`, `POST /users/{id}/resend-confirmation-email`, `POST /forgot-password`, `POST /reset-password`, and `POST /self-register`. Full table:
@@ -157,8 +187,8 @@ Auth e-mail links resolve through `FrontendOptions` (a dedicated config, separat
 |---|---|---|
 | POST | `/token/issue` | Login |
 | POST | `/token/refresh` | Rotate refresh token |
-| GET | `/profile` | Current user profile |
-| PUT | `/profile` | Update own profile |
+| GET | `/profile` | Current user profile (returns a strong `ETag`) |
+| PUT | `/profile` | Update own profile (honours `If-Match`, answers `412` on a stale token) |
 | PUT | `/profile/image` | Set / clear profile image |
 | GET | `/permissions` | Current user permissions |
 | GET | `/permissions/catalog` | All registered permissions (catalog) |
