@@ -49,10 +49,15 @@ public class MailRequest(
     Collection<string>? bcc = null,
     Collection<string>? cc = null,
     IDictionary<string, byte[]>? attachmentData = null,
-    IDictionary<string, string>? headers = null);
+    IDictionary<string, string>? headers = null,
+    string? textBody = null);
 ```
 
-The body is treated as HTML by both implementations (MailKit's `BodyBuilder.HtmlBody`; SendGrid sends it as both plain-text and HTML content). `From`/`DisplayName` on the request override the configured defaults per send.
+`Body` is the **HTML** part in both implementations (MailKit's `BodyBuilder.HtmlBody`; SendGrid's `htmlContent`), and `TextBody` is the optional `text/plain` alternative sent alongside it as multipart/alternative. `From`/`DisplayName` on the request override the configured defaults per send.
+
+:::caution[Write HTML in `Body`, not bare text]
+Because `Body` always lands in the HTML part, plain text placed there is parsed as markup. Two consequences bite in practice: a bare URL is **not** turned into a link - most clients only auto-link inside `text/plain` - so an action link arrives as dead text the user cannot click; and any interpolated value (a person's name, a tenant's name) is read as markup rather than shown. Build real HTML with an `<a href>`, HTML-encode every interpolated value, and put the plain wording in `TextBody`.
+:::
 
 ### Implementations
 
@@ -71,12 +76,13 @@ Inject `IMailService` and call `SendAsync` - or better, do what Identity does an
 var mailRequest = new MailRequest(
     new Collection<string> { user.Email },
     "Confirm Your Email Address",
-    emailBody);
+    emailBody,
+    textBody: $"Please confirm your email address using the following link: {emailVerificationUri}");
 
 jobService.Enqueue("email", () => mailService.SendAsync(mailRequest, cancellationToken));
 ```
 
-Identity uses this shape for its email flows: email confirmation, password reset, and the welcome mail.
+Identity uses this shape for its email flows: email confirmation, password reset, and the welcome mail. Its `EmailBodies` helper renders the HTML - the action link as a real anchor, every interpolated value HTML-encoded - while the `textBody` argument carries the same wording in plain text.
 
 ## Configuration
 
