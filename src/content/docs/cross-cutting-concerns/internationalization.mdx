@@ -1,6 +1,6 @@
 ---
 title: Internationalization (i18n)
-lastUpdated: 2026-07-20
+lastUpdated: 2026-09-25
 description: End-to-end localization across the backend and both React apps - en-US as default and fallback, pt-BR included, with per-user language, IStringLocalizer, RequestLocalization, and react-i18next.
 sidebar:
   label: Internationalization
@@ -8,7 +8,7 @@ sidebar:
 pageType: concept
 seo:
   title: 'Internationalization in .NET 10 - IStringLocalizer + react-i18next'
-  description: 'How fullstackhero localizes end-to-end: backend IStringLocalizer with neutral-culture resx and RequestLocalization, per-user language on the JWT, and two React apps on react-i18next with a language switcher.'
+  description: 'How fullstackhero localizes end-to-end: backend IStringLocalizer with per-culture resx catalogs and RequestLocalization, per-user language on the JWT, and two React apps on react-i18next with a language switcher.'
   keywords: 'istringlocalizer .net 10, requestlocalization asp.net core, react-i18next, per-user language jwt, accept-language culture resolution, pt-br en-us localization'
 ---
 
@@ -24,59 +24,84 @@ A user's language preference lives on their account (`User.Locale`) and rides on
 
 ### String resources
 
-Localizable backend strings use the framework's `IStringLocalizer`. The resource files live in the **Core** building block under `BuildingBlocks/Core/Localization/` and use **neutral (culture-parent) names**:
+Localizable backend strings use the framework's `IStringLocalizer`. Catalogs are split in two tiers, each a marker type with its resx files next to it:
+
+- **Shared** - `SharedResources` in the **Core** building block, under `BuildingBlocks/Core/Localization/`: ProblemDetails titles, cross-cutting errors and shared validation messages.
+- **Per module** - one `{Module}Resources` catalog per module, under `src/Modules/{Module}/Modules.{Module}/Localization/` (`AuditingResources`, `BillingResources`, `CatalogResources`, `ChatResources`, `FilesResources`, `IdentityResources`, `MultitenancyResources`, `NotificationsResources`, `TicketsResources`, `WebhooksResources`): the domain messages that module owns.
+
+Every catalog follows the same naming, **named for specific cultures**:
 
 | File | Culture | Role |
 |---|---|---|
-| `SharedResources.resx` | neutral (invariant) | English source, and the fallback for any unresolved key |
-| `SharedResources.pt.resx` | `pt` | Portuguese |
+| `SharedResources.resx` | neutral (invariant) | English (`en-US`) source, and the fallback for any unresolved key |
+| `SharedResources.pt-BR.resx` | `pt-BR` | Brazilian Portuguese |
 
-Naming the Portuguese file for the neutral parent culture `pt` (rather than `pt-BR`) is deliberate: .NET's resource-manager fallback walks from the specific culture up to its parent, so `pt-BR`, `pt`, and `pt-PT` all resolve to `SharedResources.pt.resx`, and anything with no match falls through to `SharedResources.resx`. Localization is registered with an empty resources path so the resx files resolve next to their `SharedResources` marker type:
+The supported cultures are the specific tags in `SupportedCultures.Tags` (`en-US` and `pt-BR`), a code-level list in `BuildingBlocks/Core/Localization/SupportedCultures.cs` with no neutral entries. Naming the catalogs for `pt-BR` rather than the neutral `pt` is deliberate: a future `pt-PT` is never served Brazilian strings by parent fallback. The consequence is that a request asking for a bare `pt`, or for an unsupported variant such as `pt-PT`, resolves to the configured default culture rather than to Portuguese. Both React apps canonicalize variants onto a supported tag before calling the API (see below), so only a hand-rolled client sending a bare `pt` sees this. Localization is registered with an empty resources path so the resx files resolve next to their marker types:
 
 ```csharp
 services.AddLocalization(o => o.ResourcesPath = "");
 ```
 
-### Request localization
-
-`RequestLocalization` is wired through the kit's `AddHeroLocalization` / `UseHeroLocalization` pair. The middleware is placed **after `UseAuthentication`** so the culture chain can read the authenticated user's `locale` claim:
+**Exceptions** keep an English `Message` (what logs and audit records see) and carry the resource key alongside it; `GlobalExceptionHandler` resolves the key under the request culture when it renders the response, and falls back to `Message` when the key is missing:
 
 ```csharp
-// Program.cs (composition root)
-builder.Services.AddHeroLocalization();
+throw new NotFoundException($"Product {id} not found.")
+{
+    MessageKey = "Catalog.ProductNotFound",
+    MessageArgs = [id],
+    ResourceSource = typeof(CatalogResources), // omitted = SharedResources
+};
+```
+
+**Validators** inject `IStringLocalizer<SharedResources>` (shared `Validation.*` keys) or `IStringLocalizer<{Module}Resources>` and resolve lazily with `.WithMessage(_ => localizer["Key"])`, so the message is looked up at validation time, under the request culture.
+
+Placeholders are `{0}`, `{1}` and are filled by `string.Format` under `CultureInfo.CurrentCulture`, which is invariant (see below). **Message arguments must therefore be culture-insensitive**: pass `int`, `long`, `string`, `Guid` or an enum, never a `double`, `decimal` or `DateTime`, which would render with invariant separators whatever the reader's language. An enum argument is itself localized: the handler looks up `"{EnumType}.{Member}"` in the same catalog and falls back to the member name.
+
+### Request localization
+
+`RequestLocalization` is wired through the kit's `AddHeroLocalization` / `UseHeroLocalization` pair, which the Web building block already calls from `AddHeroPlatform` / `UseHeroPlatform`, so the host's `Program.cs` needs nothing extra. The middleware is placed **after `UseAuthentication`** so the culture chain can read the authenticated user's `locale` claim, and before `UseAuthorization` and the endpoints:
+
+```csharp
+// BuildingBlocks/Web/Extensions.cs (inside AddHeroPlatform / UseHeroPlatform)
+builder.Services.AddHeroLocalization(builder.Configuration);
 
 // ... later, in the pipeline
 app.UseAuthentication();
 app.UseHeroLocalization();   // must run after authentication
+// ...
 app.UseAuthorization();
 ```
 
+**Only the UI culture is negotiated.** The request culture drives `CultureInfo.CurrentUICulture`, which is what resource lookup uses. `CultureInfo.CurrentCulture`, which drives `ToString()`, `Parse()`, string interpolation and number or date formatting, stays pinned to `CultureInfo.InvariantCulture` on every request: `DefaultRequestCulture` carries `(InvariantCulture, default culture)` and `SupportedCultures` is left `null`, so the culture half can never take any other value. An API that emits JSON does not shift its formatting per caller; both React apps format numbers, dates and currency themselves. For a module author this means code under a `pt-BR` request still formats `1234.5` as `1234.5`, and it is why message arguments must be culture-insensitive (above). Do not "fix" it by adding supported cultures: `Formatting_culture_stays_invariant_while_ui_culture_negotiates` fails if you do.
+
 ### Culture resolution chain
 
-For each request the culture is resolved by trying five sources **in order**. The first source that yields a **supported** culture wins; a value that is present but not in the supported list is discarded and resolution continues to the next source. The chain always terminates with a guaranteed default, so a culture is always set:
+For each request the UI culture is resolved by trying three providers **in order**, then the default. The first provider that yields a **supported** culture (one of `SupportedCultures.Tags`) wins; a value that is present but not in the list is discarded and resolution continues to the next provider. The chain always terminates with the default, so a culture is always set:
 
-1. **Explicit override** - a `?culture=` query-string value or the culture cookie. Intended for quick testing and one-off overrides.
-2. **JWT `locale` claim** - the authenticated user's persisted `User.Locale` (see below). This is what makes a user's preference follow them across devices.
+1. **Query string** - a `?culture=` value. Intended for quick testing and one-off overrides. There is no culture cookie: the framework's cookie provider is removed from the chain.
+2. **JWT `locale` claim** - the authenticated user's persisted `User.Locale` (see below), read by `UserLocaleRequestCultureProvider`, which is inserted right after the query-string provider. This is what makes a user's preference follow them across devices.
 3. **`Accept-Language` header** - the browser's / client's advertised preference, used for anonymous requests and users who have never set a preference.
-4. **`DefaultCulture`** - the per-deployment default, configurable via `LocalizationOptions:DefaultCulture`.
-5. **`en-US`** - the guaranteed final fallback, so the pipeline never runs without a culture.
+4. **Default culture** - the request localization's `DefaultRequestCulture`: the value of `LocalizationOptions:DefaultCulture` when it is one of `SupportedCultures.Tags`, otherwise `en-US` (`SupportedCultures.Default`). The configured value is checked once at startup, so a missing or unsupported setting means `en-US`, and a deployment configured for `pt-BR` falls back to `pt-BR`, not to `en-US`.
+
+The resolved culture is echoed on the response's `Content-Language` header.
 
 <Callout type="note" title="Unsupported values fall through, they don't fail">
-At every step an unsupported culture is simply ignored and the next source is tried. A request that asks for a language the deployment doesn't ship still succeeds - it lands on the configured default, and ultimately on `en-US`.
+At every step an unsupported culture is simply ignored and the next source is tried. A request that asks for a language the deployment doesn't ship (including a bare `pt` or `pt-PT`) still succeeds - it lands on the configured default, which is `en-US` unless the deployment set another supported culture.
 </Callout>
 
 ### Per-user language
 
-`User.Locale` is a nullable [BCP 47](https://www.rfc-editor.org/info/bcp47) language tag (for example `pt-BR`) on the identity user. It holds the user's chosen language and is `null` until the user picks one.
+`User.Locale` is a nullable [BCP 47](https://www.rfc-editor.org/info/bcp47) language tag (for example `pt-BR`) on the identity user. It holds the user's chosen language and is `null` until the user picks one. It is set through `PUT /identity/profile`, whose validator accepts only a tag in `SupportedCultures.Tags` (anything else is rejected with a 400 validation error, message key `Validation.UnsupportedLocale`); a blank `locale` on that call means "leave it unchanged", so there is currently no way to clear a stored preference back to "follow the browser".
 
 The value is emitted as the JWT `locale` claim **only when it is set** - a user who has never chosen a language carries no `locale` claim, so their requests fall through to `Accept-Language` and then the default. Once set (through the language switcher, see below), every subsequently issued token carries the claim and the backend honours it on step 2 of the chain.
 
 ### Localized messages
 
-Two server-produced message surfaces are localized through the active culture:
+Three server-produced message surfaces are localized through the active culture:
 
-- **Problem details** - `GlobalExceptionHandler` localizes the messages it renders into the RFC 7807 `ProblemDetails` body, so an error returned to the client is in the caller's language. Because `detail` is culture-dependent, the handler also emits the exception's `MessageKey` as a stable `code` extension - a client that branches on a specific error keys off the code, never off the prose. See [Error handling](/docs/cross-cutting-concerns/error-handling/#code---the-machine-readable-discriminator).
+- **Problem details** - `GlobalExceptionHandler` localizes the `title` (by status) and the `detail` (from the exception's `MessageKey` and `ResourceSource`, see above) it renders into the RFC 7807 `ProblemDetails` body, so an error returned to the client is in the caller's language. Because `detail` is culture-dependent, the handler also emits the exception's `MessageKey` as a stable `code` extension - a client that branches on a specific error keys off the code, never off the prose. See [Error handling](/docs/cross-cutting-concerns/error-handling/#code---the-machine-readable-discriminator).
 - **Validation** - FluentValidation's built-in messages are localized automatically because the framework picks them by `CultureInfo.CurrentUICulture`, which `RequestLocalization` has already set for the request. Custom validation messages are localized explicitly by resolving them through `IStringLocalizer`. See [Vertical Slice architecture](/docs/architecture/vertical-slice/) for where validators live.
+- **The 401 challenge** - the `ProblemDetails` body JwtBearer writes for a missing or rejected token never passes through `GlobalExceptionHandler`, so it resolves `IStringLocalizer<SharedResources>` itself and reads in the same language as every other error.
 
 ## Frontend (admin and dashboard)
 
@@ -94,22 +119,24 @@ for example `src/locales/en-US/common.json` and `src/locales/pt-BR/common.json`.
 
 ### Language detection and normalization
 
-The browser language detector caches the resolved language in **`localStorage`** (no cookie is written), under a per-app key rather than the library default: **`fsh.admin.lng`** and **`fsh.dashboard.lng`**, matching every other value the apps persist (`fsh.admin.accessToken`, `fsh.theme`, and so on). The default `i18nextLng` would be claimed by both apps on a shared origin and by any other i18next app deployed beside them. Detected values are passed through a `convertDetectedLanguage` step that **normalizes variants** to a supported locale - for instance `pt-PT` is mapped to `pt-BR` - so a browser advertising a regional variant the app doesn't ship still lands on a language it does.
+The detector tries, in order, a `?culture=` query-string value, the cached value in `localStorage`, and the browser's language; when none yields a supported locale the app falls back to the deployment default (see below). It caches the resolved language in **`localStorage`** (no cookie is written), under a per-app key rather than the library default: **`fsh.admin.lng`** and **`fsh.dashboard.lng`**, matching every other value the apps persist (`fsh.admin.accessToken`, `fsh.admin.theme`, and so on). The default `i18nextLng` would be claimed by both apps on a shared origin and by any other i18next app deployed beside them. Detected values are passed through a `convertDetectedLanguage` step that **normalizes variants** to a supported locale through the `CANON` map in `src/i18n.ts` - for instance `pt` and `pt-PT` are mapped to `pt-BR`, `en-GB` to `en-US` - so the API never sees a bare `pt`, and a browser advertising a regional variant the app doesn't ship still lands on a language it does.
 
 ### Talking to the backend
 
-Every request the app makes through `apiFetch` sends the **active language as the `Accept-Language` header**, so an anonymous or not-yet-personalized session still gets server messages in the language the UI is showing.
+Every request the app makes through `apiFetch` sends the **active language as the `Accept-Language` header**, so an anonymous or not-yet-personalized session still gets server messages in the language the UI is showing. The SignalR hub client is the exception: it builds its own requests rather than going through `apiFetch`, so its negotiate carries the browser's `Accept-Language`.
 
 ### Language switcher
 
 A language switcher sits in the **topbar**. Changing the language does two things beyond re-rendering the UI:
 
-1. Persists the choice to `User.Locale` by calling the profile update endpoint (`PUT /profile`).
-2. Refreshes the access token, so the new preference is baked into the JWT `locale` claim immediately and the backend honours it on the next request.
+1. Persists the choice to `User.Locale` by calling the profile update endpoint (`PUT /identity/profile`). The dashboard reads the profile with its `ETag` and sends it back as `If-Match`, so a stale write is rejected with 412 instead of overwriting a concurrent change; the admin switcher does not send `If-Match` yet. A failed save raises a toast.
+2. Refreshes the access token, so the new preference is baked into the JWT `locale` claim and the backend honours it from the next request. The refresh is best-effort: if it fails, the session stays signed in and the claim catches up at the next natural refresh, so until then an API error can still come back in the previous language.
+
+While an operator is impersonating a user in the dashboard, the switcher only changes the UI language: it sends no `PUT`, so the operator's choice never lands on the impersonated user's profile.
 
 ### Locale-aware formatting
 
-Dates, numbers, and currency are formatted through a shared helper so they follow the active locale's conventions rather than being hard-coded, keeping formatting consistent with the chosen language.
+Dates, numbers, and currency are formatted in the browser with `Intl` under the active `i18n.language`, so they follow the active locale's conventions rather than being hard-coded, keeping formatting consistent with the chosen language. The admin app centralizes this in `src/lib/format.ts`; the dashboard uses the helpers in `src/lib/list-helpers.ts` and passes `i18n.language` to `Intl` at its other call sites. This is the other half of the backend's UI-culture-only negotiation: the API never formats for the caller, so the apps do.
 
 ### Per-deployment default
 
@@ -119,38 +146,43 @@ The default language for a deployment is set at runtime through the app's `confi
 
 Supporting a new language is three steps: one on the backend, one shared by both React apps, and an optional deployment default. Suppose you are adding Spanish (`es-ES`).
 
-**1. Backend - add the resource file and register the culture.**
+**1. Backend - add the resource files and register the culture.**
 
-Create a translated resx named for the neutral parent culture so its regional variants resolve through fallback, then add the tag to the supported-cultures list:
+Create one translated resx per catalog, named for the specific culture next to the existing `*.pt-BR.resx` file: the shared catalog plus every module catalog.
 
 ```
-src/BuildingBlocks/Core/Localization/SharedResources.es.resx
+src/BuildingBlocks/Core/Localization/SharedResources.es-ES.resx
+src/Modules/Auditing/Modules.Auditing/Localization/AuditingResources.es-ES.resx
+src/Modules/Billing/Modules.Billing/Localization/BillingResources.es-ES.resx
+...one per module catalog listed under String resources
 ```
 
-Add `"es-ES"` (or the tag you support) to the supported-cultures configuration - the `SupportedCultures.Tags` / `RequestMatch` list that `AddHeroLocalization` reads. Any tag not in this list is treated as unsupported and falls through the resolution chain.
+Then add `"es-ES"` to `SupportedCultures.Tags` in `src/BuildingBlocks/Core/Localization/SupportedCultures.cs`. It is a list in code, not configuration, and it is the single whitelist that the `locale`-claim provider, `Accept-Language` matching and the `User.Locale` validator all read. Any tag not in this list is treated as unsupported and falls through the resolution chain, and `PUT /identity/profile` rejects it.
+
+The parity tests hold every catalog at strict key and placeholder parity with the neutral one. `CatalogParityTests` (in `src/Tests/Architecture.Tests`) discovers every catalog (shared and per module) and iterates `SupportedCultures.Tags`, so it covers the new culture with no change and fails if any catalog lacks its `.es-ES.resx`; `SharedResourcesKeyParityTests` (in `src/Tests/Framework.Tests/Localization`) and the per-module `{Module}ResourcesTests` compare against `pt-BR` by name, so extend them to the new tag.
 
 **2. Frontend - add catalogs and register the locale (repeat in both `clients/admin` and `clients/dashboard`).**
 
-Create one JSON catalog per namespace:
+Create one JSON catalog per namespace, mirroring every file under `src/locales/en-US/`:
 
 ```
 src/locales/es-ES/common.json
 src/locales/es-ES/<other-namespace>.json
 ```
 
-Then register the locale in `src/i18n.ts`: add its catalogs to the `CATALOGS` / `catalogs` map and add the locale tag to the `SUPPORTED` list. If the new language has regional variants you want to collapse, extend `convertDetectedLanguage` to map them onto the supported tag.
+Then register the locale in `src/i18n.ts`: import its catalogs and add them to the `CATALOGS` (admin) / `catalogs` (dashboard) map, and add the tag to the `SUPPORTED` list, which is also what the switcher offers. Give the switcher a label by adding a `language.esES` key (the tag without its hyphen) to every locale's `common.json`. To collapse a bare `es` or an unsupported variant such as `es-MX` onto the new tag, add `es: "es-ES"` to the `CANON` map; a tag listed in `SUPPORTED` is always kept as-is. Each app's `tests/i18n/parity.spec.ts` compares `en-US` with `pt-BR` by name, so extend it to the new locale too.
 
 **3. (Optional) Make it the deployment default.**
 
 If the new language should be the default rather than an opt-in, set it on the backend via `LocalizationOptions:DefaultCulture` and on each front-end via the `defaultLanguage` key in `config.json`.
 
 <Callout type="warning" title="Keep both sides in sync">
-A language is only fully supported when it exists on **both** sides. If the backend ships `es` resources but the app never registers `es-ES`, the UI can't switch to it; if the app registers the locale but the backend has no matching resx, server messages fall back to English. Add the backend resx and the front-end catalogs together.
+A language is only fully supported when it exists on **both** sides. If the backend ships `es-ES` but the app never registers it, the UI can't switch to it; if the app registers `es-ES` but the backend's `SupportedCultures.Tags` doesn't list it, server messages come back in the backend's default culture and the switcher's `PUT /identity/profile` is rejected. A tag that is listed but has no resx for some catalog falls back to that catalog's English at runtime, and `CatalogParityTests` fails. Add the backend resx files, the tag and the front-end catalogs together.
 </Callout>
 
 ## Configuration
 
-Backend default culture (the `DefaultCulture` step of the resolution chain):
+Backend default culture (the default-culture step of the resolution chain). The section is optional and the shipped `appsettings.json` doesn't include it; when it is absent, or names a culture that isn't in `SupportedCultures.Tags`, the default is `en-US`:
 
 ```jsonc
 {
@@ -171,13 +203,17 @@ Front-end default language (runtime `config.json`, served to the app at startup)
 ## Gotchas
 
 - **A missing `locale` claim is normal.** Users who have never chosen a language carry no `locale` claim, so their culture comes from `Accept-Language` or the default - not a bug.
-- **The neutral resx name is load-bearing.** `SharedResources.pt.resx`, not `SharedResources.pt-BR.resx`. Naming a resource for a specific culture breaks the parent-culture fallback that lets `pt`, `pt-BR`, and `pt-PT` all resolve to it.
+- **Catalogs are named for the specific tag.** `SharedResources.pt-BR.resx`, not `SharedResources.pt.resx`, matching the tag in `SupportedCultures.Tags` and the front-end's `src/locales/pt-BR/` folder; `CatalogParityTests` reads each culture's own catalog without parent fallback and fails when the `.{tag}.resx` is missing. Whatever the file name, a bare `pt` or `pt-PT` request resolves to the default culture, not to Portuguese, because the request culture is only ever one of the listed tags.
+- **The `locale` claim lags a language switch by one token.** The provider reads the claim, not the database, so a switch reaches the API when the refreshed token is in use; the switcher refreshes right away, but in between the UI can already be in the new language while an API error still arrives in the old one.
 - **`UseHeroLocalization` must run after `UseAuthentication`.** Placed earlier, the JWT `locale` claim isn't available yet, so step 2 of the chain is silently skipped and users fall back to `Accept-Language`.
+- **Errors raised before localization runs are not in the caller's language.** `UseExceptionHandler` sits above `UseHeroLocalization`; the handler re-applies the negotiated UI culture, so exceptions from endpoints are localized, but one thrown by middleware that runs before localization (HTTPS redirection, CORS, routing and so on) has no negotiated culture and is rendered in the server process's own UI culture (English in a standard container), not the caller's and not `LocalizationOptions:DefaultCulture`.
+- **Formatting is invariant on the server.** `CultureInfo.CurrentCulture` is `InvariantCulture` on every request, whatever the caller's language; only `CurrentUICulture` is negotiated.
 - **Both sides must ship a language for it to work.** Registering a locale in the front-end without the matching backend resx (or vice versa) leaves one surface un-localized.
 
 ## Related
 
-- [Core building block](/docs/building-blocks/core/) - where `SharedResources` and the localization wiring live.
+- [Core building block](/docs/building-blocks/core/) - where `SharedResources` and `SupportedCultures` live.
+- [Web building block](/docs/building-blocks/web/) - where the localization wiring (`AddHeroLocalization`, `UserLocaleRequestCultureProvider`) and `GlobalExceptionHandler` live.
 - [Error handling](/docs/cross-cutting-concerns/error-handling/) - problem-details messages are localized through the active culture.
 - [Authentication](/docs/security/authentication/) - the JWT and its claims, including `locale`.
 - [Frontend: dashboard](/docs/frontend/dashboard/) and [Frontend: admin](/docs/frontend/admin/) - the two React apps and their `apiFetch` client.
