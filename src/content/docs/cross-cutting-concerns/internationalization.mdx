@@ -209,6 +209,7 @@ Front-end default language (runtime `config.json`, served to the app at startup)
 - **Errors raised before localization runs are not in the caller's language.** `UseExceptionHandler` sits above `UseHeroLocalization`; the handler re-applies the negotiated UI culture, so exceptions from endpoints are localized, but one thrown by middleware that runs before localization (HTTPS redirection, CORS, routing and so on) has no negotiated culture and is rendered in the server process's own UI culture (English in a standard container), not the caller's and not `LocalizationOptions:DefaultCulture`.
 - **Formatting is invariant on the server.** `CultureInfo.CurrentCulture` is `InvariantCulture` on every request, whatever the caller's language; only `CurrentUICulture` is negotiated.
 - **Both sides must ship a language for it to work.** Registering a locale in the front-end without the matching backend resx (or vice versa) leaves one surface un-localized.
+- **Containers run in globalization-invariant mode.** The chiseled .NET runtime image the API ships on has no ICU and sets `DOTNET_SYSTEM_GLOBALIZATION_INVARIANT`, where creating a culture such as `pt-BR` throws `CultureNotFoundException` and stops the API at startup. `FSH.Starter.Api.csproj` sets `<PredefinedCulturesOnly>false</PredefinedCulturesOnly>` so named cultures can be created there; resource lookup only needs the culture name, and formatting is invariant anyway. Keep that property if you build your own host project or image.
 
 ## Related
 
