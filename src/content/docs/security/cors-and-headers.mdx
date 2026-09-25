@@ -30,14 +30,15 @@ CORS in fullstackhero has two non-default conventions: **CORS middleware runs be
       "https://app.example.com",
       "https://admin.example.com"
     ],
-    "AllowedHeaders": [ "content-type", "authorization" ],
-    "AllowedMethods": [ "GET", "POST", "PUT", "DELETE" ]
+    "AllowedHeaders": [ "content-type", "authorization", "tenant", "x-fsh-app", "idempotency-key", "x-requested-with", "x-signalr-user-agent" ],
+    "AllowedMethods": [ "GET", "POST", "PUT", "PATCH", "DELETE" ]
   }
 }
 ```
 
 - `AllowAll: true` → `SetIsOriginAllowed(_ => true)` + any header + any method + `AllowCredentials()`. Dev only.
 - `AllowAll: false` → `WithOrigins/WithHeaders/WithMethods` from the three lists + `AllowCredentials()`. Startup validation **fails** if any of the three lists is empty while `AllowAll` is false.
+- The shipped header and method lists are exactly what the two React apps send: `tenant` on every call, `x-fsh-app` on login, `idempotency-key` on chat send, `x-requested-with` / `x-signalr-user-agent` on the SignalR negotiate, and `PATCH` for partial updates. If you override `AllowedHeaders` or `AllowedMethods`, keep all of them - drop one and the browser rejects the preflight, so login, realtime or `PATCH` calls fail under restricted CORS (dev hides this because `appsettings.Development.json` sets `AllowAll: true`). Add your own custom headers on top.
 - Credentials are always allowed by the policy - there is no `AllowCredentials` config key.
 - If `AllowAll` is false **and** `AllowedOrigins` is empty, CORS isn't mounted at all - cross-origin browser calls will simply fail. (`appsettings.Production.json` ships with an empty list precisely so you have to fill it in.)
 

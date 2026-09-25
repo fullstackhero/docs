@@ -69,8 +69,8 @@ Separately, set **`FrontendOptions`** (`AllowedOrigins` + `DefaultOrigin`) - the
       "https://app.example.com",
       "https://admin.example.com"
     ],
-    "AllowedHeaders": [ "content-type", "authorization" ],
-    "AllowedMethods": [ "GET", "POST", "PUT", "DELETE" ]
+    "AllowedHeaders": [ "content-type", "authorization", "tenant", "x-fsh-app", "idempotency-key", "x-requested-with", "x-signalr-user-agent" ],
+    "AllowedMethods": [ "GET", "POST", "PUT", "PATCH", "DELETE" ]
   }
 }
 ```
