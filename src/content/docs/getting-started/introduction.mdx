@@ -1,6 +1,6 @@
 ---
 title: Introduction
-lastUpdated: 2026-06-11
+lastUpdated: 2026-09-25
 description: What fullstackhero is, what it ships with, and how it's put together.
 sidebar:
   label: Introduction
@@ -29,7 +29,7 @@ It's aimed at teams that want to ship features on day one without spending a spr
 - **Quotas.** Per-tenant request and resource limits.
 - **Observability baked in.** OpenTelemetry traces, metrics, and logs (OTLP); Serilog structured logging; health checks; security/exception auditing.
 - **API docs.** OpenAPI + Scalar UI. Versioned routes via `Asp.Versioning` (`/api/v{version}/{module}`).
-- **Cloud-ready.** `.NET Aspire` AppHost brings up Postgres, Valkey (a Redis-compatible, BSD-licensed Redis fork), MinIO, the migrator, the API, and both React apps locally with one command. Production deploy via Docker Compose included.
+- **Cloud-ready.** `.NET Aspire` AppHost brings up Postgres, Valkey (a Redis-compatible, BSD-licensed Redis fork), RustFS (S3-compatible object storage), the migrator, the API, and both React apps locally with one command. Production deploy via Docker Compose included.
 - **Two frontends.** React + Vite admin console and dashboard, both in `clients/`.
 - **CLI + template.** Scaffold a fresh, fully renamed project in one command with the `fsh` CLI (`FullStackHero.CLI`) or the `dotnet new fsh` template (`FullStackHero.NET.StarterKit`) - both on NuGet as stable 10.0.0. Or clone the repo / use the GitHub template.
 
@@ -148,7 +148,7 @@ The API never mutates data on startup. Demo data (acme/globex tenants, sample ca
 | Tracing / metrics   | OpenTelemetry 1.15 (OTLP exporter)                                      |
 | API docs            | OpenAPI 10 + Scalar UI                                                  |
 | Errors              | `ProblemDetails` (RFC 9457) via global exception handler                |
-| Orchestration       | .NET Aspire 13.4 (Postgres + Valkey + MinIO + API + both React apps)   |
+| Orchestration       | .NET Aspire 13.4 (Postgres + Valkey + RustFS + API + both React apps)   |
 
 ### Frontends
 
@@ -162,7 +162,7 @@ The API never mutates data on startup. Demo data (acme/globex tenants, sample ca
 | Layer            | Tools                                                            |
 |------------------|------------------------------------------------------------------|
 | Unit             | xUnit, Shouldly, NSubstitute, AutoFixture                        |
-| Integration      | `Microsoft.AspNetCore.Mvc.Testing`, Testcontainers (Postgres / Valkey / Minio) |
+| Integration      | `Microsoft.AspNetCore.Mvc.Testing`, Testcontainers (Postgres / Valkey / RustFS) |
 | Architecture     | NetArchTest - enforces module boundaries                         |
 
 ### Distribution

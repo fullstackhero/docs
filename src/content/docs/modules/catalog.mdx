@@ -1,6 +1,6 @@
 ---
 title: Catalog module
-lastUpdated: 2026-06-11
+lastUpdated: 2026-09-25
 description: Production-grade product catalogue - brands, hierarchical categories, products with multi-image support, price + stock domain events, and soft delete.
 sidebar:
   label: Catalog
@@ -219,7 +219,7 @@ Then any other module can subscribe via `IIntegrationEventHandler<ProductReprice
 
 ## Tests
 
-Ten integration test files in `src/Tests/Integration.Tests/Tests/Catalog/` exercise every endpoint against Testcontainers Postgres + MinIO:
+Ten integration test files in `src/Tests/Integration.Tests/Tests/Catalog/` exercise every endpoint against Testcontainers Postgres + RustFS:
 
 - `BrandsEndpointTests.cs`, `CategoriesEndpointTests.cs`, `ProductsEndpointTests.cs` - CRUD + soft-delete/restore per resource
 - `ProductImagesTests.cs` and `ProductImageRemoveReorderTests.cs` - image add/remove/reorder/thumbnail flows
