@@ -1,6 +1,6 @@
 ---
 title: Files module
-lastUpdated: 2026-09-25
+lastUpdated: 2026-09-27
 description: Presigned-URL file lifecycle with pluggable per-OwnerType access policies, soft delete + retention purge, optional scanner hook, and S3-compatible storage.
 sidebar:
   label: Files
@@ -242,7 +242,7 @@ No module ships a consumer today - Catalog and Chat attach files by passing the 
   - `DefaultUploaderOnlyPolicyTests` - policy enforcement
   - `FileAccessPolicyRegistryTests` - registry lookup
   - `StorageKeyBuilderTests` - tenant + category path generation
-- Integration tests at `src/Tests/Integration.Tests/Tests/Files/` (ten files) cover the presigned round-trip (`RequestAndFinalizeUploadTests`, `StorageFlowTests`), upload validation, finalize edge cases, visibility + sharing, soft delete + restore, the purge jobs, and tenant isolation against Testcontainers RustFS.
+- Integration tests at `src/Tests/Integration.Tests/Tests/Files/` (eleven files) cover the presigned round-trip (`RequestAndFinalizeUploadTests`, `StorageFlowTests`), presigned URLs signed for a separate public endpoint (`PresignServiceUrlTests`), upload validation, finalize edge cases, visibility + sharing, soft delete + restore, the purge jobs, and tenant isolation against Testcontainers RustFS.
 
 ## Related
 
