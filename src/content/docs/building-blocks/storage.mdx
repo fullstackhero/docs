@@ -56,7 +56,7 @@ public interface IStorageService
 ### Implementations
 
 - **`LocalStorageService`** - stores under `wwwroot/uploads/{owner-type}/{guid}_{sanitized-filename}` and validates extension + size against `FileTypeMetadata.GetRules(fileType)`. Presigning is a **dev-only token fallback**: `GenerateUploadUrlAsync` issues a `local://upload/{token}` URL backed by `LocalPresignTokenStore`; `GenerateDownloadUrlAsync` and `BuildPublicUrl` return server-relative `/uploads/...` paths (no signing needed).
-- **`S3StorageService`** - uses `AWSSDK.S3` with a singleton `IAmazonS3` client for every real S3 call. A custom `ServiceUrl` (RustFS, MinIO, etc.) switches to path-style addressing per `ForcePathStyle`; presigned PUT/GET URLs come from the SDK's request signer, through a second, keyed `IAmazonS3` (`S3StorageService.PresignClientKey`) aimed at `PresignServiceUrl` when it is set and at `ServiceUrl` otherwise. Presigning is offline, so that client never opens a connection.
+- **`S3StorageService`** - uses `AWSSDK.S3` with a singleton `IAmazonS3` client for every real S3 call. A custom `ServiceUrl` (RustFS, MinIO, etc.) switches to path-style addressing per `ForcePathStyle`; presigned PUT/GET URLs come from the SDK's request signer, through a second, keyed `IAmazonS3` (`S3StorageService.PresignClientKey`) aimed at `PresignServiceUrl` when it is set and at `ServiceUrl` otherwise. Signing itself is offline; the only network call that client can make is fetching ambient credentials when no keys are set.
 - **`QuotaMeteredStorageService`** - decorator. `CheckAndRecordAsync(tenantId, QuotaResource.StorageBytes, bytes, ct)` on upload (throws 507 when exceeded, rolls back the charge if the write fails); refunds the object's size on `RemoveAsync`. Requests with no resolved tenant pass through unmetered.
 
 ### Request / response
@@ -69,7 +69,7 @@ public interface IStorageService
 
 ### Options
 
-- **`S3StorageOptions`** - `Bucket`, `Region`, `Prefix`, `PublicRead` (default true), `PublicBaseUrl` (for non-expiring public URLs), `ServiceUrl` (custom endpoint for RustFS, MinIO, etc.), `PresignServiceUrl` (optional host that presigned upload/download URLs are signed for, when browsers reach the store on a different address than the API does; `PublicBaseUrl` only rewrites the plain public-read URLs, never a presigned one), `AccessKey` / `SecretKey` (leave empty to use the AWS SDK credential chain), `ForcePathStyle` (only applies when `ServiceUrl` is set).
+- **`S3StorageOptions`** - `Bucket`, `Region`, `Prefix`, `PublicRead` (default true), `PublicBaseUrl` (for non-expiring public URLs), `ServiceUrl` (custom endpoint for RustFS, MinIO, etc.), `PresignServiceUrl` (optional host that presigned upload/download URLs are signed for, when browsers reach the store on a different address than the API does; `PublicBaseUrl` only rewrites the plain public-read URLs, never a presigned one), `AccessKey` / `SecretKey` (leave empty to use the AWS SDK credential chain), `ForcePathStyle` (applies to each client with a custom endpoint, `ServiceUrl` or `PresignServiceUrl`). `PresignServiceUrl` must be an absolute http(s) URL with no path, checked at startup: a path would be signed into every URL and break behind a proxy.
 
 ## How modules consume Storage
 
