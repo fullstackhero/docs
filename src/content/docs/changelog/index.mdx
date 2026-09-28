@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-09-25
+lastUpdated: 2026-09-28
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -10,6 +10,10 @@ seo:
 ---
 
 Notable changes to the kit, newest first.
+
+## 2026-09-28
+
+- **Dashboard: the overview Quick actions tiles no longer crush their text (fix).** The Quick actions card sits in one cell of the overview's two-up widget grid, next to the 360px side rail, but its tiles went two-up on the viewport `sm:` breakpoint. At common desktop widths that left each tile about 130px wide with a 40px text column, so titles and descriptions broke word by word and a title like "Subscription" spilled out of its box. The column count now comes from the card itself (a container query), so the tiles stack in a narrow card and sit two side by side only when the card fits two 14rem tiles, never more than two. An overview Playwright test measures the rendered tiles and fails on overflow or a wrapping title. See [#1407](https://github.com/fullstackhero/dotnet-starter-kit/pull/1407).
 
 ## 2026-09-25
 
