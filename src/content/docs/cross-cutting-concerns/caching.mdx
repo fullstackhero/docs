@@ -1,6 +1,6 @@
 ---
 title: Caching
-lastUpdated: 2026-06-11
+lastUpdated: 2026-09-28
 description: HybridCache (L1 in-memory + L2 Valkey) with OpenTelemetry instrumentation, stampede protection, and tag-based invalidation.
 sidebar:
   label: Caching
@@ -101,7 +101,7 @@ One connection pool per host for those consumers. The SignalR backplane (realtim
 ## Who uses it in the kit
 
 - **Multitenancy module** caches resolved tenants in the distributed cache (Finbuckle's `DistributedCacheStore`, 60-minute TTL) and tenant themes in HybridCache (`TenantThemeService`, with `RemoveByTagAsync` per-tenant invalidation).
-- **Identity module** caches user permission sets in HybridCache (`UserPermissionService`, tag-invalidated; `RolePermissionSyncer` keeps role-permission state in sync at startup) and impersonation-grant revocation markers.
+- **Identity module** caches user permission sets in HybridCache (`UserPermissionService`, tag-invalidated; `RolePermissionSyncer` keeps role-permission state in sync at startup) and impersonation-grant revocation markers. A root operator's permission set is loaded under the operator's own tenant, so a cross-tenant request keeps working when the entry is cold.
 - **Realtime** uses the distributed cache for the 3-second typing-indicator throttle per (channel, user) in `AppHub`.
 - **Idempotency** uses it to cache request responses by `Idempotency-Key`.
 

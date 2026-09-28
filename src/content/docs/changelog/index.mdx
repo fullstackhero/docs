@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-09-27
+lastUpdated: 2026-09-28
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -10,6 +10,10 @@ seo:
 ---
 
 Notable changes to the kit, newest first.
+
+## 2026-09-28
+
+- **Identity: a root operator's cross-tenant request no longer fails with a random `401` (fix).** A root operator scopes a request to another tenant with the `tenant` header, and every permission-gated endpoint then checks the operator's permission set through `UserPermissionService`. That set is cached under `perm:u:{userId}`, a key with no tenant, and on a cache miss it was loaded under the tenant the request had just been moved to, where the root user does not exist, so the check threw `UnauthorizedException` and the request answered `401 Authentication failed`. Whether it failed depended only on whether the entry happened to be warm: it expires from the in-process cache every 2 minutes when no Redis is configured, and after an hour, a startup permission sync or any role or group change otherwise. The set is now loaded under the operator's own tenant (from the token's tenant claim), so the request succeeds whether the entry is cold or warm; nothing changes for requests that stay in the caller's tenant. The intermittent `401` seen in `TenantHeaderOverrideTests` in CI matches this failure. The docs and code comments that called Finbuckle's claim strategy a no-op are corrected too: it runs the authentication handler itself, so an authenticated caller always resolves to its own tenant claim and the `tenant` header only decides for anonymous requests. See [#1404](https://github.com/fullstackhero/dotnet-starter-kit/pull/1404).
 
 ## 2026-09-27
 
