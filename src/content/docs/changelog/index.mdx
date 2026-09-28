@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-09-25
+lastUpdated: 2026-09-26
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -10,6 +10,10 @@ seo:
 ---
 
 Notable changes to the kit, newest first.
+
+## 2026-09-26
+
+- **Frontend containers: admin and dashboard survive a restart (fix).** Both images rendered `/config.json` from `/usr/share/nginx/html/config.json.template` at startup and then deleted the template so it wouldn't be served. A container's filesystem outlives a restart, so the next start of the same container - `docker restart`, a Docker daemon restart, or a host reboot under `restart: unless-stopped` - found no template, failed with `can't open /usr/share/nginx/html/config.json.template: no such file` under `set -e`, and crash-looped forever. The template now lives at `/etc/fsh/config.json.template`, outside the web root, so it is still never served, and `config.json` is re-rendered from it on every start. The files copied into both images are now checked out with LF line endings on every platform, so an image built on Windows no longer serves `config.json` with CRLF. **Upgrade note:** rebuild the admin and dashboard images. A container already stuck in the loop is fixed by recreating it (`docker compose up -d --force-recreate admin dashboard`), even before you upgrade - a fresh container gets the template back until its next restart. See [#1400](https://github.com/fullstackhero/dotnet-starter-kit/pull/1400).
 
 ## 2026-09-25
 
