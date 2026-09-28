@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-09-25
+lastUpdated: 2026-09-28
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -10,6 +10,10 @@ seo:
 ---
 
 Notable changes to the kit, newest first.
+
+## 2026-09-28
+
+- **Identity: expired sessions are now actually cleaned up, in every tenant (fix).** The hourly `SessionCleanupHostedService` is meant to delete sessions that expired more than 30 days ago, but it ran outside any request, so no tenant was resolved and the default-on tenant filter on `UserSessions` threw a `NullReferenceException` on every run (logged as "Error during session cleanup"). Nothing was ever deleted and the table only grew. The service now enumerates the tenant store and runs the delete inside each tenant's context, which also reaches tenants that have their own database; a failure in one tenant is logged with its id and the remaining tenants are still cleaned. Retention (30 days) and interval (hourly) are unchanged, and there is nothing to configure. See [#1406](https://github.com/fullstackhero/dotnet-starter-kit/pull/1406).
 
 ## 2026-09-25
 
