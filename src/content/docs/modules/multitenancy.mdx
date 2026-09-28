@@ -1,6 +1,6 @@
 ---
 title: Multitenancy module
-lastUpdated: 2026-06-11
+lastUpdated: 2026-09-28
 description: Finbuckle-driven tenant resolution (claim, header, query), distributed-cache store, per-tenant connection strings, theme customisation, and an async provisioning state machine.
 sidebar:
   label: Multitenancy
@@ -25,7 +25,7 @@ Once this module is loaded (order 200), every other module's `DbContext` is tena
 - **EFCoreStore** as the source of truth - tenants live in `TenantDbContext` with `AppTenantInfo` as the record.
 - **Per-tenant connection strings** - each `AppTenantInfo` can carry its own DB connection, set on creation.
 - **`IGlobalEntity` opt-out** - entities that need to live across tenants (plans, impersonation grants, outbox messages) mark this interface and skip the tenant filter.
-- **Root-operator header override** - SuperAdmin can scope a single request to another tenant via the `tenant` header for admin operations like cross-tenant user search; runs as post-auth middleware (the Finbuckle strategies see anonymous principals).
+- **Root-operator header override** - SuperAdmin can scope a single request to another tenant via the `tenant` header for admin operations like cross-tenant user search; runs as post-auth middleware (the claim strategy has already resolved the operator to `root`).
 - **Provisioning state machine** - multi-step tenant creation (Database → Migrations → Seeding → CacheWarm). Steps are persisted; failures are resumable via `RetryTenantProvisioning`.
 - **Tenant lifecycle with plans** - `CreateTenantCommand` takes an optional `PlanKey` (falls back to `Billing:DefaultPlanKey`) and publishes `TenantSubscribedIntegrationEvent`; `RenewTenant` extends `ValidUpto` by the plan term and publishes `TenantRenewedIntegrationEvent` - the Billing module reacts to both with subscriptions + invoices. `AdjustTenantValidity` is the operator override that *may* backdate (the internal `SetValidity` used by renewal is forward-only and throws on backdating).
 - **Active/expiry enforcement as post-auth guards** - Finbuckle happily resolves inactive or expired tenants; two middleware guards (registered in `IModule.ConfigureMiddleware`) reject requests for deactivated tenants and enforce `ValidUpto` with a configurable grace window (`Billing:GraceWindowDays`, default 7). Inside the window, responses carry an `X-Subscription-Grace` header with days left.
@@ -66,15 +66,15 @@ The Finbuckle strategy chain runs on every request, before authentication. The k
 ```csharp
 // MultitenancyModule.cs (simplified)
 builder.Services.AddMultiTenant<AppTenantInfo>()
-    .WithClaimStrategy(ClaimConstants.Tenant)       // 1. claim - no-op pre-auth
-    .WithHeaderStrategy(MultitenancyConstants.Identifier) // 2. "tenant" header - primary
+    .WithClaimStrategy(ClaimConstants.Tenant)       // 1. claim - the caller's JWT
+    .WithHeaderStrategy(MultitenancyConstants.Identifier) // 2. "tenant" header - anonymous requests
     .WithDelegateStrategy(ResolveTenantFromQuery)   // 3. ?tenant= query string fallback
     .WithDistributedCacheStore(TimeSpan.FromMinutes(60))
     .WithStore<EFCoreStore<TenantDbContext, AppTenantInfo>>(ServiceLifetime.Scoped);
 ```
 
-<Callout type="warning" title="ClaimStrategy is pre-auth, by design">
-Finbuckle's strategy chain runs before `UseAuthentication`, so the claim strategy sees an anonymous principal on every request - it's effectively a no-op in normal flow. The **header strategy is the real primary resolver**. The claim strategy is there for the cross-tenant impersonation case where a downstream pipeline can re-resolve with claims.
+<Callout type="warning" title="ClaimStrategy authenticates on its own">
+Finbuckle's strategy chain runs **before** `UseAuthentication()`, but the claim strategy does not wait for it: when `User` is not authenticated yet, Finbuckle runs the default scheme's handler itself and reads the tenant claim from the result. An authenticated caller therefore always resolves to its own tenant, and a `tenant` header cannot move it. The header strategy decides only for anonymous requests (login, refresh, forgot-password). Moving a root operator to another tenant is the job of the post-auth root-operator override.
 </Callout>
 
 The **root-operator header override** is what lets a SuperAdmin (whose JWT carries `tenant=root`) scope a single request to another tenant. It runs as post-auth middleware via `IModule.ConfigureMiddleware`, checks that the caller is in the root tenant, reads the `tenant` header on the request, looks up the target, and replaces the multi-tenant context on the `HttpContext`.
