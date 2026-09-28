@@ -1,6 +1,6 @@
 ---
 title: Local development
-lastUpdated: 2026-09-25
+lastUpdated: 2026-09-26
 description: Running the React frontends with Vite HMR, building for production, deploying to static hosts or behind Nginx, runtime config via /config.json.
 sidebar:
   label: Local development
@@ -114,11 +114,13 @@ The dashboard's variant swaps `dashboardUrl` for a `demoMode` flag (login-page d
 : "${FSH_API_URL:?FSH_API_URL is required (e.g. https://api.example.com)}"
 : "${FSH_DEFAULT_TENANT:=root}"
 
-envsubst < /usr/share/nginx/html/config.json.template \
+envsubst < /etc/fsh/config.json.template \
        > /usr/share/nginx/html/config.json
 
 exec nginx -g 'daemon off;'
 ```
+
+The template lives at `/etc/fsh/config.json.template`, outside the web root, so it is never served and `config.json` is re-rendered on every start - restarting the same container is safe.
 
 ```jsonc
 // clients/admin/docker/config.json.template
