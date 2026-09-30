@@ -1,6 +1,6 @@
 ---
 title: Jobs building block
-lastUpdated: 2026-06-11
+lastUpdated: 2026-09-30
 description: Hangfire 1.8 wiring with multi-tenant context preservation, DI-aware activator, basic-auth dashboard, telemetry filter, and stale-lock cleanup.
 sidebar:
   label: Jobs
@@ -77,7 +77,7 @@ if (jobManager is not null)
 }
 ```
 
-The Billing module ships `MonthlyInvoiceJob` (monthly); the Files module ships `PurgeOrphanedFilesJob` (hourly) and `PurgeDeletedFilesJob` (daily, 03:30 UTC); the Auditing module ships `AuditRetentionJob` (cron from `AuditRetentionOptions`, no-op until enabled).
+The Billing module ships `MonthlyInvoiceJob` (monthly); the Files module ships `PurgeOrphanedFilesJob` (hourly) and `PurgeDeletedFilesJob` (daily, 03:30 UTC), and enqueues `MigrateLegacyPublicFileKeysJob` on every API start; the Auditing module ships `AuditRetentionJob` (cron from `AuditRetentionOptions`, no-op until enabled).
 
 ## Configuration
 
