@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-09-28
+lastUpdated: 2026-09-30
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -10,6 +10,12 @@ seo:
 ---
 
 Notable changes to the kit, newest first.
+
+## 2026-09-30
+
+- **Auditing: the retention job now actually purges audit records, in every tenant (fix).** The `auditing-retention` Hangfire job is registered without a tenant, and `AuditRecords` carries the default-on tenant filter, so every run threw a `NullReferenceException` inside the filter and deleted nothing: with `Auditing:Retention:Enabled` on, audit tables still grew without limit. The job now loads every tenant from the tenant store and runs the sweep inside each tenant's context, which also reaches tenants with a dedicated database. A failure in one tenant is logged with its `TenantId` and the other tenants still run. Retention options and batching are unchanged. See [#1413](https://github.com/fullstackhero/dotnet-starter-kit/pull/1413).
+- **Production mail settings now bind (fix).** `appsettings.Production.json` put `Host`, `Port`, `UserName` and `Password` directly under `MailOptions` instead of `MailOptions:Smtp`, so they bound to nothing and Production silently inherited the base `smtp.ethereal.email` host. They now sit under `MailOptions:Smtp`, with the port defaulting to `587`. Set `MailOptions__Smtp__Host` (and credentials) for Production; with the blank default, sending fails at send time. See [#1414](https://github.com/fullstackhero/dotnet-starter-kit/pull/1414).
+- **Docker: the API and DbMigrator images build on supported base images.** Both Dockerfiles moved from `mcr.microsoft.com/dotnet/nightly/aspnet:10.0-noble-chiseled` to the supported `mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled`. The SDK container publish (`ContainerFamily`, used by the AWS deploy) stays on full `noble` on purpose. See [#1414](https://github.com/fullstackhero/dotnet-starter-kit/pull/1414).
 
 ## 2026-09-28
 
