@@ -1,6 +1,6 @@
 ---
 title: Troubleshooting
-lastUpdated: 2026-09-28
+lastUpdated: 2026-10-02
 description: Symptom → cause → fix for the failure modes you actually hit on first run and in the daily dev loop.
 sidebar:
   order: 6
@@ -142,9 +142,10 @@ your connection string unless the server actually uses Kerberos.
 
 **Symptom:** confirmation, password-reset or welcome e-mails do not show up; the API logs `An error occurred while sending email`, with `The SMTP server does not support the STARTTLS extension` or an authentication error; a user an operator registered cannot sign in because the address was never confirmed.
 
-The compose stack sends every e-mail to its bundled Mailpit service. Open
-`http://localhost:8025` on the Docker host (`FSH_MAILPIT_PORT`) to read them and follow
-the links. If you switched to a real provider, check that `MailOptions__Smtp__Security`
+With `.env.example` as shipped, the compose stack sends every e-mail to its bundled
+Mailpit service and delivers none. Open `http://localhost:8025` on the Docker host
+(`FSH_MAILPIT_PORT`) to read them and follow the links. If you switched to a real
+provider, check that `FSH_SMTP_HOST` no longer says `mailpit` and that `FSH_SMTP_SECURITY`
 matches it: `StartTls` for port 587, `SslOnConnect` for 465, and `None` only for a local
 catcher like Mailpit. See [Mailing](/docs/building-blocks/mailing/#local-mail-catcher-docker-compose).
 
@@ -229,6 +230,24 @@ CorsOptions__AllowedOrigins__0=https://app.example.com
 
 Never replace the policy with `AllowAnyOrigin()` - it cannot be combined with
 credentials and reintroduces exactly this failure.
+
+### Avatar or product image returns 403
+
+**Symptom:** an image doesn't render, and its URL answers `403 AccessDenied` from RustFS or S3.
+
+The bucket policy grants anonymous read on `public/*` only. Either the URL's key
+doesn't start with `public/`, or the policy is missing:
+
+- **Policy missing** - check that `rustfs-init` exited `0` (Aspire dashboard, or
+  `docker compose logs rustfs-init`). It re-applies the policy on every run.
+- **Key without `public/`** - a public file uploaded before the key carried its
+  visibility. The API moves those on start; look for
+  `[Files] moved N legacy public file(s) under public/` in the API log, and for
+  `[Files] could not move legacy public file ...` errors. Failures are retried by
+  Hangfire and again on every start.
+- **Wrong host in the URL** (for example `http://rustfs:9000/...` in Docker
+  Compose) - set `Storage__S3__PublicBaseUrl` to a base browsers reach. The
+  legacy migration rewrites the stored avatar and product-image URLs of the files it moves to it.
 
 ### Hangfire dashboard prompts or returns 401
 

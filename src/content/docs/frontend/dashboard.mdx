@@ -192,7 +192,7 @@ The context handles:
 - Automatic reconnect with backoff + jitter (capped at 60 s), with status (`idle / connecting / connected / reconnecting / error`) surfaced as a state pill.
 - Transport negotiation (WebSockets, then SSE, then long-polling) for proxy-hostile networks.
 
-**SSE** - `clients/dashboard/src/sse/sse-context.tsx` streams the live activity feed. The client first exchanges its JWT for a short-lived stream token (`POST /api/v1/sse/token`), then opens `GET /api/v1/sse/stream?token=...` and parses the `text/event-stream` itself (fetch + ReadableStream, with reconnect/backoff). Overview and the Activity page render the same event buffer.
+**SSE** - `clients/dashboard/src/sse/sse-context.tsx` streams the live activity feed. The client first exchanges its JWT for a short-lived stream token (`POST /api/v1/sse/token`), then opens `GET /api/v1/sse/stream?token=...` and parses the `text/event-stream` itself (fetch + ReadableStream, with reconnect/backoff). Overview and the Activity page render the same event buffer. The buffer lives in memory only and is empty after a refresh; the Activity page adds a **Recent history** section (latest 25 audits, loaded once per visit) for users with `Permissions.AuditTrails.View`, and the Overview's Recent audits card is gated on the same permission.
 
 <Screenshot src="/screenshots/dashboard/realtime-status-pill.png"
             alt="Realtime status pill in the sidebar"

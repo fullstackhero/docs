@@ -1,6 +1,6 @@
 ---
 title: Multitenancy deep dive
-lastUpdated: 2026-06-11
+lastUpdated: 2026-09-28
 description: How tenancy is the default in every layer - Finbuckle strategies, EF Core global query filter, IGlobalEntity opt-out, named filters, cross-tenant query discipline.
 sidebar:
   label: Multitenancy deep-dive
@@ -35,15 +35,15 @@ Finbuckle.MultiTenant 10 resolves the tenant on every request. The kit configure
 ```csharp
 // MultitenancyModule.ConfigureServices (simplified)
 builder.Services.AddMultiTenant<AppTenantInfo>()
-    .WithClaimStrategy(ClaimConstants.Tenant)         // 1. claim - no-op pre-auth (see below)
-    .WithHeaderStrategy(MultitenancyConstants.Identifier)  // 2. "tenant" header - the primary resolver
+    .WithClaimStrategy(ClaimConstants.Tenant)         // 1. claim - the caller's JWT (see below)
+    .WithHeaderStrategy(MultitenancyConstants.Identifier)  // 2. "tenant" header - anonymous requests
     .WithDelegateStrategy(/* ?tenant= query fallback */)   // 3. query string
     .WithDistributedCacheStore(TimeSpan.FromMinutes(60))
     .WithStore<EFCoreStore<TenantDbContext, AppTenantInfo>>(ServiceLifetime.Scoped);
 ```
 
-<Callout type="warning" title="ClaimStrategy is pre-auth">
-Finbuckle's strategy chain runs **before** `UseAuthentication()`. The claim strategy therefore sees an anonymous `User` on every normal request and is effectively a no-op. It's there for the **cross-tenant impersonation** case, where post-auth middleware re-resolves the tenant from the impersonation grant's claim. In the normal flow the header strategy is the primary resolver.
+<Callout type="warning" title="ClaimStrategy authenticates on its own">
+Finbuckle's strategy chain runs **before** `UseAuthentication()`, but the claim strategy does not wait for it: when `User` is not authenticated yet, Finbuckle runs the default scheme's handler itself and reads the tenant claim from the result. An authenticated caller therefore always resolves to its own tenant, and a `tenant` header cannot move it. The header strategy decides only for anonymous requests (login, refresh, forgot-password). Moving a root operator to another tenant is the job of the post-auth root-operator override.
 </Callout>
 
 The kit caches resolved tenants in `DistributedCacheStore` for 60 minutes (Valkey backplane) to keep hot-path requests off the DB. The `EFCoreStore` is the source of truth.
