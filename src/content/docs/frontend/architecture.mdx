@@ -218,7 +218,7 @@ Implementation details worth knowing:
 - Reconnects use SignalR's automatic-reconnect backoff plus an outer retry loop with jitter, capped at 60 s.
 - Transport is auto-negotiated (WebSockets → SSE → long-polling) for proxy-hostile networks.
 
-One connection per user session; every subscriber attaches via `on(event, handler)` and the returned function detaches it. The dashboard's chat page is the canonical user - see the [dashboard page](/docs/frontend/dashboard/#chat--the-realtime-showcase).
+One connection per user session; every subscriber attaches via `on(event, handler)` and the returned function detaches it. The dashboard's chat page is the canonical user - see the [dashboard page](/docs/frontend/dashboard/#chat---the-realtime-showcase).
 
 ## Error handling
 
