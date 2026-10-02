@@ -1,6 +1,6 @@
 ---
 title: Deploy to AWS with Terraform
-lastUpdated: 2026-09-25
+lastUpdated: 2026-09-30
 description: End-to-end AWS deployment - prerequisites, bootstrapping the state backend, configuring an environment, and the one-command deploy that ships the API and both React apps.
 sidebar:
   label: AWS (Terraform)
@@ -36,7 +36,7 @@ The Terraform lives under `deploy/terraform/`.
 - **API** - ECS Fargate service behind an Application Load Balancer, fronted by **AWS WAF** (rate limiting + managed rule sets). Autoscaling, deployment circuit breaker, container in private subnets. Optionally fronted by **CloudFront** (`enable_api_cloudfront`) so the HTTPS SPAs can call the API over HTTPS with no custom domain (no mixed-content).
 - **Migrations** - the schema is applied by a **one-shot `fsh-db-migrator` ECS task** the deploy runs after `apply` (never at API startup). It migrates and - in dev - seeds the admin user and default tenant; demo tenants are opt-in.
 - **Data** - RDS PostgreSQL (optional Multi-AZ, AWS-managed master password in Secrets Manager) and ElastiCache Redis/Valkey (encryption in transit + at rest).
-- **Files** - an S3 bucket for application uploads, optionally fronted by CloudFront.
+- **Files** - an S3 bucket for application uploads, optionally fronted by CloudFront. Only the `app_s3_public_read_prefix` prefix (default `public/`) is publicly readable - see [Upload bucket access](#upload-bucket-access).
 - **Frontends** - the admin and dashboard React SPAs each on a **private S3 bucket + CloudFront** (Origin Access Control), with SPA routing, default-on security headers (HSTS, nosniff, frame, referrer), and a Terraform-managed `config.json`.
 - **Observability** - CloudWatch alarms (opt-in) for ECS, RDS, Redis, and the ALB.
 
@@ -256,6 +256,18 @@ deploy/terraform/
 - The ALB drops invalid headers and runs desync mitigation in `defensive` mode.
 - RDS and Redis security groups are scoped to the VPC CIDR; Redis uses encryption in transit + at rest; the DB password is managed in **Secrets Manager** and injected via the ECS task execution role.
 - SPA buckets are **private** - CloudFront reads them through Origin Access Control, and a managed response-headers policy adds HSTS and the usual hardening headers.
+- The upload bucket's CloudFront read is limited to `app_s3_public_read_prefix` (see below); private files are reachable through presigned S3 URLs only.
+
+### Upload bucket access
+
+The API keeps public files (avatars, product images) under `public/` and private ones under `private/`. Two variables decide what is readable without a signature:
+
+| Variable | Default | What |
+|---|---|---|
+| `app_s3_public_read_prefix` | `public/` | Key prefix that is publicly readable - through CloudFront, and anonymously when `app_s3_enable_public_read` is on. Empty disables the anonymous policy and lets CloudFront read the whole bucket. |
+| `app_s3_enable_public_read` | `false` | Anonymous S3 reads on that prefix (direct bucket URLs). Not needed when CloudFront serves the bucket. |
+
+With `app_s3_enable_cloudfront` on (every shipped env), the API gets `Storage__S3__PublicBaseUrl=https://{cloudfront domain}` and CloudFront's Origin Access Control read is scoped to `{bucket}/{app_s3_public_read_prefix}*`. Before [#1422](https://github.com/fullstackhero/dotnet-starter-kit/pull/1422) the default prefix was `uploads/` and CloudFront could read the whole bucket; if you overrode `app_s3_public_read_prefix`, set it to `public/` (or `{Prefix}/public/` when you set `Storage:S3:Prefix`) and run `terraform apply`.
 - The API container runs as a **non-root** user (`1654`) on the .NET `noble` runtime base image.
 
 ## Teardown

@@ -1,6 +1,6 @@
 ---
 title: Files module
-lastUpdated: 2026-09-25
+lastUpdated: 2026-09-30
 description: Presigned-URL file lifecycle with pluggable per-OwnerType access policies, soft delete + retention purge, optional scanner hook, and S3-compatible storage.
 sidebar:
   label: Files
@@ -23,9 +23,10 @@ If your module owns files, ship a `FileAccessPolicy : IFileAccessPolicy` next to
 - **Presigned upload flow** - `POST /files/upload-url` mints a presigned PUT URL with a 15-minute TTL (configurable). Client uploads directly to S3 (RustFS locally). `POST /files/{id}/finalize` flips the file from `PendingUpload` to `Available`.
 - **Pluggable access policies** - `IFileAccessPolicy` interface registered per `OwnerType`. Catalog ships `ProductFileAccessPolicy`, Chat ships `ChatChannelFileAccessPolicy`, the Files module itself registers `DefaultUploaderOnlyPolicy` for the built-in `MyFiles` and `User` owner types.
 - **Per-category validation** - extension whitelist + size cap per category (`Image` 10 MB, `Document` 25 MB, `Archive` 50 MB), configured in `appsettings`.
-- **Visibility** - files are `Public` or `Private`; `PATCH /files/{id}/visibility` flips it after upload (policy-gated, only on `Available` files). `GET /files/shared` lists the tenant's public free-standing files (`MyFiles` / `User` owner types) for a "Shared in tenant" surface.
+- **Visibility** - files are `Public` or `Private`, and the visibility is part of the storage key (`public/...` or `private/...`); only `public/*` is anonymously readable. `PATCH /files/{id}/visibility` flips it after upload (policy-gated, only on `Available` files) and moves the object to the other root. `GET /files/shared` lists the tenant's public free-standing files (`MyFiles` / `User` owner types) for a "Shared in tenant" surface. See [Visibility and storage moves](#visibility-and-storage-moves).
+- **Legacy key migration** - `MigrateLegacyPublicFileKeysJob` runs on every API start and moves public files uploaded before visibility lived in the key under `public/`.
 - **File scanner hook** - `IFileScanner.ScanAsync(storageKey)` with `NoOpFileScanner` as the default (always `Clean`). Implement it to plug in ClamAV / GuardDuty / VirusTotal; an `Infected` scan result transitions the file to `Quarantined` instead of `Available`.
-- **Soft delete + retention** - deleted files go to trash; `PurgeDeletedFilesJob` (Hangfire, daily 03:30 UTC) hard-deletes after 30 days. The tenant dashboard's Trash page restores from here (permission-gated tab).
+- **Soft delete + retention** - deleted files go to trash; `PurgeDeletedFilesJob` (Hangfire, daily 03:30 UTC) hard-deletes after 30 days. The tenant dashboard's Trash page restores from here (permission-gated tab). Both purge jobs run once per tenant (including tenants with a dedicated database), and the soft-delete purge refunds the freed bytes to that tenant's storage quota.
 - **Orphan cleanup** - `PurgeOrphanedFilesJob` (hourly) deletes `PendingUpload` rows whose upload deadline passed without a finalize call.
 - **Storage quota metering** - finalize records the uploaded bytes against the tenant's `StorageBytes` quota.
 - **`FileFinalizedIntegrationEvent`** - published when a file is finalized (`Available` or `Quarantined`), carrying owner type/id, content type, size, and final status. No built-in consumer ships today - Catalog and Chat attach files via explicit commands carrying the `fileAssetId` + URL - but it's the hook for search indexing, notifications, and the like.
@@ -44,11 +45,15 @@ src/Modules/Files/
 │   │   └── DefaultUploaderOnlyPolicy.cs         For MyFiles + User
 │   ├── Services/
 │   │   ├── FileAccessPolicyRegistry.cs          OwnerType → IFileAccessPolicy lookup
-│   │   ├── StorageKeyBuilder.cs                 Tenant + category path generation
+│   │   ├── StorageKeyBuilder.cs                 {public|private}/tenants/... key generation
+│   │   ├── FileStorageRelocator.cs              Row-locked object moves between roots
 │   │   └── NoOpFileScanner.cs                   Default IFileScanner
+│   ├── IntegrationEventHandlers/
+│   │   └── DeleteSupersededObjectHandler.cs     Durable delete of a moved file's old object
 │   ├── Jobs/
 │   │   ├── PurgeOrphanedFilesJob.cs             Hangfire hourly
-│   │   └── PurgeDeletedFilesJob.cs              Hangfire 03:30 daily
+│   │   ├── PurgeDeletedFilesJob.cs              Hangfire 03:30 daily
+│   │   └── MigrateLegacyPublicFileKeysJob.cs    Enqueued on every API start
 │   └── Features/v1/                             10 features
 └── Modules.Files.Contracts/                     ~250 LoC, incl. IFileAccessPolicy
 ```
@@ -107,6 +112,70 @@ public sealed class FileAsset : AggregateRoot<Guid>, ISoftDeletable
 ```
 
 Finalize HEADs the uploaded object, rejects uploads larger than the declared size (plus a 1 % slack), runs the scanner, and records the bytes against the tenant's storage quota.
+
+## Visibility and storage moves
+
+`StorageKeyBuilder` is the one place that builds a key:
+
+```
+{public|private}/tenants/{tenantId}/{owner-type}/{yyyy}/{MM}/{fileAssetId:N}/{sanitized-filename}
+```
+
+The root follows `Visibility`, and every shipped stack grants anonymous read on `public/*` only (see [Storage - key layout and visibility](/docs/building-blocks/storage/#key-layout-and-visibility)). So a visibility change has to move the object.
+
+**Moves are serialized per file.** `ChangeFileVisibility`, `FinalizeUpload` and the legacy migration all go through `FileStorageRelocator.ApplyAsync(fileId, mutate)`, which runs one transaction:
+
+1. Takes the file's row lock (`SELECT ... FOR UPDATE` on PostgreSQL; other providers have no portable row lock).
+2. Re-reads the row and applies the mutation. The mutation can decline after the re-read, for example when another writer already changed the file.
+3. Copies the object to the key for the new visibility (`IStorageService.CopyAsync`; a copy left by a crashed attempt is reused), then commits the row together with `FileStorageKeyChangedIntegrationEvent` through the outbox.
+
+A migration racing a user's flip, or two flips racing each other, therefore run one after the other.
+
+**The old object's delete is durable.** It is deleted only when no row references its key, under the same row lock. The first attempt runs right after the commit (not tied to the request's cancellation token) and checks with `ExistsAsync` that the object is really gone. Files also handles its own event: `DeleteSupersededObjectHandler` repeats the delete and throws while the object is still there, so the outbox retries it with backoff. A Public → Private flip can't leave the object readable under `public/`.
+
+**Finalize moves in-flight uploads.** An upload presigned before the upgrade still lands at a key with no visibility root; `FinalizeUpload` moves it under the right root once the file is `Available`.
+
+### `FileStorageKeyChangedIntegrationEvent`
+
+Raised on every move, in the same transaction as the row. It carries `FileAssetId`, `OwnerType`, `OwnerId`, `OldStorageKey`, `NewStorageKey`, `Visibility` and, for public files, `NewPublicUrl` (`BuildPublicUrl(newKey)` - the API's current public URL). Any module that persists a URL built from a file's key must handle it, because the old object is deleted right after the move:
+
+```csharp
+public sealed class FileStorageKeyChangedProductImageHandler(CatalogDbContext db)
+    : IIntegrationEventHandler<FileStorageKeyChangedIntegrationEvent>
+{
+    public async Task HandleAsync(FileStorageKeyChangedIntegrationEvent @event, CancellationToken ct = default)
+    {
+        if (!string.Equals(@event.OwnerType, "Product", StringComparison.OrdinalIgnoreCase)) return;
+
+        var images = await db.Set<ProductImage>()
+            .Where(i => i.FileAssetId == @event.FileAssetId)
+            .ToListAsync(ct).ConfigureAwait(false);
+
+        foreach (var image in images)
+        {
+            // null when the stored URL doesn't point at OldStorageKey - leave it alone
+            if (@event.ResolveUrl(image.Url) is { } rewritten) image.ReplaceUrl(rewritten);
+        }
+
+        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+    }
+}
+```
+
+`ResolveUrl(currentUrl)` returns `null` when the stored URL is not a URL for `OldStorageKey`, so a user who changed their avatar since the upload keeps the new one, and a replayed event is a no-op. Otherwise it returns `NewPublicUrl` for a public file - which also repairs URLs stored with an outdated base, such as `http://rustfs:9000/...` - and the old URL re-pointed at `NewStorageKey` for a private one. `RewriteUrl(url)` is the raw re-point without the `NewPublicUrl` substitution. The kit ships two consumers: Catalog (product images, `Product` owner type only) and Identity (`FshUser.ImageUrl` avatars, `User` owner type).
+
+### Legacy key migration
+
+Keys written before [#1422](https://github.com/fullstackhero/dotnet-starter-kit/pull/1422) (`tenants/...`) have no root, so no bucket policy opens them any more. `MigrateLegacyPublicFileKeysJob` moves every `Public`, `Available` file with such a key under `public/`, soft-deleted ones included so a restore brings back a working URL. Legacy private files stay where they are - presigned-only, which is what they should be.
+
+- **When** - the API enqueues it through `IJobService` on every start. It is idempotent, and per-file row locks make overlapping runs (several instances, retries) safe.
+- **Per tenant** - it runs inside each tenant's context, so tenants with a dedicated database are covered.
+- **Batching** - keyset pagination in id order, one DI scope per page of `Files:LegacyKeyMigrationBatchSize` rows (default `100`).
+- **Failures** - a row that fails (for example, its object is missing) or a tenant whose database is unreachable is logged and skipped, so it doesn't block the rows after it. If anything failed, the run throws at the end and Hangfire retries it (3 attempts, after 1, 5 and 30 minutes); every later API start tries again.
+- **Log line** - `[Files] moved {Count} legacy public file(s) under public/ across {TenantCount} tenant(s)`.
+- **Cost when done** - the scan reads the partial index `IX_FileAsset_LegacyKey` (rows whose key starts with neither `public/` nor `private/`). New keys never enter it, so once a tenant is migrated a start costs one index probe per tenant database. There is no completion marker; new tenants are done from the start.
+
+Not migrated: `uploads/...` objects written by `IStorageService.UploadAsync<T>` (the API-only byte-upload path in `UserProfileService` and `TenantThemeService`). They have no `FileAsset` row. Neither frontend uses that path.
 
 ## Access policies
 
@@ -177,6 +246,7 @@ Endpoints marked "- (policy)" require authentication only; the per-OwnerType `IF
     "DownloadUrlTtlMinutes": 60,
     "OrphanRetentionMinutes": 60,
     "SoftDeleteRetentionDays": 30,
+    "LegacyKeyMigrationBatchSize": 100,   // rows per page for MigrateLegacyPublicFileKeysJob
     "Categories": {
       "Image":    { "AllowedExtensions": [".jpg",".jpeg",".png",".webp",".gif",".ico"],  "MaxBytes": 10485760 },
       "Document": { "AllowedExtensions": [".pdf",".docx",".xlsx",".pptx",".txt",".csv"], "MaxBytes": 26214400 },
@@ -241,8 +311,9 @@ No module ships a consumer today - Catalog and Chat attach files by passing the 
   - `FileAssetTests` - state transitions
   - `DefaultUploaderOnlyPolicyTests` - policy enforcement
   - `FileAccessPolicyRegistryTests` - registry lookup
-  - `StorageKeyBuilderTests` - tenant + category path generation
-- Integration tests at `src/Tests/Integration.Tests/Tests/Files/` (ten files) cover the presigned round-trip (`RequestAndFinalizeUploadTests`, `StorageFlowTests`), upload validation, finalize edge cases, visibility + sharing, soft delete + restore, the purge jobs, and tenant isolation against Testcontainers RustFS.
+  - `StorageKeyBuilderTests` - visibility root + tenant path generation
+  - `FileStorageKeyChangedIntegrationEventTests` - `ResolveUrl` / `RewriteUrl`
+- Integration tests at `src/Tests/Integration.Tests/Tests/Files/` (twelve files) cover the presigned round-trip (`RequestAndFinalizeUploadTests`, `StorageFlowTests`), presigned URLs signed for a separate public endpoint (`PresignServiceUrlTests`), upload validation, finalize edge cases, visibility + sharing, soft delete + restore, the purge jobs, and tenant isolation against Testcontainers RustFS. `StorageVisibilityRootTests` covers the key roots, moves in both directions, anonymous `200`/`403` under a `public/*` policy, the legacy migration across two tenants, lock races, and the durable delete.
 
 ## Related
 
