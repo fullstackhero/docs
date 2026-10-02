@@ -1,6 +1,6 @@
 ---
 title: Internationalization (i18n)
-lastUpdated: 2026-09-25
+lastUpdated: 2026-10-02
 description: End-to-end localization across the backend and both React apps - en-US as default and fallback, pt-BR included, with per-user language, IStringLocalizer, RequestLocalization, and react-i18next.
 sidebar:
   label: Internationalization
@@ -117,6 +117,8 @@ src/locales/<locale>/<namespace>.json
 
 for example `src/locales/en-US/common.json` and `src/locales/pt-BR/common.json`. Splitting by namespace keeps each catalog focused and lets a feature ship its own strings without touching one giant file.
 
+Only `en-US` has to be complete. A translation may lag behind: a key missing from `pt-BR` (or a whole namespace without a `pt-BR` file) renders the English string, because the fallback chain always ends in `en-US`, even on a deployment whose default language is `pt-BR` (`fallbackChain` in `src/lib/i18n-fallback.ts`). Each app's `tests/i18n/parity.spec.ts` fails only on a `pt-BR` key that `en-US` does not have (an orphan, usually a renamed or deleted key) and on a `pt-BR` value whose `{{placeholders}}` differ from the English one, so a contributor adding English strings never has to write Portuguese to get a green build. The backend catalogs follow the same rule.
+
 ### Language detection and normalization
 
 The detector tries, in order, a `?culture=` query-string value, the cached value in `localStorage`, and the browser's language; when none yields a supported locale the app falls back to the deployment default (see below). It caches the resolved language in **`localStorage`** (no cookie is written), under a per-app key rather than the library default: **`fsh.admin.lng`** and **`fsh.dashboard.lng`**, matching every other value the apps persist (`fsh.admin.accessToken`, `fsh.admin.theme`, and so on). The default `i18nextLng` would be claimed by both apps on a shared origin and by any other i18next app deployed beside them. Detected values are passed through a `convertDetectedLanguage` step that **normalizes variants** to a supported locale through the `CANON` map in `src/i18n.ts` - for instance `pt` and `pt-PT` are mapped to `pt-BR`, `en-GB` to `en-US` - so the API never sees a bare `pt`, and a browser advertising a regional variant the app doesn't ship still lands on a language it does.
@@ -159,7 +161,7 @@ src/Modules/Billing/Modules.Billing/Localization/BillingResources.es-ES.resx
 
 Then add `"es-ES"` to `SupportedCultures.Tags` in `src/BuildingBlocks/Core/Localization/SupportedCultures.cs`. It is a list in code, not configuration, and it is the single whitelist that the `locale`-claim provider, `Accept-Language` matching and the `User.Locale` validator all read. Any tag not in this list is treated as unsupported and falls through the resolution chain, and `PUT /identity/profile` rejects it.
 
-The parity tests hold every catalog at strict key and placeholder parity with the neutral one. `CatalogParityTests` (in `src/Tests/Architecture.Tests`) discovers every catalog (shared and per module) and iterates `SupportedCultures.Tags`, so it covers the new culture with no change and fails if any catalog lacks its `.es-ES.resx`; `SharedResourcesKeyParityTests` (in `src/Tests/Framework.Tests/Localization`) and the per-module `{Module}ResourcesTests` compare against `pt-BR` by name, so extend them to the new tag.
+The parity tests hold every translated catalog consistent with the neutral one: a key the neutral catalog lacks (an orphan) or a `{n}` placeholder that differs fails the build, while a key or a whole `.es-ES.resx` that is still missing does not, and resolves to English at runtime. `CatalogParityTests` (in `src/Tests/Architecture.Tests`) discovers every catalog (shared and per module) and iterates `SupportedCultures.Tags`, so it covers the new culture with no change; `SharedResourcesKeyParityTests` (in `src/Tests/Framework.Tests/Localization`) and the per-module `{Module}ResourcesTests` compare against `pt-BR` by name, so extend them to the new tag.
 
 **2. Frontend - add catalogs and register the locale (repeat in both `clients/admin` and `clients/dashboard`).**
 
@@ -170,14 +172,14 @@ src/locales/es-ES/common.json
 src/locales/es-ES/<other-namespace>.json
 ```
 
-Then register the locale in `src/i18n.ts`: import its catalogs and add them to the `CATALOGS` (admin) / `catalogs` (dashboard) map, and add the tag to the `SUPPORTED` list, which is also what the switcher offers. Give the switcher a label by adding a `language.esES` key (the tag without its hyphen) to every locale's `common.json`. To collapse a bare `es` or an unsupported variant such as `es-MX` onto the new tag, add `es: "es-ES"` to the `CANON` map; a tag listed in `SUPPORTED` is always kept as-is. Each app's `tests/i18n/parity.spec.ts` compares `en-US` with `pt-BR` by name, so extend it to the new locale too.
+Then register the locale in `src/i18n.ts`: import its catalogs and add them to the `CATALOGS` (admin) / `catalogs` (dashboard) map, and add the tag to the `SUPPORTED` list, which is also what the switcher offers. Give the switcher a label by adding a `language.esES` key (the tag without its hyphen) to every locale's `common.json`. To collapse a bare `es` or an unsupported variant such as `es-MX` onto the new tag, add `es: "es-ES"` to the `CANON` map; a tag listed in `SUPPORTED` is always kept as-is. Each app's `tests/i18n/parity.spec.ts` checks `pt-BR` against `en-US` by name, so extend it to the new locale too; the fallback chain needs no change, since it always ends in `en-US`.
 
 **3. (Optional) Make it the deployment default.**
 
 If the new language should be the default rather than an opt-in, set it on the backend via `LocalizationOptions:DefaultCulture` and on each front-end via the `defaultLanguage` key in `config.json`.
 
 <Callout type="warning" title="Keep both sides in sync">
-A language is only fully supported when it exists on **both** sides. If the backend ships `es-ES` but the app never registers it, the UI can't switch to it; if the app registers `es-ES` but the backend's `SupportedCultures.Tags` doesn't list it, server messages come back in the backend's default culture and the switcher's `PUT /identity/profile` is rejected. A tag that is listed but has no resx for some catalog falls back to that catalog's English at runtime, and `CatalogParityTests` fails. Add the backend resx files, the tag and the front-end catalogs together.
+A language is only fully supported when it exists on **both** sides. If the backend ships `es-ES` but the app never registers it, the UI can't switch to it; if the app registers `es-ES` but the backend's `SupportedCultures.Tags` doesn't list it, server messages come back in the backend's default culture and the switcher's `PUT /identity/profile` is rejected. A tag that is listed but has no resx for some catalog falls back to that catalog's English at runtime. Add the backend resx files, the tag and the front-end catalogs together.
 </Callout>
 
 ## Configuration
@@ -203,7 +205,7 @@ Front-end default language (runtime `config.json`, served to the app at startup)
 ## Gotchas
 
 - **A missing `locale` claim is normal.** Users who have never chosen a language carry no `locale` claim, so their culture comes from `Accept-Language` or the default - not a bug.
-- **Catalogs are named for the specific tag.** `SharedResources.pt-BR.resx`, not `SharedResources.pt.resx`, matching the tag in `SupportedCultures.Tags` and the front-end's `src/locales/pt-BR/` folder; `CatalogParityTests` reads each culture's own catalog without parent fallback and fails when the `.{tag}.resx` is missing. Whatever the file name, a bare `pt` or `pt-PT` request resolves to the default culture, not to Portuguese, because the request culture is only ever one of the listed tags.
+- **Catalogs are named for the specific tag.** `SharedResources.pt-BR.resx`, not `SharedResources.pt.resx`, matching the tag in `SupportedCultures.Tags` and the front-end's `src/locales/pt-BR/` folder; `CatalogParityTests` reads each culture's own catalog without parent fallback, so it sees exactly the keys that file declares. Whatever the file name, a bare `pt` or `pt-PT` request resolves to the default culture, not to Portuguese, because the request culture is only ever one of the listed tags.
 - **The `locale` claim lags a language switch by one token.** The provider reads the claim, not the database, so a switch reaches the API when the refreshed token is in use; the switcher refreshes right away, but in between the UI can already be in the new language while an API error still arrives in the old one.
 - **`UseHeroLocalization` must run after `UseAuthentication`.** Placed earlier, the JWT `locale` claim isn't available yet, so step 2 of the chain is silently skipped and users fall back to `Accept-Language`.
 - **Errors raised before localization runs are not in the caller's language.** `UseExceptionHandler` sits above `UseHeroLocalization`; the handler re-applies the negotiated UI culture, so exceptions from endpoints are localized, but one thrown by middleware that runs before localization (HTTPS redirection, CORS, routing and so on) has no negotiated culture and is rendered in the server process's own UI culture (English in a standard container), not the caller's and not `LocalizationOptions:DefaultCulture`.
