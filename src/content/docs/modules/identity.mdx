@@ -1,6 +1,6 @@
 ---
 title: Identity module
-lastUpdated: 2026-09-25
+lastUpdated: 2026-10-02
 description: JWT bearer + refresh tokens, ASP.NET Identity with roles + permissions, user groups, operator impersonation, two-factor TOTP, sessions, and password-policy enforcement.
 sidebar:
   label: Identity
@@ -149,15 +149,15 @@ endpoints.MapPost("/users", handler)
 
 `PUT /profile` replaces the whole representation, so two overlapping saves used to silently overwrite each other: whoever wrote last won, and the other person's change was gone with no error anywhere. The endpoint now supports an optimistic precondition.
 
-`GET /profile` returns the user's `ConcurrencyStamp` as a strong `ETag`. ASP.NET Identity already treats that column as an EF Core concurrency token and rotates it on every write, so no extra column and no migration were needed. Echo the tag back as `If-Match` on the `PUT` and the write is rejected with `412 Precondition Failed` when the stored profile has moved on:
+`GET /profile` returns a strong `ETag` derived from the fields the `PUT` writes: a SHA-256 hash of the first name, last name, phone number and stored avatar URL. Nothing is stored for it, so no extra column and no migration were needed. Echo the tag back as `If-Match` on the `PUT` and the write is rejected with `412 Precondition Failed` when one of those fields has changed since the read:
 
 ```http
 GET /api/v1/identity/profile
 → 200 OK
-  ETag: "6f9619ff-8b86-d011-b42d-00cf4fc964ff"
+  ETag: "9c1f0e4b7a2d38e5c6b14f90d2a7e3b85f6c0d19a4e2b7c83d5f61a09e4b2c7d"
 
 PUT /api/v1/identity/profile
-If-Match: "6f9619ff-8b86-d011-b42d-00cf4fc964ff"
+If-Match: "9c1f0e4b7a2d38e5c6b14f90d2a7e3b85f6c0d19a4e2b7c83d5f61a09e4b2c7d"
 → 200 OK       # nobody else wrote in between
 → 412          # someone did; nothing was written
 ```
@@ -172,7 +172,8 @@ Details worth knowing:
 
 - **Take the tag from the read that populated the form**, not from a read issued inside the save. The lost update this guards against happens between the moment the user saw the values and the moment they save, so a tag fetched at save time is never stale and therefore never catches anything.
 
-- **The token also rotates on writes the user does not think of as profile edits**, such as a password change, a new avatar, or a failed sign-in. Those show up as a `412` on an otherwise innocent save, which is why the message the user sees should read as "this changed, review and save again" rather than as an error.
+- **Only a profile change moves the tag.** Sign-in attempts (a wrong password bumps `AccessFailedCount`, the next good sign-in resets it), token refreshes and password changes write the user row but leave the tag alone, so nobody can turn an open form into a `412` by typing a wrong password for the account. A new avatar or a phone change made elsewhere does move it. Because the tag follows content, a save that leaves every field as it was keeps the same tag, and replaying it is accepted: nothing can be lost by rewriting identical values.
+- **One narrow `412` without a profile change remains.** If a non-profile write, such as a failed sign-in, lands between the moment the `PUT` loads the user and the moment it saves, ASP.NET Identity's own `ConcurrencyStamp` check rejects the save, and that also answers `412`. The window is a single request wide, which is one more reason the message the user sees should read as "this changed, review and save again" rather than as an error.
 - **CORS is already configured for it.** `ETag` is not a CORS-safelisted response header, so the framework's CORS policy exposes it explicitly and `if-match` ships in `CorsOptions.AllowedHeaders`. Without both, a browser on another origin cannot read the tag and silently stops sending the precondition. Keep them in place if you replace the policy with your own.
 
 ## Endpoints
