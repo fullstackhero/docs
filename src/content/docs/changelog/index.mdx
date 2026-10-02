@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-09-30
+lastUpdated: 2026-10-02
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -10,6 +10,10 @@ seo:
 ---
 
 Notable changes to the kit, newest first.
+
+## 2026-10-02
+
+- **Identity: narrowing a permission now revokes it from the built-in roles on existing tenants (fix, behaviour change).** `RolePermissionSyncer` used to only add the permissions missing from `Basic` and `Admin`, so a permission that stopped being `IsBasic`, or that a module stopped registering, stayed on those roles in every tenant that already existed, and the API refuses permission edits on system roles, so it could only be removed by hand in `RoleClaims`. The sync is now authoritative for those two roles: at every API start it also removes each permission claim the catalog no longer grants to the role (the root tenant's `Admin` keeps the `IsRoot` permissions), logs each removal at Warning with the role, the permission and the tenant, and invalidates the permission cache so live sessions lose it on their next request. Only claims of type `permission` are reconciled, and custom roles are untouched. **Upgrade note:** if you narrowed `IsBasic` or removed a permission in your fork, the next start revokes it from `Basic` (or `Admin`) in every existing tenant; check the Warning lines after deploying. See [Authorization](/docs/security/authorization/#the-role-permission-syncer) and [#1426](https://github.com/fullstackhero/dotnet-starter-kit/pull/1426).
 
 ## 2026-09-30
 

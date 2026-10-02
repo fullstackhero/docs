@@ -1,6 +1,6 @@
 ---
 title: Caching building block
-lastUpdated: 2026-06-11
+lastUpdated: 2026-10-02
 description: HybridCache (L1 in-memory + L2 Valkey or distributed memory) with OpenTelemetry instrumentation, stampede protection, and a shared multiplexer for DataProtection.
 sidebar:
   label: Caching
@@ -71,7 +71,7 @@ await cache.GetOrCreateAsync(key, factory, tags: ["tenant:" + tenantId.ToString(
 await cache.RemoveByTagAsync("tenant:" + tenantId.ToString(), ct).ConfigureAwait(false);
 ```
 
-Identity uses HybridCache for per-user permission sets (`UserPermissionService`, warmed by the `RolePermissionSyncer`) and impersonation grants (`ImpersonationGrantService`); Multitenancy caches tenant themes (`TenantThemeService`) and fronts the tenant EF store with Finbuckle's `DistributedCacheStore`, which rides on the same `IDistributedCache` this block registers.
+Identity uses HybridCache for per-user permission sets (`UserPermissionService`, invalidated through the permissions tag whenever the `RolePermissionSyncer` adds or removes a system-role claim) and impersonation grants (`ImpersonationGrantService`); Multitenancy caches tenant themes (`TenantThemeService`) and fronts the tenant EF store with Finbuckle's `DistributedCacheStore`, which rides on the same `IDistributedCache` this block registers.
 
 ## Configuration
 
