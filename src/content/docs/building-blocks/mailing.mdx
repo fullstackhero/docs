@@ -1,6 +1,6 @@
 ---
 title: Mailing building block
-lastUpdated: 2026-09-28
+lastUpdated: 2026-10-02
 description: SMTP or SendGrid email abstraction behind a single IMailService, with multi-recipient delivery and HTML body support.
 sidebar:
   label: Mailing
@@ -140,16 +140,22 @@ An unknown name (a typo such as `Plain`) makes the options fail to bind, so the 
 
 ### Local mail catcher (Docker Compose)
 
-`deploy/docker/docker-compose.yml` ships a [Mailpit](https://mailpit.axllent.org) service (`axllent/mailpit:v1.31.3`) and points the API at it, so confirmation, password-reset and welcome e-mails work without an SMTP account:
+`deploy/docker/docker-compose.yml` reads the SMTP target from `.env` and ships a [Mailpit](https://mailpit.axllent.org) service (`axllent/mailpit:v1.31.3`) under the `mail-catcher` compose profile. The defaults in `.env.example` enable that profile and point the API at it, so confirmation, password-reset and welcome e-mails work without an SMTP account, and none of them is delivered:
 
-```yaml
-MailOptions__Smtp__Host: mailpit
-MailOptions__Smtp__Port: "1025"
-MailOptions__Smtp__Security: "None"
-MailOptions__From: ${FSH_MAIL_FROM:-no-reply@fsh.local}
+```bash
+# .env
+COMPOSE_PROFILES=mail-catcher
+FSH_SMTP_HOST=mailpit
+FSH_SMTP_PORT=1025
+FSH_SMTP_SECURITY=None
+FSH_SMTP_USERNAME=
+FSH_SMTP_PASSWORD=
+FSH_MAIL_FROM=no-reply@fsh.local
 ```
 
-Mailpit's SMTP port stays on the compose network. Its inbox UI is published on the host loopback only, at `http://localhost:8025` (`FSH_MAILPIT_PORT`), because it holds live password-reset and confirmation links. Nothing sent there leaves the host: for real delivery, set `MailOptions__Smtp__*` on the `api` service to your provider, set `FSH_MAIL_FROM` to a sender it accepts (`appsettings.Production.json` leaves `MailOptions:From` blank), and remove the `mailpit` service.
+The compose file maps these to `MailOptions__Smtp__Host`, `Port`, `Security`, `UserName`, `Password` and `MailOptions__From` on the `api` service. Mailpit's SMTP port stays on the compose network. Its inbox UI is published on the host loopback only, at `http://localhost:8025` (`FSH_MAILPIT_PORT`), because it holds live password-reset and confirmation links.
+
+For real delivery, edit `.env` only, never the compose file: set the `FSH_SMTP_*` values to your provider (`FSH_SMTP_SECURITY=StartTls` on port 587, `SslOnConnect` on 465), set `FSH_MAIL_FROM` to a sender it accepts (`appsettings.Production.json` leaves `MailOptions:From` blank), and delete the `COMPOSE_PROFILES` line so the catcher no longer runs.
 
 ### SendGrid
 
