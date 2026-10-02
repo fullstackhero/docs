@@ -1,6 +1,6 @@
 ---
 title: Authorization
-lastUpdated: 2026-06-11
+lastUpdated: 2026-10-02
 description: Permission-based authorization - fine-grained gates on every endpoint via .RequirePermission() with a flat registry, default + fallback policy wiring, and the silent-no-op gotcha that catches every team once.
 sidebar:
   label: Authorization
@@ -131,7 +131,9 @@ So a permission grant or revocation applies to live sessions within seconds - no
 
 ## The role-permission syncer
 
-`RolePermissionSyncer` (driven by `RolePermissionSyncHostedService` at startup) walks every tenant and inserts any **newly registered** permissions that are missing from the built-in `Admin` / `Basic` roles' claim rows. It's idempotent - only missing claims are added - and if it writes anything it drops the per-user permission cache so logged-in sessions pick the new permissions up immediately. This is what makes "add a permission to a module, restart, Admin can use it" work without a manual seeding step.
+`RolePermissionSyncer` (driven by `RolePermissionSyncHostedService` at startup) walks every tenant and makes the built-in `Admin` / `Basic` roles' permission claims match the permission catalog: it inserts any **newly registered** permission that is missing and removes any permission claim the catalog no longer grants to that role. It's idempotent, and if it writes anything it drops the per-user permission cache so logged-in sessions see the change immediately. This is what makes "add a permission to a module, restart, Admin can use it" work without a manual seeding step, and it works the same way in reverse: turning `IsBasic` off for a permission, or deleting a permission from a module, revokes it from every existing tenant's `Basic` (or `Admin`) role at the next start. Each removed claim is logged at Warning with the role, the permission and the tenant, so a mistaken change to the permission constants shows up in the logs instead of passing silently.
+
+The sync can be authoritative because the API refuses permission edits on the built-in roles, so there is no operator change to lose. The root tenant's `Admin` keeps the `IsRoot` permissions; only claims of type `permission` are reconciled, so other claim types on those roles are left alone.
 
 Custom roles are yours to manage - the syncer only touches the built-in two.
 
