@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-09-30
+lastUpdated: 2026-10-02
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -10,6 +10,10 @@ seo:
 ---
 
 Notable changes to the kit, newest first.
+
+## 2026-10-02
+
+- **Authorization: `.RequirePermission(a, b)` now requires every listed permission (fix).** `RequiredPermissionAuthorizationHandler` checked only the first permission in the endpoint metadata, so a user holding `a` passed a gate that also demanded `b`. It now checks each one and succeeds only when the user holds all of them. A permission metadata entry with no permissions left (for example `.RequirePermission("")`) now denies the request; before, the handler threw `InvalidOperationException`. No kit endpoint lists more than one permission today, so nothing changes for the shipped API; your own multi-permission endpoints become stricter. See [Authorization](/docs/security/authorization/#applying-a-gate), [#1415](https://github.com/fullstackhero/dotnet-starter-kit/issues/1415) and [#1424](https://github.com/fullstackhero/dotnet-starter-kit/pull/1424).
 
 ## 2026-09-30
 

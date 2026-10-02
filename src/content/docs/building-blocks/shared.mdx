@@ -1,6 +1,6 @@
 ---
 title: Shared building block
-lastUpdated: 2026-06-11
+lastUpdated: 2026-10-02
 description: Multi-tenancy types, permission registry, claim/role/action/resource constants, audit attributes, and shared DTOs used by every module.
 sidebar:
   label: Shared
@@ -43,7 +43,7 @@ New permission? Add it to `PermissionConstants`. New claim type? Add it to `Clai
 
 - **`ClaimsPrincipalExtensions`** - extracts user id, tenant, email, etc. from a `ClaimsPrincipal`. Used in middleware and handlers.
 - **`RequiredPermissionAttribute`** - implements **`IRequiredPermissionMetadata`** (a `HashSet<string> RequiredPermissions`). This interface is what the authorization handler keys off - it must exist exactly once, in `FSH.Framework.Shared.Identity.Authorization`.
-- **`EndpointExtensions.RequirePermission(permission, params additionalPermissions)`** - the canonical fluent helper for minimal-API endpoints; it attaches a `RequiredPermissionAttribute` as endpoint metadata. Permissions are plain strings (modules expose them as `const string`s in their contracts).
+- **`EndpointExtensions.RequirePermission(permission, params additionalPermissions)`** - the canonical fluent helper for minimal-API endpoints; it attaches a `RequiredPermissionAttribute` as endpoint metadata. When it lists several permissions the user needs every one of them. Permissions are plain strings (modules expose them as `const string`s in their contracts).
 
 ### Persistence shared
 

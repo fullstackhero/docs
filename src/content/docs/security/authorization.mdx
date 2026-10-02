@@ -1,6 +1,6 @@
 ---
 title: Authorization
-lastUpdated: 2026-06-11
+lastUpdated: 2026-10-02
 description: Permission-based authorization - fine-grained gates on every endpoint via .RequirePermission() with a flat registry, default + fallback policy wiring, and the silent-no-op gotcha that catches every team once.
 sidebar:
   label: Authorization
@@ -113,6 +113,15 @@ The equivalent attribute form:
 ```
 
 Both produce the same metadata - `.RequirePermission()` is literally `WithMetadata(new RequiredPermissionAttribute(...))`. `RequiredPermissionAuthorizationHandler` reads it from the endpoint's metadata via the `IRequiredPermissionMetadata` interface and checks the user's effective permission set. Endpoints with **no** permission metadata pass the handler (authentication is still enforced by the policy itself).
+
+Passing more than one permission requires **all** of them (AND, not OR):
+
+```csharp
+endpoints.MapPost("/products/{id}/stock", handler)
+         .RequirePermission(CatalogPermissions.Products.Update, CatalogPermissions.Products.AdjustStock);
+```
+
+A user holding only one of the two gets `403`. Before [#1415](https://github.com/fullstackhero/dotnet-starter-kit/issues/1415) the handler checked only the first permission and ignored the rest. Blank permission strings are dropped from the metadata; if nothing is left (for example `.RequirePermission("")`), the gate denies every request instead of opening.
 
 ## Roles, groups, and aggregation
 
