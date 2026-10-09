@@ -1,6 +1,6 @@
 ---
 title: Troubleshooting
-lastUpdated: 2026-09-30
+lastUpdated: 2026-10-02
 description: Symptom → cause → fix for the failure modes you actually hit on first run and in the daily dev loop.
 sidebar:
   order: 6
@@ -126,6 +126,28 @@ cache data, so wiping it is harmless:
 docker rm -f <redis-container>
 docker volume rm fsh-starter-redis-data
 ```
+
+### `Cannot load library libgssapi_krb5.so.2` in the API log (Docker Compose)
+
+**Symptom:** the API or migrator container logs `Cannot load library libgssapi_krb5.so.2` and `libgssapi_krb5.so.2: cannot open shared object file` on the first database connection, then carries on normally.
+
+The API and DbMigrator images are .NET *chiseled* images, which do not ship the Kerberos
+library. Npgsql's `GSS Encryption Mode` defaults to `Prefer`, so it tries to load that
+library before falling back to a normal connection. The message is noise, not a failure.
+`deploy/docker/docker-compose.yml` appends `GSS Encryption Mode=Disable` to both
+connection strings; if you point the stack at your own Postgres, keep that setting in
+your connection string unless the server actually uses Kerberos.
+
+### E-mails never arrive (Docker Compose)
+
+**Symptom:** confirmation, password-reset or welcome e-mails do not show up; the API logs `An error occurred while sending email`, with `The SMTP server does not support the STARTTLS extension` or an authentication error; a user an operator registered cannot sign in because the address was never confirmed.
+
+With `.env.example` as shipped, the compose stack sends every e-mail to its bundled
+Mailpit service and delivers none. Open `http://localhost:8025` on the Docker host
+(`FSH_MAILPIT_PORT`) to read them and follow the links. If you switched to a real
+provider, check that `FSH_SMTP_HOST` no longer says `mailpit` and that `FSH_SMTP_SECURITY`
+matches it: `StartTls` for port 587, `SslOnConnect` for 465, and `None` only for a local
+catcher like Mailpit. See [Mailing](/docs/building-blocks/mailing/#local-mail-catcher-docker-compose).
 
 ## Database & migrations
 
