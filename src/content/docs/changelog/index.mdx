@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-09-30
+lastUpdated: 2026-10-02
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -10,6 +10,11 @@ seo:
 ---
 
 Notable changes to the kit, newest first.
+
+## 2026-10-02
+
+- **Mailing & Docker Compose: e-mail works out of the box, and SMTP connection security is configurable (fix).** `SmtpMailService` always connected with STARTTLS, so any server that does not offer it was refused before a single envelope was sent, and the compose stack inherited the `smtp.ethereal.email` host with empty credentials: every confirmation, password-reset and welcome e-mail failed, and a user registered by an operator could not sign in until someone confirmed the address by hand. A new **`MailOptions:Smtp:Security`** setting (MailKit `SecureSocketOptions`, by name: `None`, `Auto`, `SslOnConnect`, `StartTls`, `StartTlsWhenAvailable`) chooses the mode; it defaults to `StartTls`, so existing configuration behaves exactly as before, and an unknown name fails the options binding instead of guessing. `deploy/docker/docker-compose.yml` now reads the SMTP target from `.env` (`FSH_SMTP_HOST`, `FSH_SMTP_PORT`, `FSH_SMTP_SECURITY`, `FSH_SMTP_USERNAME`, `FSH_SMTP_PASSWORD`), defaulting to a pinned [Mailpit](https://mailpit.axllent.org) catcher (`axllent/mailpit:v1.31.3`, `Security` set to `None`) that runs only under the `mail-catcher` compose profile, which `.env.example` enables with `COMPOSE_PROFILES=mail-catcher`. With that default, e-mail is caught, not delivered. SMTP stays on the compose network and the inbox UI is published on the host loopback only, at `http://localhost:8025` (`FSH_MAILPIT_PORT`), because it holds live reset and confirmation links. For real delivery, edit `.env` only: set `FSH_SMTP_*` to your provider, set `FSH_MAIL_FROM` to a sender it accepts (the compose default is `no-reply@fsh.local`, because `appsettings.Production.json` leaves `MailOptions:From` blank), and delete the `COMPOSE_PROFILES` line. See [Mailing](/docs/building-blocks/mailing/) and [#1409](https://github.com/fullstackhero/dotnet-starter-kit/pull/1409).
+- **Docker Compose: no more `libgssapi_krb5.so.2` errors in the API and migrator logs (fix).** The chiseled .NET images do not ship the Kerberos library, and Npgsql tries GSS encryption by default (`GSS Encryption Mode=Prefer`), so the first connection logged `Cannot load library libgssapi_krb5.so.2` on every start. Both compose connection strings now append `GSS Encryption Mode=Disable`; keep it when you swap in your own Postgres unless the server uses Kerberos. See [Troubleshooting](/docs/getting-started/troubleshooting/) and [#1409](https://github.com/fullstackhero/dotnet-starter-kit/pull/1409).
 
 ## 2026-09-30
 
