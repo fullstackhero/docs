@@ -197,6 +197,14 @@ If the new language should be the default rather than an opt-in, set it on the b
 A language is only fully supported when it exists on **both** sides. If the backend ships `es-ES` but the app never registers it, the UI can't switch to it; if the app registers `es-ES` but the backend's `SupportedCultures.Tags` doesn't list it, server messages come back in the backend's default culture and the switcher's `PUT /identity/profile` is rejected. A tag that is listed but has no resx for some catalog falls back to that catalog's English at runtime. Add the backend resx files, the tag and the front-end catalogs together.
 </Callout>
 
+## Upgrading an existing project
+
+Three changes can break code you wrote on top of an earlier version of the kit:
+
+- **ProblemDetails `title` is localized.** For a `CustomException`, `title` used to be the exception type name (for example `CustomException`). It is now a localized title for the status code, such as `Forbidden` or `Proibido`. A client that branched on `title` should branch on the `code` extension instead, which carries the stable `MessageKey`.
+- **`PagedQueryValidator<T>` needs a localizer.** Its constructor now takes `IStringLocalizer<SharedResources>`, with no parameterless overload. Add it to your validator's constructor and pass it to the base class; validators are resolved from DI, so nothing else changes.
+- **`MessageKey`, `MessageArgs` and `ResourceSource` have private setters.** Code that set them through an object initializer on a `CustomException` no longer compiles. Use the `.Localized<T>(key, args)` factory instead (see [String resources](#string-resources)).
+
 ## Configuration
 
 Backend default culture (the default-culture step of the resolution chain). The section is optional and the shipped `appsettings.json` doesn't include it; when it is absent, or names a culture that isn't in `SupportedCultures.Tags`, the default is `en-US`:
