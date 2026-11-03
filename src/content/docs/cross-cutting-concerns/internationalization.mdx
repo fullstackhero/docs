@@ -1,6 +1,6 @@
 ---
 title: Internationalization (i18n)
-lastUpdated: 2026-10-02
+lastUpdated: 2026-11-03
 description: End-to-end localization across the backend and both React apps - en-US as default and fallback, pt-BR included, with per-user language, IStringLocalizer, RequestLocalization, and react-i18next.
 sidebar:
   label: Internationalization
@@ -157,7 +157,7 @@ Dates, numbers, and currency are formatted in the browser with `Intl` under the 
 
 ### Per-deployment default
 
-The default language for a deployment is set at runtime through the app's `config.json`, via the `defaultLanguage` key - consistent with how the front-ends take the rest of their environment configuration at runtime rather than from `VITE_*` build-time variables.
+The default language for a deployment is set at runtime through the app's `config.json`, via the `defaultLanguage` key - consistent with how the front-ends take the rest of their environment configuration at runtime rather than from `VITE_*` build-time variables. In the container images of both apps, set `FSH_DEFAULT_LANGUAGE` (for example `pt-BR`); leaving it unset gives `en-US`. `deploy/docker` passes it through from `.env`, and Terraform sets it on both static sites from `frontend_default_language`.
 
 ## Adding a language
 
