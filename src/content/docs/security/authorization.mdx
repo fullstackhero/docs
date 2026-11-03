@@ -1,6 +1,6 @@
 ---
 title: Authorization
-lastUpdated: 2026-06-11
+lastUpdated: 2026-11-03
 description: Permission-based authorization - fine-grained gates on every endpoint via .RequirePermission() with a flat registry, default + fallback policy wiring, and the silent-no-op gotcha that catches every team once.
 sidebar:
   label: Authorization
@@ -114,6 +114,27 @@ The equivalent attribute form:
 
 Both produce the same metadata - `.RequirePermission()` is literally `WithMetadata(new RequiredPermissionAttribute(...))`. `RequiredPermissionAuthorizationHandler` reads it from the endpoint's metadata via the `IRequiredPermissionMetadata` interface and checks the user's effective permission set. Endpoints with **no** permission metadata pass the handler (authentication is still enforced by the policy itself).
 
+Passing more than one permission requires **all** of them (AND, not OR):
+
+```csharp
+endpoints.MapPost("/products/{id}/stock", handler)
+         .RequirePermission(CatalogPermissions.Products.Update, CatalogPermissions.Products.AdjustStock);
+```
+
+A user holding only one of the two gets `403`. Before [#1415](https://github.com/fullstackhero/dotnet-starter-kit/issues/1415) the handler checked only the first permission and ignored the rest. Blank permission strings are dropped from the metadata; if nothing is left (for example `.RequirePermission("")`), the gate denies every request instead of opening.
+
+Gates stack across route groups. A `.RequirePermission()` on a group and another on an endpoint inside it are both enforced, so the caller needs every permission from both:
+
+```csharp
+var stock = endpoints.MapGroup("/stock")
+                     .RequirePermission(CatalogPermissions.Products.Update);
+
+stock.MapPost("/adjust", handler)
+     .RequirePermission(CatalogPermissions.Products.AdjustStock); // needs Update AND AdjustStock
+```
+
+Before [#1429](https://github.com/fullstackhero/dotnet-starter-kit/issues/1429) the handler read only the most specific metadata entry, so the endpoint's gate replaced the group's and a user holding only `AdjustStock` got through.
+
 ## Roles, groups, and aggregation
 
 - **Roles** are flat (no inheritance hierarchy). A user can be in multiple roles; the user's effective permission set is the **union** of every role's permission claims.
@@ -131,9 +152,30 @@ So a permission grant or revocation applies to live sessions within seconds - no
 
 ## The role-permission syncer
 
-`RolePermissionSyncer` (driven by `RolePermissionSyncHostedService` at startup) walks every tenant and inserts any **newly registered** permissions that are missing from the built-in `Admin` / `Basic` roles' claim rows. It's idempotent - only missing claims are added - and if it writes anything it drops the per-user permission cache so logged-in sessions pick the new permissions up immediately. This is what makes "add a permission to a module, restart, Admin can use it" work without a manual seeding step.
+`RolePermissionSyncer` (driven by `RolePermissionSyncHostedService` at startup) walks every tenant and makes the built-in `Admin` / `Basic` roles' permission claims match the permission catalog: it inserts any **newly registered** permission that is missing and removes any permission claim the catalog no longer grants to that role. It's idempotent, and if it writes anything it drops the per-user permission cache so logged-in sessions see the change immediately. This is what makes "add a permission to a module, restart, Admin can use it" work without a manual seeding step, and it works the same way in reverse: turning `IsBasic` off for a permission, or deleting a permission from a module, revokes it from every existing tenant's `Basic` (or `Admin`) role at the next start. Each removed claim is logged at Warning with the role, the permission and the tenant, so a mistaken change to the permission constants shows up in the logs instead of passing silently.
+
+The sync can be authoritative because the API refuses permission edits on the built-in roles, so there is no operator change to lose. The root tenant's `Admin` keeps the `IsRoot` permissions; only claims of type `permission` are reconciled, so other claim types on those roles are left alone.
 
 Custom roles are yours to manage - the syncer only touches the built-in two.
+
+### Hosts that load only some modules
+
+What the sync removes depends only on the modules the running process loaded, because each module registers its permissions at startup. If you run a second host (a worker, say) that registers `IdentityModule` with only some of the other modules, its catalog is partial, and at every start it would revoke the missing modules' permissions from `Admin` and `Basic` in every tenant. Turn removal off on that host:
+
+```jsonc
+// appsettings.json of the partial host
+{
+  "PermissionSyncOptions": {
+    "RemoveRevoked": false   // default true; env var: PermissionSyncOptions__RemoveRevoked=false
+  }
+}
+```
+
+With `RemoveRevoked` off, the sync still adds missing permissions but removes nothing, and logs that once at startup. Keep the default on the API host, which loads every module. Independently of the setting, a role whose catalog target comes out empty is never stripped: the sync logs a Warning and skips the removal for that role.
+
+Two instances starting at the same time can both try to remove the same claim, or both try to insert the same missing one. `identity.RoleClaims` has a unique index on `(RoleId, ClaimType, ClaimValue)`, so a role holds each permission once and the second insert is rejected by the database. In either case the instance that loses the race logs it at Information and moves on, because the other instance already wrote the same end state. The tenant seeder (`IdentityDbInitializer`) handles a rejected insert the same way, so a seed overlapping the startup sync on a new tenant doesn't fail either.
+
+During a rolling deploy, an instance still on a version before this behaviour only adds permissions, so if it restarts it puts a revoked claim back; the claim is removed again at the next start of a new-version instance.
 
 ## Anonymous endpoints
 
