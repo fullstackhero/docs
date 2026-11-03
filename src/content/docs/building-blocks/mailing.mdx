@@ -1,6 +1,6 @@
 ---
 title: Mailing building block
-lastUpdated: 2026-10-02
+lastUpdated: 2026-11-03
 description: SMTP or SendGrid email abstraction behind a single IMailService, with multi-recipient delivery and HTML body support.
 sidebar:
   label: Mailing
@@ -140,7 +140,7 @@ An unknown name (a typo such as `Plain`) makes the options fail to bind, so the 
 
 ### Local mail catcher (Docker Compose)
 
-`deploy/docker/docker-compose.yml` reads the SMTP target from `.env` and ships a [Mailpit](https://mailpit.axllent.org) service (`axllent/mailpit:v1.31.3`) under the `mail-catcher` compose profile. The defaults in `.env.example` enable that profile and point the API at it, so confirmation, password-reset and welcome e-mails work without an SMTP account, and none of them is delivered:
+`deploy/docker/docker-compose.yml` reads the SMTP target from `.env` and ships a [Mailpit](https://mailpit.axllent.org) service (`axllent/mailpit:v1.33.0`) under the `mail-catcher` compose profile. The defaults in `.env.example` enable that profile and point the API at it, so confirmation, password-reset and welcome e-mails work without an SMTP account, and none of them is delivered:
 
 ```bash
 # .env
