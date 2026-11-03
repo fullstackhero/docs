@@ -1,6 +1,6 @@
 ---
 title: Identity module
-lastUpdated: 2026-10-02
+lastUpdated: 2026-11-03
 description: JWT bearer + refresh tokens, ASP.NET Identity with roles + permissions, user groups, operator impersonation, two-factor TOTP, sessions, and password-policy enforcement.
 sidebar:
   label: Identity
@@ -189,7 +189,7 @@ Auth e-mail links resolve through `FrontendOptions` (a dedicated config, separat
 | POST | `/token/issue` | Login |
 | POST | `/token/refresh` | Rotate refresh token |
 | GET | `/profile` | Current user profile (returns a strong `ETag`) |
-| PUT | `/profile` | Update own profile (honours `If-Match`, answers `412` on a stale token) |
+| PUT | `/profile` | Update own profile (honours `If-Match`, answers `412` on a stale token). There is no e-mail field: an `email` in the body is ignored |
 | PUT | `/profile/image` | Set / clear profile image |
 | GET | `/permissions` | Current user permissions |
 | GET | `/permissions/catalog` | All registered permissions (catalog) |
