@@ -1,6 +1,6 @@
 ---
 title: Identity module
-lastUpdated: 2026-10-02
+lastUpdated: 2026-10-14
 description: JWT bearer + refresh tokens, ASP.NET Identity with roles + permissions, user groups, operator impersonation, two-factor TOTP, sessions, and password-policy enforcement.
 sidebar:
   label: Identity
@@ -257,9 +257,14 @@ Yes, the role-permission routes really are `/{id}/permissions` directly under `/
     "AccessTokenMinutes": 45,
     "RefreshTokenDays": 7,
     "SigningKey": "set via secrets manager or env var"
+  },
+  "PermissionSyncOptions": {
+    "RemoveRevoked": true               // startup sync also revokes what the catalog no longer grants
   }
 }
 ```
+
+Set `PermissionSyncOptions:RemoveRevoked` to `false` only on a host that registers `IdentityModule` without every other module; see [Authorization - hosts that load only some modules](/docs/security/authorization/#hosts-that-load-only-some-modules).
 
 Lockout is configured by `IdentityOptions` and defaults to 5 failed attempts → 15-minute lock. Outbox events are dispatched by the framework's `OutboxDispatcherHostedService` (on by default) - the module deliberately registers no dispatcher of its own, since a second one would race the same rows.
 
