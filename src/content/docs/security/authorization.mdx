@@ -173,7 +173,7 @@ What the sync removes depends only on the modules the running process loaded, be
 
 With `RemoveRevoked` off, the sync still adds missing permissions but removes nothing, and logs that once at startup. Keep the default on the API host, which loads every module. Independently of the setting, a role whose catalog target comes out empty is never stripped: the sync logs a Warning and skips the removal for that role.
 
-Two instances starting at the same time can both try to remove the same claim. The one that loses the race logs it at Information and moves on, because the other instance already wrote the same end state.
+Two instances starting at the same time can both try to remove the same claim, or both try to insert the same missing one. `identity.RoleClaims` has a unique index on `(RoleId, ClaimType, ClaimValue)`, so a role holds each permission once and the second insert is rejected by the database. In either case the instance that loses the race logs it at Information and moves on, because the other instance already wrote the same end state. The tenant seeder (`IdentityDbInitializer`) handles a rejected insert the same way, so a seed overlapping the startup sync on a new tenant doesn't fail either.
 
 During a rolling deploy, an instance still on a version before this behaviour only adds permissions, so if it restarts it puts a revoked claim back; the claim is removed again at the next start of a new-version instance.
 
