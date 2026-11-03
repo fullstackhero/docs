@@ -1,6 +1,6 @@
 ---
 title: Admin console
-lastUpdated: 2026-06-11
+lastUpdated: 2026-11-03
 description: The operator-facing React + Vite app at clients/admin - users, roles, tenants, impersonation, audits, billing, webhooks, health, notifications.
 sidebar:
   label: Admin console
@@ -79,6 +79,8 @@ await login({ email, password, tenant });
 // X-FSH-App: admin header so the API can enforce the operator-app boundary),
 // stores both tokens, then navigates to the post-login destination.
 ```
+
+If the account has two-factor authentication on, the first call answers `401` with `code: "Identity.TwoFactorRequired"` and the login card switches to a six-digit code step; the page then calls `login({ email, password, tenant, twoFactorCode })`. The password stays in component memory only for that retry. The dashboard login works the same way. See [Two-factor authentication](/docs/security/two-factor/#signing-in-from-the-react-apps).
 
 Token refresh is **reactive, not timer-based**: when any API call returns 401, the API client runs a single-flight refresh (`POST /api/v1/identity/token/refresh`) and retries the original request. At boot, if the stored access token is missing or expired but a refresh token exists, the auth context attempts one silent refresh before rendering protected routes. If a refresh fails (refresh token expired / revoked), the user is signed out and redirected to `/login`.
 
