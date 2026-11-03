@@ -1,6 +1,6 @@
 ---
 title: Eventing building block
-lastUpdated: 2026-08-07
+lastUpdated: 2026-11-03
 description: Event bus implementation (InMemory or RabbitMQ), outbox/inbox stores for durable delivery, and the open-generic handler registration that lets modules subscribe with one method.
 sidebar:
   label: Eventing
@@ -27,7 +27,7 @@ Publish goes through the outbox in the same transaction as your business write. 
 
 ### Event bus implementations
 
-- **`InMemoryEventBus`** - in-process. For each event it **sets the tenant context first** (`IEventTenantScope.Begin(event.TenantId)`), creates a fresh DI scope, resolves the matching handlers, checks the inbox (skip if already processed by that handler), awaits each handler in order, then marks the inbox row. Great for dev/test and single-process production hosts.
+- **`InMemoryEventBus`** - in-process. For each event it **sets the tenant context first** (`IEventTenantScope.Begin(event.TenantId)`), creates a fresh DI scope, resolves the matching handlers, checks the inbox (skip if already processed by that handler), awaits each handler in order, and marks the inbox row for each one that succeeds. A handler that throws doesn't stop the ones after it: every handler runs, then the failure is rethrown (an `AggregateException` when several fail) so the outbox retries the event, and the inbox skips the handlers that already succeeded. Great for dev/test and single-process production hosts.
 - **`RabbitMqEventBus`** - durable, cross-service; uses `RabbitMQ.Client` and publishes to a durable topic exchange (`EventingOptions:RabbitMQ`).
 
 ### Outbox / inbox
