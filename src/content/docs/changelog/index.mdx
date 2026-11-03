@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-10-14
+lastUpdated: 2026-11-03
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -11,9 +11,10 @@ seo:
 
 Notable changes to the kit, newest first.
 
-## 2026-10-14
+## 2026-11-03
 
 - **Dashboard: the overview welcomes the tenant by its name (fix).** The first-run card on a tenant with no subscription read "Welcome to" followed by the tenant identifier (for example `qpb2edshbj`), and the header caption showed the same identifier, because both came from the token's `tenant` claim. Both now use the tenant name from `GET /api/v1/tenants/me/status`, which the overview already loads for its "Valid for" card, and fall back to the identifier while that call is loading or has failed. No backend change. See [Tenant dashboard](/docs/frontend/dashboard/#page-inventory) and [#1437](https://github.com/fullstackhero/dotnet-starter-kit/pull/1437).
+- **Both apps: non-ASCII claims in the access token now render correctly (fix).** `decodeJwt` decoded the token payload with a bare `atob`, which returns one character per byte, while the payload is UTF-8. A display name like "Comitê de Ética" therefore showed as "ComitÃª de Ã‰tica" in the user menu and the overview greeting, even though the token and the database were correct. The payload bytes are now decoded as UTF-8 in both the dashboard and the admin console. No configuration change. See PR [#1439](https://github.com/fullstackhero/dotnet-starter-kit/pull/1439).
 
 ## 2026-10-09
 
