@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-10-09
+lastUpdated: 2026-11-03
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -10,6 +10,10 @@ seo:
 ---
 
 Notable changes to the kit, newest first.
+
+## 2026-11-03
+
+- **Admin & dashboard: sign-in now asks for the authenticator code when two-factor is on (fix).** Both apps let a user enable two-factor authentication under Settings > Security, but neither login page could send the code, so the next sign-in failed with `401 two_factor_required` and locked the user out. When `POST /api/v1/identity/token/issue` answers with the ProblemDetails `code` `Identity.TwoFactorRequired`, the login card now switches to a code step (six digits, `autocomplete="one-time-code"` so the browser or password manager can fill it), then repeats the call with `twoFactorCode`. A wrong code (`Identity.TwoFactorInvalid`) shows an inline error and keeps the user on the step; "Back to sign in" returns to the password step. The password is held only in the login page's memory for the retry, never in browser storage, and is dropped on back, success or leaving the page. The clients branch on the `code` extension, not the localized `detail` text. Recovery codes are still not supported. See [Two-factor authentication](/docs/security/two-factor/#signing-in-from-the-react-apps) and [#1446](https://github.com/fullstackhero/dotnet-starter-kit/issues/1446).
 
 ## 2026-10-09
 
