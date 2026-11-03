@@ -1,6 +1,6 @@
 ---
 title: fullstackhero vs ABP Framework
-lastUpdated: 2026-06-11
+lastUpdated: 2026-11-03
 description: A fair comparison of fullstackhero and ABP Framework for building production .NET 10 applications. License, architecture, learning curve, and when to pick which.
 sidebar:
   label: vs ABP Framework
@@ -32,7 +32,7 @@ ABP Framework and fullstackhero both target the same problem - getting a product
 | ORM | EF Core 10 (PostgreSQL via Npgsql by default; SQL Server provider available) | EF Core with abstraction layer + LINQ via repository pattern |
 | Background jobs | Hangfire 1.8 | ABP's `IBackgroundJobManager` (multiple providers) |
 | Realtime | SignalR + Server-Sent Events | SignalR via ABP modules |
-| Observability | Serilog 4 + OpenTelemetry 1.19 (OTLP exporter), pre-wired | OpenTelemetry support; configuration via ABP modules |
+| Observability | Serilog 4 + OpenTelemetry 1.20 (OTLP exporter), pre-wired | OpenTelemetry support; configuration via ABP modules |
 | Frontend included | React + Vite admin and dashboard, in the repo | MVC + Razor / Blazor / Angular options - Lepton theme is paid in ABP Commercial |
 | CLI scaffolding | `fsh new <name>` | `abp new <name>` (Studio offers a GUI) |
 | Stars (May 2026) | 6.4k★ | 14.2k★ |

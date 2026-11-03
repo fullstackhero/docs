@@ -1,6 +1,6 @@
 ---
 title: Introduction
-lastUpdated: 2026-09-25
+lastUpdated: 2026-11-03
 description: What fullstackhero is, what it ships with, and how it's put together.
 sidebar:
   label: Introduction
@@ -145,10 +145,10 @@ The API never mutates data on startup. Demo data (acme/globex tenants, sample ca
 | Storage             | Local filesystem or S3-compatible (AWS SDK)                             |
 | Messaging           | RabbitMQ client (optional)                                              |
 | Logging             | Serilog 4 (structured)                                                  |
-| Tracing / metrics   | OpenTelemetry 1.19 (OTLP exporter)                                      |
+| Tracing / metrics   | OpenTelemetry 1.20 (OTLP exporter)                                      |
 | API docs            | OpenAPI 10 + Scalar UI                                                  |
 | Errors              | `ProblemDetails` (RFC 9457) via global exception handler                |
-| Orchestration       | .NET Aspire 13.5 (Postgres + Valkey + RustFS + API + both React apps)   |
+| Orchestration       | .NET Aspire 13.6 (Postgres + Valkey + RustFS + API + both React apps)   |
 
 ### Frontends
 

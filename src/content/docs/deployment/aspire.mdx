@@ -1,6 +1,6 @@
 ---
 title: Local Orchestration with .NET Aspire
-lastUpdated: 2026-09-30
+lastUpdated: 2026-11-03
 description: What spins up when you run the AppHost, and the decisions behind the local topology - Postgres, Valkey, RustFS, the migrator, the API, and both React apps.
 sidebar:
   label: Local Orchestration (Aspire)
@@ -31,7 +31,7 @@ documents what it starts and **why** it's wired the way it is.
 | pgAdmin | *(sidecar)* | Web UI on **:5050**, auto-discovers every database on the server | Persistent |
 | Valkey | `redis` | Distributed cache (HybridCache L2) + SignalR backplane + Data Protection key ring (**Valkey** - a Redis-compatible, BSD-licensed Redis fork; resource name stays `redis`) | Persistent (data volume) |
 | RedisInsight | `redis-insight` | Key browser on **:5540**, pre-connected to the Valkey instance for inspecting cache keys in dev | Persistent |
-| RustFS | `rustfs` | S3-compatible object storage (`rustfs/rustfs:1.0.0`), **:9000** (S3 API) / **:9001** (web console) | Persistent (data volume) |
+| RustFS | `rustfs` | S3-compatible object storage (`rustfs/rustfs:1.0.4`), **:9000** (S3 API) / **:9001** (web console) | Persistent (data volume) |
 | RustFS init | `rustfs-init` | One-shot (`amazon/aws-cli`): creates the `fsh-uploads` bucket + an anonymous `GetObject` policy on `public/*` only (re-applied every run), then exits | Run-once |
 | DB migrator | `fsh-starter-db-migrator` | One-shot: applies migrations across the tenant catalog + every tenant's module DBs (`apply --seed`, so the root admin exists), then exits | Run-once |
 | Demo seeder | `fsh-starter-demo-seeder` | One-shot, **dev-only**: runs `seed-demo` after the migrator to provision the `acme`/`globex` demo tenants + users, then exits | Run-once |
@@ -93,7 +93,7 @@ two contexts.
 ### Valkey for caching and realtime, with a RedisInsight browser
 
 The cache engine is **Valkey** (a Redis-compatible, BSD-licensed Redis fork),
-pulled as `valkey/valkey:9.1.0`. It speaks the Redis protocol (RESP), so the
+pulled as `valkey/valkey:9.1.3`. It speaks the Redis protocol (RESP), so the
 .NET client (`StackExchange.Redis`) and every `CachingOptions:Redis` config key
 are unchanged - and the resource keeps the name `redis` in code. It backs the
 HybridCache L2, the SignalR backplane, and the Data Protection key ring
@@ -115,7 +115,8 @@ Keep it that way.
 
 <Callout type="warning" title="A Postgres major bump can strand your data volume">
 `AddPostgres("postgres")` doesn't pin an image tag - it tracks whatever the
-Aspire hosting package defaults to (PostgreSQL 18 as of Aspire 13.4). When a
+Aspire hosting package defaults to (PostgreSQL 18 since Aspire 13.4; Aspire 13.6
+still ships `postgres:18.3`, so moving from 13.5 to 13.6 keeps your volume). When a
 package update jumps a Postgres **major** version, the persistent
 `*-postgres-data` volume written by the older major can't be read and the
 container exits. Recovery for local dev data: remove the volume and relaunch -

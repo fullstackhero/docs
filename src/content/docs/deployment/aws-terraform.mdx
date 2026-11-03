@@ -1,6 +1,6 @@
 ---
 title: Deploy to AWS with Terraform
-lastUpdated: 2026-09-30
+lastUpdated: 2026-11-03
 description: End-to-end AWS deployment - prerequisites, bootstrapping the state backend, configuring an environment, and the one-command deploy that ships the API and both React apps.
 sidebar:
   label: AWS (Terraform)
@@ -69,7 +69,7 @@ ACM cert (in `us-east-1` for CloudFront) and DNS when you're ready.
 
 <Callout type="warning" title="Terraform 1.15.4 is the floor">
 The configuration pins `required_version >= 1.15.4` and the AWS provider to
-`~> 6.46`. An older CLI will be rejected at `terraform init`. Upgrade with e.g.
+`~> 6.71`. An older CLI will be rejected at `terraform init`. Upgrade with e.g.
 `choco upgrade terraform` (Windows), `brew upgrade terraform` (macOS), or your
 package manager. A committed `.terraform.lock.hcl` keeps provider versions
 identical across machines and CI.
