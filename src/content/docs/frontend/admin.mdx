@@ -64,7 +64,7 @@ The route definitions live in `clients/admin/src/routes.tsx`; pages beyond the s
 - `auth-context.tsx` - React context providing the signed-in user, `login`, `logout`, and `refreshPermissions`.
 - `api.ts` - `issueToken()` wraps the login endpoint.
 - `token-store.ts` - wraps localStorage for access + refresh tokens and the active tenant.
-- `jwt.ts` - base64url decode + claim parsing (no library needed for read-only access).
+- `jwt.ts` - base64url decode (payload bytes read as UTF-8, so non-ASCII claims such as an accented display name stay intact) + claim parsing, no library needed for read-only access.
 - `protected-route.tsx` - route guard that requires authentication; redirects to `/login` if not.
 - `route-guard.tsx` - permission-aware wrapper; renders `<ForbiddenView>` if the user lacks the required permissions.
 - `use-auth.ts` - hook for accessing the context from components.

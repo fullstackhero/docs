@@ -1,6 +1,6 @@
 ---
 title: Local development
-lastUpdated: 2026-09-26
+lastUpdated: 2026-10-14
 description: Running the React frontends with Vite HMR, building for production, deploying to static hosts or behind Nginx, runtime config via /config.json.
 sidebar:
   label: Local development
@@ -113,6 +113,9 @@ The dashboard's variant swaps `dashboardUrl` for a `demoMode` flag (login-page d
 # clients/{app}/docker/docker-entrypoint.sh
 : "${FSH_API_URL:?FSH_API_URL is required (e.g. https://api.example.com)}"
 : "${FSH_DEFAULT_TENANT:=root}"
+: "${FSH_INACTIVITY_IDLE_MS:=600000}"      # admin; the dashboard defaults to 1200000
+: "${FSH_INACTIVITY_WARNING_MS:=60000}"
+# ...exits with an error unless both inactivity values are positive integers
 
 envsubst < /etc/fsh/config.json.template \
        > /usr/share/nginx/html/config.json
@@ -127,6 +130,8 @@ The template lives at `/etc/fsh/config.json.template`, outside the web root, so 
 {
   "apiBase": "${FSH_API_URL}",
   "defaultTenant": "${FSH_DEFAULT_TENANT}",
+  "inactivityIdleMs": ${FSH_INACTIVITY_IDLE_MS},
+  "inactivityWarningMs": ${FSH_INACTIVITY_WARNING_MS},
   "dashboardUrl": "${FSH_DASHBOARD_URL}"
 }
 ```
@@ -138,6 +143,16 @@ docker run -e FSH_API_URL=https://api.example.com -e FSH_DASHBOARD_URL=https://a
 ```
 
 The same image runs everywhere; only env vars differ.
+
+| Variable | Apps | Default | Maps to |
+|---|---|---|---|
+| `FSH_API_URL` | both | required | `apiBase` |
+| `FSH_DASHBOARD_URL` | admin | required | `dashboardUrl` |
+| `FSH_DEFAULT_TENANT` | both | `root` | `defaultTenant` |
+| `FSH_INACTIVITY_IDLE_MS` | both | admin `600000` (10 min), dashboard `1200000` (20 min) | `inactivityIdleMs` |
+| `FSH_INACTIVITY_WARNING_MS` | both | `60000` (60 s) | `inactivityWarningMs` |
+
+The two inactivity values are bare JSON numbers in the template, so the entrypoint validates them: unset or empty keeps the default, and anything that is not a positive integer (`abc`, `0`, `-5`, `1.5`) stops the container at start with an error instead of serving a broken `config.json`. The entrypoint defaults mirror the ones in each app's `src/env.ts`; change both together. The Docker Compose deployment reads `FSH_ADMIN_INACTIVITY_IDLE_MS`, `FSH_DASHBOARD_INACTIVITY_IDLE_MS` and `FSH_INACTIVITY_WARNING_MS` from `.env`, because the two apps default to different idle times.
 
 ### Reading runtime config in code
 
