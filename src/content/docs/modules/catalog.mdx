@@ -1,6 +1,6 @@
 ---
 title: Catalog module
-lastUpdated: 2026-09-25
+lastUpdated: 2026-09-30
 description: Production-grade product catalogue - brands, hierarchical categories, products with multi-image support, price + stock domain events, and soft delete.
 sidebar:
   label: Catalog
@@ -25,7 +25,7 @@ If you're adding a new domain-heavy module to your fork, copy the Catalog folder
 - **Products** - SKU, name, slug, description, brand, category, `Money` price (value object), stock, active flag. Full CRUD plus soft delete, restore, paginated search with filters.
 - **Multi-image products** - each product owns an ordered collection of `ProductImage` entries. The aggregate guarantees exactly one thumbnail, contiguous sort order, and automatic promotion when the current thumbnail is removed.
 - **Domain events** - `ProductCreatedDomainEvent`, `ProductPriceChangedDomainEvent`, `ProductStockAdjustedDomainEvent` for cross-module reactions.
-- **Files-module integration** - `ProductFileAccessPolicy` registers the `Product` owner type with the Files module: attach requires an authenticated caller (the durable gate is the product-update permission when the image lands on the product), read is public (product images ship with `Visibility=Public`), delete is uploader-only. Orphaned uploads that never attach are reaped by the Files orphan-purge job.
+- **Files-module integration** - `ProductFileAccessPolicy` registers the `Product` owner type with the Files module: attach requires an authenticated caller (the durable gate is the product-update permission when the image lands on the product), read is public (product images ship with `Visibility=Public`), delete is uploader-only. Orphaned uploads that never attach are reaped by the Files orphan-purge job. `FileStorageKeyChangedProductImageHandler` keeps each `ProductImage.Url` pointing at its file when Files moves the object (a visibility change or the legacy `public/` migration); an index on `ProductImages.FileAssetId` backs its lookup.
 - **16 fine-grained permissions** - View, Create, Update, Delete, Restore per resource (brand / category / product), plus `Catalog.Products.AdjustStock`.
 - **28 endpoints** under `/api/v1/catalog/...`.
 - **Recycle bin** - the soft-delete trash/restore endpoints back the tenant dashboard's Trash page (products, categories, and brands tabs, permission-gated).

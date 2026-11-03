@@ -1,6 +1,6 @@
 ---
 title: Background jobs
-lastUpdated: 2026-06-11
+lastUpdated: 2026-09-30
 description: Hangfire 1.8 wired with tenant context preservation, DI-aware scoped activation, OpenTelemetry instrumentation, and a basic-auth-gated dashboard.
 sidebar:
   label: Background jobs
@@ -60,6 +60,8 @@ Hangfire serializes the call signature; the activator resolves `SendInvoiceEmail
 | `PurgeDeletedFilesJob` (`files-purge-deleted`) | Files | `30 3 * * *` - 03:30 UTC daily |
 | `AuditRetentionJob` (`auditing-retention`) | Auditing | `30 3 * * *` default (configurable; the job is a no-op until `Auditing:Retention:Enabled` is true) |
 | `TenantExpiryScanJob` (`tenant-expiry-scan`) | Multitenancy | `0 2 * * *` - 02:00 UTC daily |
+
+One job is enqueued rather than scheduled: the Files module enqueues `MigrateLegacyPublicFileKeysJob` through `IJobService` on every API start. It moves public files uploaded before visibility lived in the storage key under `public/`, per tenant, and is nearly free once nothing is left to move. It retries 3 times (after 1, 5 and 30 minutes). See [Files - legacy key migration](/docs/modules/files/#legacy-key-migration).
 
 The eventing outbox is **not** a Hangfire job - it's dispatched by the framework's `OutboxDispatcherHostedService`. (The host even ships a cleanup service that removes retired `{module}-outbox-dispatcher` recurring jobs from older deployments.)
 

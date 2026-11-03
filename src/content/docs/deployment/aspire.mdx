@@ -1,6 +1,6 @@
 ---
 title: Local Orchestration with .NET Aspire
-lastUpdated: 2026-09-25
+lastUpdated: 2026-09-30
 description: What spins up when you run the AppHost, and the decisions behind the local topology - Postgres, Valkey, RustFS, the migrator, the API, and both React apps.
 sidebar:
   label: Local Orchestration (Aspire)
@@ -32,7 +32,7 @@ documents what it starts and **why** it's wired the way it is.
 | Valkey | `redis` | Distributed cache (HybridCache L2) + SignalR backplane + Data Protection key ring (**Valkey** - a Redis-compatible, BSD-licensed Redis fork; resource name stays `redis`) | Persistent (data volume) |
 | RedisInsight | `redis-insight` | Key browser on **:5540**, pre-connected to the Valkey instance for inspecting cache keys in dev | Persistent |
 | RustFS | `rustfs` | S3-compatible object storage (`rustfs/rustfs:1.0.0`), **:9000** (S3 API) / **:9001** (web console) | Persistent (data volume) |
-| RustFS init | `rustfs-init` | One-shot (`amazon/aws-cli`): creates the `fsh-uploads` bucket + a public-read `GetObject` policy, then exits | Run-once |
+| RustFS init | `rustfs-init` | One-shot (`amazon/aws-cli`): creates the `fsh-uploads` bucket + an anonymous `GetObject` policy on `public/*` only (re-applied every run), then exits | Run-once |
 | DB migrator | `fsh-starter-db-migrator` | One-shot: applies migrations across the tenant catalog + every tenant's module DBs (`apply --seed`, so the root admin exists), then exits | Run-once |
 | Demo seeder | `fsh-starter-demo-seeder` | One-shot, **dev-only**: runs `seed-demo` after the migrator to provision the `acme`/`globex` demo tenants + users, then exits | Run-once |
 | API | `fsh-starter-api` | The ASP.NET Core API (`net10.0`) | Long-running |
@@ -74,6 +74,13 @@ presigned-URL upload flow (browser → storage directly, bytes never proxied
 through the API) is exercised end-to-end in dev. RustFS is configured to accept
 browser PUTs from the admin (`:5173`) and dashboard (`:5174`) origins via
 `RUSTFS_CORS_ALLOWED_ORIGINS`. The root credentials come from the `rustfs-user` / `rustfs-password` AppHost parameters (default `rustfsadmin`).
+
+The bucket policy mirrors production: anonymous reads are allowed on
+`fsh-uploads/public/*` only, where the API keeps public files (avatars, product
+images). Private files live under `private/` and need a presigned URL, so dev
+enforces the same boundary prod does. The API gets
+`Storage__S3__PublicBaseUrl` = `{rustfs S3 endpoint}/fsh-uploads` for its public
+URLs. See [Storage - key layout and visibility](/docs/building-blocks/storage/#key-layout-and-visibility).
 
 ### The migrator is the production deploy step too
 

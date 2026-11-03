@@ -1,6 +1,6 @@
 ---
 title: Two-factor authentication (TOTP)
-lastUpdated: 2026-06-11
+lastUpdated: 2026-10-14
 description: Opt-in TOTP enrolment for any user - shared secret + otpauth URI, verify, password-confirmed disable, with TOTP-required token issuance once enrolled.
 sidebar:
   label: Two-factor (TOTP)
@@ -25,7 +25,7 @@ The kit doesn't force 2FA. A reasonable production posture is to make TOTP **man
    ↓
 2. Identity module:
    - Generates (or rotates) the user's authenticator shared secret
-   - Builds the otpauth:// URI (issuer "FullStackHero")
+   - Builds the otpauth:// URI (issuer from TwoFactorOptions:Issuer)
    - Returns { sharedKey, authenticatorUri }
    ↓
 3. Client renders authenticatorUri as a QR code; user scans it,
@@ -78,14 +78,30 @@ public async ValueTask<TwoFactorEnrollmentResponse> Handle(EnrollTwoFactorComman
     await _userManager.ResetAuthenticatorKeyAsync(user);
     var sharedKey = await _userManager.GetAuthenticatorKeyAsync(user);
 
-    var authenticatorUri = $"otpauth://totp/FullStackHero:{user.Email}" +
-                           $"?secret={sharedKey}&issuer=FullStackHero&digits=6";
+    // _options is IOptions<TwoFactorOptions>.Value; the issuer is percent-encoded in both places
+    var issuer = UrlEncoder.Default.Encode(_options.Issuer);
+    var authenticatorUri = $"otpauth://totp/{issuer}:{UrlEncoder.Default.Encode(user.Email)}" +
+                           $"?secret={sharedKey}&issuer={issuer}&digits=6";
 
     return new TwoFactorEnrollmentResponse(sharedKey, authenticatorUri);
 }
 ```
 
 The `otpauth://` URI is the RFC 6238 standard format that every authenticator app understands. The client (not the server) renders it as a QR code; the raw `sharedKey` is returned too, for users who can't scan.
+
+### Issuer name
+
+The issuer is the name the authenticator app shows next to the account. It comes from `TwoFactorOptions:Issuer` and defaults to `FullStackHero` (a project created with `fsh new` or `dotnet new fsh` gets its own display name instead), so set it to your product name:
+
+```json
+{
+  "TwoFactorOptions": {
+    "Issuer": "Acme"
+  }
+}
+```
+
+Or through the environment: `TwoFactorOptions__Issuer=Acme`. The value is percent-encoded in both the label and the `issuer=` parameter, so names with spaces or accents (`Canal Correto`, `Ação`) produce a valid URI. A blank issuer fails options validation at startup. Changing it only affects new enrolments: users who enrolled earlier keep the old name in their app, and their codes keep working because the shared secret does not change. They see the new name after they disable and enrol again.
 
 ## Validating during login
 

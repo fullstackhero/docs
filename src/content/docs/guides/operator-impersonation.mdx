@@ -1,6 +1,6 @@
 ---
 title: Operator impersonation walkthrough
-lastUpdated: 2026-05-19
+lastUpdated: 2026-09-28
 description: End-to-end guide to using operator impersonation from the admin console - starting a grant, acting as the user, ending or revoking, reading the audit trail.
 sidebar:
   label: Operator impersonation
@@ -139,7 +139,7 @@ Under the hood:
 
 The admin console adds the right `tenant: <target-tenant>` header to outbound calls automatically. From the operator's point of view, it just works.
 
-For the mechanics of why this needs post-auth middleware rather than Finbuckle's pre-auth claim strategy, see the [multitenancy deep-dive](/docs/architecture/multitenancy-deep-dive/).
+For why this needs post-auth middleware (Finbuckle's claim strategy resolves the operator to `root` before the header is read), see the [multitenancy deep-dive](/docs/architecture/multitenancy-deep-dive/).
 
 ## Audit query examples
 

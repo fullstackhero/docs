@@ -1,6 +1,6 @@
 ---
 title: Mailing building block
-lastUpdated: 2026-09-25
+lastUpdated: 2026-10-02
 description: SMTP or SendGrid email abstraction behind a single IMailService, with multi-recipient delivery and HTML body support.
 sidebar:
   label: Mailing
@@ -82,12 +82,12 @@ Always pair it with a `TextBody` alternative.
 
 ### Implementations
 
-- **`SmtpMailService`** - uses MailKit + MimeKit. Reads `MailOptions:Smtp:*` for host, port, credentials; connects with STARTTLS per send.
+- **`SmtpMailService`** - uses MailKit + MimeKit. Reads `MailOptions:Smtp:*` for host, port, credentials and connection security; opens a connection per send with the `MailOptions:Smtp:Security` mode (STARTTLS unless configured otherwise).
 - **`SendGridMailService`** - uses the SendGrid SDK via the shared `ISendGridClient`. One API call per `MailRequest`; the first `To` address is the primary recipient, `Cc`/`Bcc`/`ReplyTo`/attachments map onto the SendGrid message.
 
 ### Options
 
-- **`MailOptions`** - `From`, `DisplayName`, `UseSendGrid` (bool), `Smtp` (`Host` / `Port` / `UserName` / `Password`), `SendGrid` (`ApiKey` plus optional `From` / `DisplayName` overrides).
+- **`MailOptions`** - `From`, `DisplayName`, `UseSendGrid` (bool), `Smtp` (`Host` / `Port` / `UserName` / `Password` / `Security`), `SendGrid` (`ApiKey` plus optional `From` / `DisplayName` overrides).
 
 ## How modules consume Mailing
 
@@ -119,11 +119,43 @@ Identity uses this shape for its email flows: email confirmation, password reset
       "Host": "smtp.example.com",
       "Port": 587,
       "UserName": "smtp-user",
-      "Password": "set-via-secrets"
+      "Password": "set-via-secrets",
+      "Security": "StartTls"
     }
   }
 }
 ```
+
+`Security` is MailKit's `SecureSocketOptions`, bound by name. It defaults to `StartTls`, which is what the service always did before the setting existed, so leaving it out changes nothing.
+
+| Value | Use it for |
+|---|---|
+| `StartTls` (default) | Submission on port 587: connect in plain text, then upgrade with STARTTLS. Fails with `NotSupportedException` if the server does not offer STARTTLS. |
+| `SslOnConnect` | Implicit TLS, usually port 465. |
+| `StartTlsWhenAvailable` | Upgrade if the server offers STARTTLS, otherwise stay in plain text. |
+| `Auto` | Let MailKit pick the TLS mode; if the server supports no SSL or TLS, the connection continues unencrypted. |
+| `None` | Plain SMTP with no TLS, for a local catcher such as Mailpit, MailHog or smtp4dev. Never for a real provider: credentials and mail would cross the network unencrypted. |
+
+An unknown name (a typo such as `Plain`) makes the options fail to bind, so the API does not start rather than guessing a mode.
+
+### Local mail catcher (Docker Compose)
+
+`deploy/docker/docker-compose.yml` reads the SMTP target from `.env` and ships a [Mailpit](https://mailpit.axllent.org) service (`axllent/mailpit:v1.31.3`) under the `mail-catcher` compose profile. The defaults in `.env.example` enable that profile and point the API at it, so confirmation, password-reset and welcome e-mails work without an SMTP account, and none of them is delivered:
+
+```bash
+# .env
+COMPOSE_PROFILES=mail-catcher
+FSH_SMTP_HOST=mailpit
+FSH_SMTP_PORT=1025
+FSH_SMTP_SECURITY=None
+FSH_SMTP_USERNAME=
+FSH_SMTP_PASSWORD=
+FSH_MAIL_FROM=no-reply@fsh.local
+```
+
+The compose file maps these to `MailOptions__Smtp__Host`, `Port`, `Security`, `UserName`, `Password` and `MailOptions__From` on the `api` service. Mailpit's SMTP port stays on the compose network. Its inbox UI is published on the host loopback only, at `http://localhost:8025` (`FSH_MAILPIT_PORT`), because it holds live password-reset and confirmation links.
+
+For real delivery, edit `.env` only, never the compose file: set the `FSH_SMTP_*` values to your provider (`FSH_SMTP_SECURITY=StartTls` on port 587, `SslOnConnect` on 465), set `FSH_MAIL_FROM` to a sender it accepts (`appsettings.Production.json` leaves `MailOptions:From` blank), and delete the `COMPOSE_PROFILES` line so the catcher no longer runs.
 
 ### SendGrid
 

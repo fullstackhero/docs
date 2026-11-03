@@ -1,6 +1,6 @@
 ---
 title: Tenant dashboard
-lastUpdated: 2026-09-25
+lastUpdated: 2026-10-14
 description: The end-user-facing React + Vite app at clients/dashboard - catalog, chat, files, tickets, invoices, identity admin, plus real-time SignalR + SSE feeds.
 sidebar:
   label: Tenant dashboard
@@ -57,6 +57,7 @@ Plus shared chrome (sidebar, top bar, notification bell, command palette) in `cl
 
 A few notes:
 
+- **Overview** names the tenant (first-run "Welcome to ..." card and the header caption) from `GET /api/v1/tenants/me/status`, not from the token's `tenant` claim, which only carries the identifier. While that call is loading or has failed, the identifier is shown instead.
 - **Settings → API keys** is an honest "coming soon" placeholder, not a hidden 404.
 - **System → Trash** is the cross-module recycle bin (products, brands, categories, tickets, files). Its tabs - and the nav entry itself - are permission-gated client-side to mirror the server's restore/view-trash permissions, so users never click into a guaranteed 403.
 - The dashboard has no per-route `RouteGuard` like admin; auth is enforced by `ProtectedRoute`, and permission checks gate navigation entries + in-page actions.
@@ -192,7 +193,7 @@ The context handles:
 - Automatic reconnect with backoff + jitter (capped at 60 s), with status (`idle / connecting / connected / reconnecting / error`) surfaced as a state pill.
 - Transport negotiation (WebSockets, then SSE, then long-polling) for proxy-hostile networks.
 
-**SSE** - `clients/dashboard/src/sse/sse-context.tsx` streams the live activity feed. The client first exchanges its JWT for a short-lived stream token (`POST /api/v1/sse/token`), then opens `GET /api/v1/sse/stream?token=...` and parses the `text/event-stream` itself (fetch + ReadableStream, with reconnect/backoff). Overview and the Activity page render the same event buffer.
+**SSE** - `clients/dashboard/src/sse/sse-context.tsx` streams the live activity feed. The client first exchanges its JWT for a short-lived stream token (`POST /api/v1/sse/token`), then opens `GET /api/v1/sse/stream?token=...` and parses the `text/event-stream` itself (fetch + ReadableStream, with reconnect/backoff). Overview and the Activity page render the same event buffer. The buffer lives in memory only and is empty after a refresh; the Activity page adds a **Recent history** section (latest 25 audits, loaded once per visit) for users with `Permissions.AuditTrails.View`, and the Overview's Recent audits card is gated on the same permission.
 
 <Screenshot src="/screenshots/dashboard/realtime-status-pill.png"
             alt="Realtime status pill in the sidebar"
