@@ -1,6 +1,6 @@
 ---
 title: Authorization
-lastUpdated: 2026-10-14
+lastUpdated: 2026-11-03
 description: Permission-based authorization - fine-grained gates on every endpoint via .RequirePermission() with a flat registry, default + fallback policy wiring, and the silent-no-op gotcha that catches every team once.
 sidebar:
   label: Authorization
@@ -122,6 +122,18 @@ endpoints.MapPost("/products/{id}/stock", handler)
 ```
 
 A user holding only one of the two gets `403`. Before [#1415](https://github.com/fullstackhero/dotnet-starter-kit/issues/1415) the handler checked only the first permission and ignored the rest. Blank permission strings are dropped from the metadata; if nothing is left (for example `.RequirePermission("")`), the gate denies every request instead of opening.
+
+Gates stack across route groups. A `.RequirePermission()` on a group and another on an endpoint inside it are both enforced, so the caller needs every permission from both:
+
+```csharp
+var stock = endpoints.MapGroup("/stock")
+                     .RequirePermission(CatalogPermissions.Products.Update);
+
+stock.MapPost("/adjust", handler)
+     .RequirePermission(CatalogPermissions.Products.AdjustStock); // needs Update AND AdjustStock
+```
+
+Before [#1429](https://github.com/fullstackhero/dotnet-starter-kit/issues/1429) the handler read only the most specific metadata entry, so the endpoint's gate replaced the group's and a user holding only `AdjustStock` got through.
 
 ## Roles, groups, and aggregation
 
