@@ -1,6 +1,6 @@
 ---
 title: Frontend architecture
-lastUpdated: 2026-10-14
+lastUpdated: 2026-11-03
 description: Shared patterns across the admin + dashboard apps - folder layout, API client, route guards, realtime context, error handling, ProblemDetails parsing.
 sidebar:
   label: Architecture
@@ -22,7 +22,7 @@ If you're forking only the dashboard (deleting admin), copy admin's audit-log vi
 
 ```
 clients/{app}/
-├── package.json              React 19, Vite 7, TS 5.x, TanStack Query, Radix, etc.
+├── package.json              React 19, Vite 8, TS 6.0, TanStack Query, Radix, etc.
 ├── vite.config.ts            Vite + React + Tailwind plugins + dev proxy config
 ├── tsconfig.json
 ├── index.html                Single-page-app shell

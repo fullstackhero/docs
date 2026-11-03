@@ -77,7 +77,7 @@ need a `NUGET_API_KEY` repository secret to push packages to NuGet.org.
 
 ## frontend.yml - lint, build, E2E
 
-Triggers on pushes and PRs to `main` (and manual dispatch). A `Detect changes` job gates the work on `clients/**`. Both apps run as a matrix (`admin`, `dashboard`) on **Node 22** with npm caching.
+Triggers on pushes and PRs to `main` (and manual dispatch). A `Detect changes` job gates the work on `clients/**`. Both apps run as a matrix (`admin`, `dashboard`) on **Node 26** with npm caching.
 
 | Job | Runs when | What it does |
 |---|---|---|

@@ -7,7 +7,7 @@ sidebar:
 pageType: guide
 seo:
   title: 'Prerequisites - .NET 10 SDK, Docker, Node setup'
-  description: 'Tools you need before running fullstackhero locally: .NET 10 SDK, Docker (for Postgres, Valkey, and RustFS containers), and optional Node 20+ for the React frontends.'
+  description: 'Tools you need before running fullstackhero locally: .NET 10 SDK, Docker (for Postgres, Valkey, and RustFS containers), and optional Node 20.19+ or 22.13+ for the React frontends.'
   keywords: '.NET 10 SDK install, fullstackhero prerequisites, .NET development environment'
 ---
 
@@ -23,7 +23,7 @@ No separate Aspire install is needed: the AppHost project pulls the Aspire SDK (
 
 ## Optional
 
-- **Node 20+** - only if you'll run the React + Vite frontends in `clients/admin` and `clients/dashboard` (both declare `"node": ">=20"`).
+- **Node 20.19+ or 22.13+** - only if you'll run the React + Vite frontends in `clients/admin` and `clients/dashboard` (both declare `"node": "^20.19.0 || >=22.13.0"`, the floor Vite 8 and ESLint 10 need). CI and the container builds use Node 26, the current LTS.
 - **PostgreSQL** - install locally only if you'd rather not run Postgres in a container. Otherwise Aspire provisions one for you (the kit's containers run Postgres 18).
 - **Valkey** - same. The kit runs Valkey 9 in its containers (a Redis-compatible, BSD-licensed Redis fork); any Redis-protocol server also works.
 

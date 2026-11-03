@@ -23,15 +23,15 @@ seo:
 | | Version | Used for |
 |---|---|---|
 | React | 19.x | UI framework |
-| Vite | 7.x | Dev server + build |
-| TypeScript | 5.x | Type safety |
+| Vite | 8.x | Dev server + build (Rolldown) |
+| TypeScript | 6.0 | Type safety |
 | TanStack Query | 5.x | Server-state cache + mutations |
 | React Router | 7.x | Routing + protected routes |
-| react-hook-form + zod | 7.x / 3.x | Forms + schema validation (admin only - the dashboard doesn't use them) |
+| react-hook-form + zod | 7.x / 4.x | Forms + schema validation (admin only - the dashboard doesn't use them) |
 | @microsoft/signalr | 10.x | Realtime connection to the kit's hub |
 | Tailwind CSS | 4.x | Styling (shadcn-style, with CVA) |
 | Radix UI | 1.x–2.x | Headless primitives (Dialog, DropdownMenu, etc.) |
-| Lucide | 0.4xx | Icon set |
+| Lucide | 1.x | Icon set |
 | Playwright | 1.x | Route-mocked E2E tests (`npm run test:e2e`) |
 
 All pinned in `clients/admin/package.json`.
@@ -226,7 +226,7 @@ npm install
 npm run dev               # http://localhost:5173 with HMR
 ```
 
-The Vite dev server proxies `/api`, `/health`, `/openapi`, and `/scalar` to the backend - `http://localhost:5030` by default, overridable with a `VITE_API_BASE_URL` env var (this var only steers the **dev proxy target**; it is never baked into a build). Runtime configuration - API base URL, default tenant, inactivity timings - comes from `public/config.json`, fetched once at boot before React mounts.
+The Vite dev server proxies `/api` (with WebSocket forwarding for SignalR), `/health`, `/openapi`, and `/scalar` to the backend - `http://localhost:5030` by default, overridable with a `VITE_API_BASE_URL` env var (this var only steers the **dev proxy target**; it is never baked into a build). Runtime configuration - API base URL, default tenant, inactivity timings - comes from `public/config.json`, fetched once at boot before React mounts.
 
 The kit's Aspire AppHost wires all of this automatically when you run `dotnet run --project src/Host/FSH.Starter.AppHost` - the API, admin, and dashboard all come up together.
 
