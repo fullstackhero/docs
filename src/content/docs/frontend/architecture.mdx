@@ -1,6 +1,6 @@
 ---
 title: Frontend architecture
-lastUpdated: 2026-06-11
+lastUpdated: 2026-11-03
 description: Shared patterns across the admin + dashboard apps - folder layout, API client, route guards, realtime context, error handling, ProblemDetails parsing.
 sidebar:
   label: Architecture
@@ -22,7 +22,7 @@ If you're forking only the dashboard (deleting admin), copy admin's audit-log vi
 
 ```
 clients/{app}/
-├── package.json              React 19, Vite 7, TS 5.x, TanStack Query, Radix, etc.
+├── package.json              React 19, Vite 8, TS 6.0, TanStack Query, Radix, etc.
 ├── vite.config.ts            Vite + React + Tailwind plugins + dev proxy config
 ├── tsconfig.json
 ├── index.html                Single-page-app shell
@@ -261,7 +261,7 @@ In dev, Vite serves `public/config.json`; in production, the Nginx container ren
 
 ### Inactivity auto sign-out
 
-Both apps auto-sign-out idle sessions: admin after 10 minutes, dashboard after 20, each with a 60-second warning countdown - all four numbers configurable per deploy in `config.json`. The last-activity timestamp is shared across tabs via the `fsh.lastActivity` localStorage key so activity in any tab keeps the whole session alive.
+Both apps auto-sign-out idle sessions: admin after 10 minutes, dashboard after 20, each with a 60-second warning countdown - all four numbers configurable per deploy in `config.json`. In the container images set `FSH_INACTIVITY_IDLE_MS` and `FSH_INACTIVITY_WARNING_MS` (milliseconds); see [development](/docs/frontend/development/#the-container-pattern). The last-activity timestamp is shared across tabs via the `fsh.lastActivity` localStorage key so activity in any tab keeps the whole session alive.
 
 ## What both apps don't do
 

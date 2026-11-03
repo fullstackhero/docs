@@ -1,6 +1,6 @@
 ---
 title: Integration tests
-lastUpdated: 2026-09-25
+lastUpdated: 2026-11-03
 description: WebApplicationFactory in-process API tests against Testcontainers Postgres + RustFS - one container set, all modules, real round trips.
 sidebar:
   label: Integration tests
@@ -12,7 +12,7 @@ seo:
   keywords: 'webapplicationfactory dotnet, testcontainers postgres .net 10, integration test asp.net core, in-process api test, testcontainers rustfs s3'
 ---
 
-Integration tests in fullstackhero spin up real infrastructure in containers - PostgreSQL 17 and RustFS (S3-compatible) - and exercise the API end-to-end through `Microsoft.AspNetCore.Mvc.Testing`'s `WebApplicationFactory<T>`. One factory (and therefore one container set) serves the entire `Integration.Tests` project via an xUnit collection fixture, so the startup cost is paid once and the per-test cost is small.
+Integration tests in fullstackhero spin up real infrastructure in containers - PostgreSQL 18 and RustFS (S3-compatible) - and exercise the API end-to-end through `Microsoft.AspNetCore.Mvc.Testing`'s `WebApplicationFactory<T>`. One factory (and therefore one container set) serves the entire `Integration.Tests` project via an xUnit collection fixture, so the startup cost is paid once and the per-test cost is small.
 
 <Callout type="tip" title="One project, one container set, all modules">
 Splitting integration tests into per-module projects would mean per-project container startup. The single project shares one factory + one container set across every test class, runs faster, and you don't have to think about container leakage across boundaries.
@@ -23,11 +23,11 @@ Splitting integration tests into per-module projects would mean per-project cont
 | Layer | Library | Purpose |
 |---|---|---|
 | Host | `Microsoft.AspNetCore.Mvc.Testing` | `WebApplicationFactory<Program>` for the in-process API |
-| Containers | `Testcontainers.PostgreSql` + generic `Testcontainers` (`ContainerBuilder`) 4.14 | `postgres:17-alpine` + `rustfs/rustfs:1.0.0` per test run |
+| Containers | `Testcontainers.PostgreSql` + generic `Testcontainers` (`ContainerBuilder`) 4.16 | `postgres:18-alpine` + `rustfs/rustfs:1.0.4` per test run |
 | HTTP | `HttpClient` from `factory.CreateClient()` | Real HTTP calls through the full middleware pipeline |
 | Assertions | Shouldly, NSubstitute, AutoFixture | Same as unit tests |
 
-There is **no Redis/Valkey container** in the shared harness - `CachingOptions:Redis` is set to an empty string, so HybridCache runs on its in-memory fallback and Hangfire runs on `Hangfire.InMemory`. The one place a real cache engine matters, `Tests/Caching/HybridCacheRedisTests.cs`, spins up its own `valkey/valkey:9.1.0-alpine` container to guard against in-memory-vs-distributed serialization divergence.
+There is **no Redis/Valkey container** in the shared harness - `CachingOptions:Redis` is set to an empty string, so HybridCache runs on its in-memory fallback and Hangfire runs on `Hangfire.InMemory`. The one place a real cache engine matters, `Tests/Caching/HybridCacheRedisTests.cs`, spins up its own `valkey/valkey:9.1.3-alpine` container to guard against in-memory-vs-distributed serialization divergence.
 
 ## The fixture pattern
 

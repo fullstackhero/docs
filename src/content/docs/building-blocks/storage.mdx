@@ -1,6 +1,6 @@
 ---
 title: Storage building block
-lastUpdated: 2026-09-30
+lastUpdated: 2026-11-03
 description: File storage abstraction - local filesystem or S3-compatible (AWS S3, RustFS, MinIO, R2...) - with presigned URLs, tenant isolation, and optional quota metering.
 sidebar:
   label: Storage
@@ -103,7 +103,7 @@ Visibility is part of the object key. The first segment is a visibility root (`S
 With a prefix set, every key is written as `{Prefix}/{key}`, so public objects land under `{Prefix}/public/...`. Two rules follow:
 
 - The bucket policy (or `app_s3_public_read_prefix`) must cover `{Prefix}/public/*`, not `public/*`.
-- The prefix must not be `public` or `private`. A key that already starts with the prefix is not prefixed again, so with `Prefix = public` a `private/...` key is stored as `public/private/...` - anonymously readable. Nothing validates this at startup.
+- The prefix must not be `public` or `private`. A key that already starts with the prefix is not prefixed again, so with `Prefix = public` a `private/...` key is stored as `public/private/...` - anonymously readable. `AddHeroStorage` validates this at startup (`ValidateOnStart`): when `Storage:Provider` is `s3` and the prefix's first segment is `public` or `private` (case-insensitive, leading `/` ignored), the host fails to start with an `OptionsValidationException` naming `Storage:S3:Prefix`. `public/apps` and `/Private` are rejected; `apps/public` and `publicity` are fine.
 
 ### Local provider
 

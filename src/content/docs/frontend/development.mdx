@@ -1,6 +1,6 @@
 ---
 title: Local development
-lastUpdated: 2026-09-26
+lastUpdated: 2026-11-03
 description: Running the React frontends with Vite HMR, building for production, deploying to static hosts or behind Nginx, runtime config via /config.json.
 sidebar:
   label: Local development
@@ -107,12 +107,15 @@ The dashboard's variant swaps `dashboardUrl` for a `demoMode` flag (login-page d
 
 ### The container pattern
 
-`clients/{app}/Dockerfile` is a two-stage build - `node:22-alpine` runs `npm ci && npm run build`, then `nginx:alpine` serves `dist/`. The entrypoint renders the runtime config before starting Nginx:
+`clients/{app}/Dockerfile` is a two-stage build - `node:26-alpine` runs `npm ci && npm run build`, then `nginx:1.31.8-alpine` (pinned) serves `dist/`. The entrypoint renders the runtime config before starting Nginx:
 
 ```sh
 # clients/{app}/docker/docker-entrypoint.sh
 : "${FSH_API_URL:?FSH_API_URL is required (e.g. https://api.example.com)}"
 : "${FSH_DEFAULT_TENANT:=root}"
+: "${FSH_INACTIVITY_IDLE_MS:=600000}"      # admin; the dashboard defaults to 1200000
+: "${FSH_INACTIVITY_WARNING_MS:=60000}"
+# ...exits with an error unless both inactivity values are positive integers
 
 envsubst < /etc/fsh/config.json.template \
        > /usr/share/nginx/html/config.json
@@ -127,6 +130,8 @@ The template lives at `/etc/fsh/config.json.template`, outside the web root, so 
 {
   "apiBase": "${FSH_API_URL}",
   "defaultTenant": "${FSH_DEFAULT_TENANT}",
+  "inactivityIdleMs": ${FSH_INACTIVITY_IDLE_MS},
+  "inactivityWarningMs": ${FSH_INACTIVITY_WARNING_MS},
   "dashboardUrl": "${FSH_DASHBOARD_URL}"
 }
 ```
@@ -138,6 +143,16 @@ docker run -e FSH_API_URL=https://api.example.com -e FSH_DASHBOARD_URL=https://a
 ```
 
 The same image runs everywhere; only env vars differ.
+
+| Variable | Apps | Default | Maps to |
+|---|---|---|---|
+| `FSH_API_URL` | both | required | `apiBase` |
+| `FSH_DASHBOARD_URL` | admin | required | `dashboardUrl` |
+| `FSH_DEFAULT_TENANT` | both | `root` | `defaultTenant` |
+| `FSH_INACTIVITY_IDLE_MS` | both | admin `600000` (10 min), dashboard `1200000` (20 min) | `inactivityIdleMs` |
+| `FSH_INACTIVITY_WARNING_MS` | both | `60000` (60 s) | `inactivityWarningMs` |
+
+The two inactivity values are bare JSON numbers in the template, so the entrypoint validates them: unset or empty keeps the default, and anything that is not a positive integer (`abc`, `0`, `-5`, `1.5`) stops the container at start with an error instead of serving a broken `config.json`. The entrypoint defaults mirror the ones in each app's `src/env.ts`; change both together. The Docker Compose deployment reads `FSH_ADMIN_INACTIVITY_IDLE_MS`, `FSH_DASHBOARD_INACTIVITY_IDLE_MS` and `FSH_INACTIVITY_WARNING_MS` from `.env`, because the two apps default to different idle times.
 
 ### Reading runtime config in code
 
@@ -226,7 +241,7 @@ Tests live under `clients/{app}/tests/`. There is no unit-test runner (Vitest) w
 
 ## Linting
 
-ESLint is wired (flat config at `clients/{app}/eslint.config.js`, extending the React + TypeScript + a11y rule sets):
+ESLint 10 is wired (flat config at `clients/{app}/eslint.config.js`, extending the React + TypeScript + a11y rule sets). The React hooks rules are the React Compiler-aware set from `eslint-plugin-react-hooks` 7, so a `setState` called synchronously in an effect body, a ref read or written during render, or a component defined inside another component is a lint error. The a11y rules come from `eslint-plugin-jsx-a11y-x`, a fork of `eslint-plugin-jsx-a11y` with the same rules, because the original has no ESLint 10 release yet; it is registered under the `jsx-a11y` name, so rule ids are unchanged:
 
 ```bash
 npm run lint               # report

@@ -31,6 +31,11 @@ Only the root guide loads into the agent's context on every session. Detailed co
 keeps each session cheap while still having deep guidance available the moment it's needed.
 </Callout>
 
+Projects created with `fsh new` (or `dotnet new fsh`) get all of these files: `AGENTS.md`, both bridges and the
+whole `.agents/` folder. Sections that only apply to the kit's own repo (branching, CI gates, the docs-repo
+rule) are stripped from the scaffolded `AGENTS.md`. Pass `--no-agents` (CLI) or `--agents false` (template) to
+leave all four out.
+
 ## The `.agents/` folder
 
 ```
