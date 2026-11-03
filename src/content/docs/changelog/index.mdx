@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-10-09
+lastUpdated: 2026-11-03
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -10,6 +10,13 @@ seo:
 ---
 
 Notable changes to the kit, newest first.
+
+## 2026-11-03
+
+- **Eventing: one failing integration-event handler no longer blocks the others (fix).** `InMemoryEventBus` ran an event's handlers in order and stopped at the first exception, so the rest waited for the outbox retry, and if the failing one kept failing until the row dead-lettered they never ran. For `FileStorageKeyChangedIntegrationEvent` that meant a store rejecting Files' superseded-object delete also skipped Catalog's product-image URL rewrite. The bus now runs every handler, then rethrows (the single exception, or an `AggregateException` when several fail) so the outbox still retries; the inbox already records each handler that succeeded, so a retry re-runs only the failed ones. See [Eventing](/docs/building-blocks/eventing/#event-bus-implementations) and [#1423](https://github.com/fullstackhero/dotnet-starter-kit/issues/1423).
+- **Files: finalize no longer answers `500` for a file it already committed (fix).** `FinalizeUpload` moves an upload presigned before visibility roots existed after the finalize commit; when that move failed the client got a `500` for a file that was already `Available`, and a retried finalize answered `409`. The move is now best-effort: finalize returns the file and logs a warning, the file stays at its legacy key, and `MigrateLegacyPublicFileKeysJob` moves a public one on its next run (a private one stays presigned-only). See [Files](/docs/modules/files/#visibility-and-storage-moves).
+- **Files: a storage move whose commit fails no longer leaves an orphaned, quota-charged copy (fix).** `FileStorageRelocator` copies the object before committing the row; if the commit then failed, the copy stayed in the bucket, charged to the tenant's `StorageBytes`, with nothing pointing at it. The copy is now deleted again (refunding its bytes), best-effort and logged.
+- **Storage: `Storage:S3:Prefix` is validated at startup (breaking if misconfigured).** With the S3 provider, a prefix whose first segment is `public` or `private` (case-insensitive) now fails startup, because with `Prefix = public` every private key lands under `public/` where the anonymous-read policy applies. Fix the prefix if your host stops booting with `OptionsValidationException` naming `Storage:S3:Prefix`. Hosts on the Local provider (including the DbMigrator without S3) are unaffected. See [Storage](/docs/building-blocks/storage/#storages3prefix).
 
 ## 2026-10-09
 

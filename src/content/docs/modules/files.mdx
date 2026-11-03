@@ -1,6 +1,6 @@
 ---
 title: Files module
-lastUpdated: 2026-09-30
+lastUpdated: 2026-11-03
 description: Presigned-URL file lifecycle with pluggable per-OwnerType access policies, soft delete + retention purge, optional scanner hook, and S3-compatible storage.
 sidebar:
   label: Files
@@ -127,13 +127,13 @@ The root follows `Visibility`, and every shipped stack grants anonymous read on 
 
 1. Takes the file's row lock (`SELECT ... FOR UPDATE` on PostgreSQL; other providers have no portable row lock).
 2. Re-reads the row and applies the mutation. The mutation can decline after the re-read, for example when another writer already changed the file.
-3. Copies the object to the key for the new visibility (`IStorageService.CopyAsync`; a copy left by a crashed attempt is reused), then commits the row together with `FileStorageKeyChangedIntegrationEvent` through the outbox.
+3. Copies the object to the key for the new visibility (`IStorageService.CopyAsync`; a copy left by a crashed attempt is reused), then commits the row together with `FileStorageKeyChangedIntegrationEvent` through the outbox. If the commit fails after the copy, the copy is deleted again (which refunds its bytes to the storage quota); that cleanup is best-effort and logged.
 
 A migration racing a user's flip, or two flips racing each other, therefore run one after the other.
 
-**The old object's delete is durable.** It is deleted only when no row references its key, under the same row lock. The first attempt runs right after the commit (not tied to the request's cancellation token) and checks with `ExistsAsync` that the object is really gone. Files also handles its own event: `DeleteSupersededObjectHandler` repeats the delete and throws while the object is still there, so the outbox retries it with backoff. A Public → Private flip can't leave the object readable under `public/`.
+**The old object's delete is durable.** It is deleted only when no row references its key, under the same row lock. The first attempt runs right after the commit (not tied to the request's cancellation token) and checks with `ExistsAsync` that the object is really gone. Files also handles its own event: `DeleteSupersededObjectHandler` repeats the delete and throws while the object is still there, so the outbox retries it with backoff. A Public → Private flip can't leave the object readable under `public/`. A failing delete doesn't hold up the event's other handlers (Catalog's product-image and Identity's avatar URL rewrites): the event bus runs every handler and retries only the ones that failed.
 
-**Finalize moves in-flight uploads.** An upload presigned before the upgrade still lands at a key with no visibility root; `FinalizeUpload` moves it under the right root once the file is `Available`.
+**Finalize moves in-flight uploads.** An upload presigned before the upgrade still lands at a key with no visibility root; `FinalizeUpload` moves it under the right root once the file is `Available`. The move runs after the finalize has committed, so it is best-effort: if it fails, finalize still returns the `Available` file and logs a warning, and the file stays at its legacy key. `MigrateLegacyPublicFileKeysJob` moves a public one on its next run (every API start); a private one stays put, which is safe because nothing grants anonymous read outside `public/*`.
 
 ### `FileStorageKeyChangedIntegrationEvent`
 
