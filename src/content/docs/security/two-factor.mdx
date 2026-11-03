@@ -1,6 +1,6 @@
 ---
 title: Two-factor authentication (TOTP)
-lastUpdated: 2026-10-14
+lastUpdated: 2026-11-03
 description: Opt-in TOTP enrolment for any user - shared secret + otpauth URI, verify, password-confirmed disable, with TOTP-required token issuance once enrolled.
 sidebar:
   label: Two-factor (TOTP)
@@ -37,8 +37,8 @@ The kit doesn't force 2FA. A reasonable production posture is to make TOTP **man
    ↓
 5. From now on, POST /token/issue requires
      { email, password, twoFactorCode } (the third field is required iff enrolled)
-   - Missing code → 401 "two_factor_required"
-   - Wrong code  → 401 "two_factor_invalid"
+   - Missing code → 401, ProblemDetails code "Identity.TwoFactorRequired"
+   - Wrong code  → 401, ProblemDetails code "Identity.TwoFactorInvalid"
    ↓
 6. To turn off: POST /api/v1/identity/2fa/disable { currentPassword }
    - Requires the current password, so a stolen access token alone
@@ -122,7 +122,31 @@ if (user.TwoFactorEnabled)
 }
 ```
 
-The error prefixes (`two_factor_required` / `two_factor_invalid`) are stable strings the React clients key off to show the code-entry step. The whole login - including 2FA attempts - sits behind the rate-limit `auth` policy, which is the throttle on TOTP brute-forcing. Failed TOTP codes do **not** increment the password-lockout counter; only failed passwords do.
+Both exceptions carry a `MessageKey`, which the global exception handler writes to the ProblemDetails body as a machine-readable `code` next to the localized `detail`:
+
+```json
+{
+  "title": "Unauthorized",
+  "status": 401,
+  "detail": "two_factor_required: An authenticator code is required to complete sign-in.",
+  "code": "Identity.TwoFactorRequired"
+}
+```
+
+Branch on `code` (`Identity.TwoFactorRequired` / `Identity.TwoFactorInvalid`), not on `detail`: the detail text follows the request culture and changes with `Accept-Language`. The whole login - including 2FA attempts - sits behind the rate-limit `auth` policy, which is the throttle on TOTP brute-forcing. Failed TOTP codes do **not** increment the password-lockout counter; only failed passwords do.
+
+## Signing in from the React apps
+
+The admin and dashboard login pages handle the second factor as a two-step card:
+
+1. The user submits tenant, email and password. For an account without 2FA, `token/issue` returns tokens and the user is in, in one step.
+2. If the API answers `401` with `code: "Identity.TwoFactorRequired"`, the card switches to a code step: a six-digit field with `inputmode="numeric"` and `autocomplete="one-time-code"` (so the browser or a password manager can fill it), focused on arrival.
+3. On submit, the page repeats `token/issue` with `{ email, password, twoFactorCode }` and the same `tenant` header.
+4. A wrong or expired code (`code: "Identity.TwoFactorInvalid"`) shows an inline error, clears the field and keeps the user on the step. "Back to sign in" returns to the password step.
+
+The password is kept only in the login page's component state for that retry. It never goes to `localStorage` or `sessionStorage`, the password field is cleared when the code step opens, and the held credentials are dropped on back, on success and when the page unmounts. The detection lives in `isTwoFactorRequiredError` / `isTwoFactorInvalidError` in each app's `src/auth/api.ts`, and the step itself is `src/components/auth/two-factor-step.tsx`.
+
+The code step accepts authenticator codes only. Recovery codes are not part of the kit (see below), so there is no "use a recovery code" link.
 
 ## Operational considerations
 
