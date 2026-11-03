@@ -1,6 +1,6 @@
 ---
 title: Add a page to the tenant dashboard
-lastUpdated: 2026-06-11
+lastUpdated: 2026-10-14
 description: End-to-end recipe for adding a new page to the tenant dashboard app - API module, page component, lazy route, sidebar nav entry, permission gating, and a route-mocked Playwright test.
 sidebar:
   label: Add a dashboard page
@@ -188,6 +188,8 @@ How permissions actually flow in the dashboard (verified in `src/auth/auth-conte
 
 Gate the nav entry (step 4) and any in-page actions (hide a Restore button, hide a tab) with `user.permissions.includes(...)`. The server keeps enforcing everything as defence-in-depth - client gating is UX, not security.
 
+A query that mounts outside its own nav-gated page (a topbar badge, an overview card) needs the same gate on the query itself, or every user without the permission polls a `403` that the API logs as an error. Copy the topbar notification bell: `enabled: permissionsHydrated && (user?.permissions.includes(INBOX_VIEW_PERMISSION) ?? false)`, then hide the piece or render a no-access state when the check fails. A manual `refetch()` ignores `enabled`, so wrap it in the same check.
+
 ## Step 6 - Playwright test (`tests/projects/projects.spec.ts`)
 
 Tests are **route-mocked and JWT-seeded** - no real backend. `playwright.config.ts` auto-boots `npm run dev`. The harness (in `tests/helpers/`):
@@ -224,7 +226,7 @@ Mock everything the page touches when it mounts - not just the endpoint you're a
 
 Two more harness gotchas, both verified in the existing suite:
 
-- **Permission-gated UI**: the shell mock returns `[]` for `GET /identity/permissions`, so gated entries are hidden by default. Re-mock it with the permissions your test needs (see `tests/system/trash.spec.ts`).
+- **Permission-gated UI**: the shell mock answers `GET /identity/permissions` with `SHELL_PERMISSIONS`, the Basic-role grants the shell's own queries need (notification inbox, chat channels, billing view), so every other gated entry is hidden by default. Re-mock it with the permissions your test needs (see `tests/system/trash.spec.ts`), or with `[]` to test the no-access path (see `tests/layout/permission-gated-queries.spec.ts`).
 - **Strict-mode double match**: list pages render a mobile card list and a desktop table of the same data. Scope assertions to one of them (the tickets spec filters to the desktop card) or `getByText` will find two elements.
 
 ## Step 7 - Verify

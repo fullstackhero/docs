@@ -1,6 +1,6 @@
 ---
 title: Frontend architecture
-lastUpdated: 2026-06-11
+lastUpdated: 2026-10-14
 description: Shared patterns across the admin + dashboard apps - folder layout, API client, route guards, realtime context, error handling, ProblemDetails parsing.
 sidebar:
   label: Architecture
@@ -261,7 +261,7 @@ In dev, Vite serves `public/config.json`; in production, the Nginx container ren
 
 ### Inactivity auto sign-out
 
-Both apps auto-sign-out idle sessions: admin after 10 minutes, dashboard after 20, each with a 60-second warning countdown - all four numbers configurable per deploy in `config.json`. The last-activity timestamp is shared across tabs via the `fsh.lastActivity` localStorage key so activity in any tab keeps the whole session alive.
+Both apps auto-sign-out idle sessions: admin after 10 minutes, dashboard after 20, each with a 60-second warning countdown - all four numbers configurable per deploy in `config.json`. In the container images set `FSH_INACTIVITY_IDLE_MS` and `FSH_INACTIVITY_WARNING_MS` (milliseconds); see [development](/docs/frontend/development/#the-container-pattern). The last-activity timestamp is shared across tabs via the `fsh.lastActivity` localStorage key so activity in any tab keeps the whole session alive.
 
 ## What both apps don't do
 
