@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-11-03
+lastUpdated: 2026-11-04
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -10,6 +10,10 @@ seo:
 ---
 
 Notable changes to the kit, newest first.
+
+## 2026-11-04
+
+- **Frontends: smaller initial load after the Vite 8 upgrade (perf).** Rolldown had split the code each app loads up front into 45 (admin) and 68 (dashboard) small chunks, so initial load grew past the Vite 7 numbers. `vite.config.ts` now groups everything the entry statically imports into one `vendor` and one `app` chunk. Only the app shell's `en-US` translation namespaces ship in the main bundle, and a route's own namespaces load alongside its page chunk. Admin now loads the SignalR client on first connect, as the dashboard already did. Initial load (gzip) drops from 265.4 to 225.1 KiB in admin and from 271.3 to 229.9 KiB in the dashboard, below the pre-upgrade 242.9 and 245.2 KiB. **If you forked the apps:** a new route namespace goes in the lazy catalog map in `src/i18n.ts` and is listed on its routes, as in `lazyNamed(importer, name, ["ns"])`. The new `tests/i18n/route-namespaces.spec.ts` fails when a route misses one. See [Internationalization](/docs/cross-cutting-concerns/internationalization/#catalogs), [#1462](https://github.com/fullstackhero/dotnet-starter-kit/issues/1462) and [#1466](https://github.com/fullstackhero/dotnet-starter-kit/pull/1466).
 
 ## 2026-11-03
 
