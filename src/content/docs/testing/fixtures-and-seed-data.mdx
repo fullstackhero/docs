@@ -129,6 +129,20 @@ Finbuckle's `IMultiTenantContextSetter` writes an `AsyncLocal`. Set it **in the 
 ## When to add to the harness
 
 - **New shared infrastructure.** If you need RabbitMQ, Elasticsearch, etc., add the container as another field on `FshWebApplicationFactory`, start it in `InitializeAsync`, and overlay its connection details - same shape as the RustFS wiring. For something only one test class needs (like the Valkey container in `HybridCacheRedisTests`), keep it local to that class via `IAsyncLifetime` instead.
+
+In xUnit v3, `IAsyncLifetime` methods return `ValueTask` and the interface extends `IAsyncDisposable`:
+
+```csharp
+public sealed class HybridCacheRedisTests : IAsyncLifetime
+{
+    private readonly RedisContainer _redis = new RedisBuilder("valkey/valkey:9.1.3-alpine").Build();
+
+    public async ValueTask InitializeAsync() => await _redis.StartAsync();
+    public ValueTask DisposeAsync() => _redis.DisposeAsync();
+}
+```
+
+`FshWebApplicationFactory` already has a `DisposeAsync()` from `WebApplicationFactory<Program>`, so it **overrides** it: it calls `base.DisposeAsync()` first (stops the host), then disposes the Postgres and RustFS containers.
 - **New always-present seed data.** Extend the module's `IDbInitializer` seed - that's the production path, and the factory runs it automatically.
 - **One-off setup per test class.** Don't touch the harness; arrange it in the test class constructor or the test itself.
 

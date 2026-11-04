@@ -122,7 +122,8 @@ The factory overrides configuration and services so tests are deterministic:
 
 - **Don't share state across tests.** The whole suite shares one database, and a single collection means hundreds of tests touch the same rows over a run. Use unique names per test (`UniqueName("...")` / a `Guid` suffix) so tests stay independent and re-runnable.
 - **Don't mutate seeded data.** The root tenant and root admin are shared by every test. Create your own tenant/user/brand when you need to mutate one.
-- **Don't trust class ordering.** xUnit doesn't guarantee execution order across classes. If a test needs another test to "have created X first," the test is wrong.
+- **Don't trust class ordering.** xUnit doesn't guarantee execution order across classes. If a test needs another test to "have created X first," the test is wrong. The reverse matters too: clean up shared state a later test could trip over. A tenant pointed at an unreachable database, for example, goes through `_factory.RemoveTenantsAsync(ids)` in the class's `DisposeAsync`; otherwise jobs that walk every tenant count it as a failure.
+- **Dispose derived hosts.** A host from `_factory.WithWebHostBuilder(...)` shares two process-wide statics with the shared host: Hangfire's `JobStorage.Current` and the static `Audit` publisher. The harness's `PrimaryHostStaticsRestorer` points both back at the shared host when a derived host stops, so always `await using` the derived factory.
 
 ## When integration tests get slow
 

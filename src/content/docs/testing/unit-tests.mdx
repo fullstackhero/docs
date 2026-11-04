@@ -18,12 +18,17 @@ Unit tests in fullstackhero are **fast, in-process, no infrastructure**. They te
 
 | Library | Used for |
 |---|---|
-| xUnit 2.x | Test runner, `[Fact]` / `[Theory]` discovery |
+| xUnit v3 (`xunit.v3.mtp-off`) | Test runner, `[Fact]` / `[Theory]` discovery. Runs on VSTest, so `dotnet test` and the coverlet collector work as before |
 | Shouldly 4.x | Readable assertions - `result.ShouldBe(...)`, `.ShouldThrow<>()`, `.ShouldSatisfyAllConditions(...)` |
 | NSubstitute 6.x | Mocking service interfaces, verifying calls |
 | AutoFixture 4.x | Random DTO / fixture generation |
 
 All four come from the kit's `Directory.Packages.props` central package management.
+
+### xUnit v3 specifics
+
+- Test projects are executables: each csproj sets `<OutputType>Exe</OutputType>`.
+- The analyzer rule `xUnit1051` (pass `TestContext.Current.CancellationToken` to every async call) is turned off for `src/Tests` in `src/.editorconfig`. Its code fix also rewrites NSubstitute setups and `Received()` checks to expect that token, which changes what the mock matches, since handlers under test are called with `CancellationToken.None`. Pass the token yourself when a test does long-running IO that should stop on cancellation.
 
 ## Naming convention
 

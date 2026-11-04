@@ -146,7 +146,7 @@ Every request the app makes through `apiFetch` sends the **active language as th
 
 A language switcher sits in the **topbar**. Changing the language does two things beyond re-rendering the UI:
 
-1. Persists the choice to `User.Locale` by calling the profile update endpoint (`PUT /identity/profile`). The dashboard reads the profile with its `ETag` and sends it back as `If-Match`, so a stale write is rejected with 412 instead of overwriting a concurrent change; the admin switcher does not send `If-Match` yet. A failed save raises a toast.
+1. Persists the choice to `User.Locale` by calling the profile update endpoint (`PUT /identity/profile`). Both apps read the profile with its `ETag` and send it back as `If-Match`, so a stale write is rejected with 412 instead of overwriting a concurrent change. The admin switcher then retries once against the fresh profile. A failed save raises a toast.
 2. Refreshes the access token, so the new preference is baked into the JWT `locale` claim and the backend honours it from the next request. The refresh is best-effort: if it fails, the session stays signed in and the claim catches up at the next natural refresh, so until then an API error can still come back in the previous language.
 
 While an operator is impersonating a user in the dashboard, the switcher only changes the UI language: it sends no `PUT`, so the operator's choice never lands on the impersonated user's profile.
