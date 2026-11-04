@@ -1,6 +1,6 @@
 ---
 title: Webhooks module
-lastUpdated: 2026-06-11
+lastUpdated: 2026-11-05
 description: Tenant-scoped webhook subscriptions, open-generic event fan-out, HMAC-signed delivery with secrets encrypted at rest, permission-gated endpoints, Hangfire dispatch with exponential backoff, and a delivery audit log.
 sidebar:
   label: Webhooks
@@ -24,7 +24,7 @@ You publish integration events anyway (Chat does, Identity does, Files does). Th
 - **Signing secret encrypted at rest** - the secret is the HMAC key, so it must stay recoverable (a one-way hash would make signing impossible). It is encrypted with ASP.NET Data Protection (`IWebhookSecretProtector`) on create and decrypted only at sign time, so a database breach never exposes plaintext secrets.
 - **Permission-gated endpoints** - `Webhooks.View` / `Create` / `Delete` / `Test` (previously authentication-only).
 - **Open-generic event handler** - one `WebhookFanoutHandler<TEvent>` registered for every `IIntegrationEvent`; no per-event setup needed. When a new module publishes a new event, existing subscriptions automatically receive it.
-- **Tenant context restoration** - the fanout handler explicitly restores the tenant context before querying subscriptions, so Finbuckle's global query filter sees the right tenant. (This is the single most important gotcha - see below.)
+- **Tenant context restoration** - the fanout handler keeps a complete tenant context the event bus already resolved, otherwise it installs an ID-only one, and restores the previous context afterwards, so Finbuckle's global query filter sees the right tenant. (This is the single most important gotcha - see below.)
 - **HMAC-SHA256 payload signing** - when `SecretHash` is set, every delivery includes `X-Webhook-Signature: sha256={hex}` so subscribers can verify authenticity.
 - **Hangfire delivery jobs** with `[AutomaticRetry]` - 5 attempts total, exponential backoff (30 s, 2 min, 10 min, 1 h).
 - **Transient vs permanent error classification** - 5xx, 408, 429 retried; other 4xx permanent.
@@ -76,9 +76,13 @@ public sealed class WebhookFanoutHandler<TEvent> : IIntegrationEventHandler<TEve
         var prev = _tenantContextAccessor.MultiTenantContext;
         try
         {
-            var info = new AppTenantInfo(@event.TenantId, @event.TenantId);
-            ((IMultiTenantContextSetter)_tenantContextAccessor).MultiTenantContext =
-                new MultiTenantContext<AppTenantInfo>(info);
+            // Keep a complete context (e.g. a dedicated-database connection) the bus already resolved.
+            if (prev.TenantInfo?.Id != @event.TenantId || string.IsNullOrWhiteSpace(prev.TenantInfo.ConnectionString))
+            {
+                var info = new AppTenantInfo(@event.TenantId, @event.TenantId);
+                ((IMultiTenantContextSetter)_tenantContextAccessor).MultiTenantContext =
+                    new MultiTenantContext<AppTenantInfo>(info);
+            }
 
             var eventType = typeof(TEvent).Name;
             var subscriptions = await _db.Subscriptions
@@ -112,7 +116,9 @@ services.AddScoped(typeof(IIntegrationEventHandler<>), typeof(WebhookFanoutHandl
 The DI container materializes the handler for every event type the eventing system sees. Zero per-event code.
 
 <Callout type="warning" title="Restore tenant context manually">
-The handler installs the event's tenant into `IMultiTenantContextSetter` before querying subscriptions (and restores the previous context after). Without it, the Finbuckle query filter on `WebhookDbContext` filters away every row because the tenant context is null on the background event-bus thread. **This is the easiest thing to forget when adding a new handler.**
+The handler installs the event's tenant into `IMultiTenantContextSetter` before querying subscriptions (and restores the previous context after), unless the bus already resolved a complete one. Without it, the Finbuckle query filter on `WebhookDbContext` filters away every row because the tenant context is null on the background event-bus thread. **This is the easiest thing to forget when adding a new handler.**
+
+On the InMemory path the event bus resolves the full tenant before the handler is built; see [Eventing routing](/docs/building-blocks/eventing/#source-and-consumer-routing).
 </Callout>
 
 ## The delivery job
