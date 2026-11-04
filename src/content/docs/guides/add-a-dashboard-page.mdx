@@ -147,11 +147,13 @@ mutation.mutate({ text, clientId: crypto.randomUUID() });
 Every page is code-split via the `lazyNamed` helper (adapts named exports to `React.lazy`'s default contract) and wrapped in `withSuspense` for a per-route skeleton fallback. Add the child route under `AppShell` - which already sits inside `ProtectedRoute`:
 
 ```tsx
-const ProjectsPage = lazyNamed(() => import("@/pages/projects/projects"), "ProjectsPage");
+const ProjectsPage = lazyNamed(() => import("@/pages/projects/projects"), "ProjectsPage", ["projects"]);
 
 // inside the AppShell children array:
 { path: "projects", element: withSuspense(<ProjectsPage />) },
 ```
+
+The third argument lists the page's translation namespaces. Route catalogs are not in the main bundle: add `projects: () => import("@/locales/en-US/projects.json")` to `lazyCatalogs` in `src/i18n.ts`, and `lazyNamed` loads it alongside the page chunk. Shell namespaces (`common`, `auth`, `notifications`) are always loaded and are not listed. `tests/i18n/route-namespaces.spec.ts` fails if the page, or a component it imports, uses a namespace the route doesn't list. See [Internationalization](/docs/cross-cutting-concerns/internationalization/#catalogs).
 
 There is **no per-route permission guard** in the dashboard - `ProtectedRoute` is auth-only. Don't port admin's `RouteGuard` here; the server returns 403 for anything the user can't do, and the nav hides entries they can't reach (next step).
 
