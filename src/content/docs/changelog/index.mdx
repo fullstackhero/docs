@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-11-04
+lastUpdated: 2026-11-05
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -10,6 +10,10 @@ seo:
 ---
 
 Notable changes to the kit, newest first.
+
+## 2026-11-05
+
+- **Eventing: InMemory consumers now run against the event tenant's database (fix).** `InMemoryEventBus` runs its handler loop inside the new `IEventTenantScope.ExecuteAsync`, and the Multitenancy module's `FinbuckleEventTenantScope` resolves the full tenant (cache first, then the tenant catalog) before consumers, tenant-aware DbContexts and the Inbox are constructed, so a tenant with a dedicated database no longer has its handlers and Inbox rows land in the shared one. A missing or inactive tenant falls back to an ID-only context with a warning, and global events keep the ambient context. The webhook fan-out keeps a complete context the bus already resolved. `ExecuteAsync` has a default implementation over `Begin`, so custom `IEventTenantScope` implementations keep working. See [#1434](https://github.com/fullstackhero/dotnet-starter-kit/pull/1434).
 
 ## 2026-11-04
 

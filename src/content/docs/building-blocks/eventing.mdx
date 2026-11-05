@@ -1,6 +1,6 @@
 ---
 title: Eventing building block
-lastUpdated: 2026-11-03
+lastUpdated: 2026-11-05
 description: Event bus implementation (InMemory or RabbitMQ), outbox/inbox stores for durable delivery, and the open-generic handler registration that lets modules subscribe with one method.
 sidebar:
   label: Eventing
@@ -27,7 +27,7 @@ Publish goes through the outbox in the same transaction as your business write. 
 
 ### Event bus implementations
 
-- **`InMemoryEventBus`** - in-process. For each event it **sets the tenant context first** (`IEventTenantScope.Begin(event.TenantId)`), creates a fresh DI scope, resolves the matching handlers, checks the inbox (skip if already processed by that handler), awaits each handler in order, and marks the inbox row for each one that succeeds. A handler that throws doesn't stop the ones after it: every handler runs, then the failure is rethrown (an `AggregateException` when several fail) so the outbox retries the event, and the inbox skips the handlers that already succeeded. Great for dev/test and single-process production hosts.
+- **`InMemoryEventBus`** - in-process. For each event it **sets the tenant context first** (`IEventTenantScope.ExecuteAsync(event.TenantId, ...)`), creates a fresh DI scope inside that callback, resolves the matching handlers, checks the inbox (skip if already processed by that handler), awaits each handler in order, and marks the inbox row for each one that succeeds. A handler that throws doesn't stop the ones after it: every handler runs, then the failure is rethrown (an `AggregateException` when several fail) so the outbox retries the event, and the inbox skips the handlers that already succeeded. Great for dev/test and single-process production hosts.
 - **`RabbitMqEventBus`** - durable, cross-service; uses `RabbitMQ.Client` and publishes to a durable topic exchange (`EventingOptions:RabbitMQ`).
 
 ### Outbox / inbox
@@ -50,6 +50,16 @@ Publish goes through the outbox in the same transaction as your business write. 
 Because outbox rows follow the tenant connection, the dispatcher can't poll a single database. Each cycle it asks **`IEventingDrainTargetProvider`** which databases to drain and runs one pass per target inside **`IEventingDrainScope`**, which installs the tenant context *before* the scope builds its `EventingDbContext` (that context captures `TenantInfo`, and with it the connection string, at construction). BuildingBlocks defaults to a single target; the Multitenancy module replaces it with the default database plus one target per distinct **active** per-tenant connection string - tenants sharing a database collapse to one pass. An unreachable tenant database is logged and skipped, never fatal to the cycle.
 
 `ClaimBatchAsync` leases rows with Postgres `FOR UPDATE SKIP LOCKED` in one `UPDATE … RETURNING`, so several API instances partition a batch instead of all publishing the same message. The lease is an expiry (`OutboxClaimLeaseSeconds`, default 300), so a dispatcher that dies mid-batch has its rows recovered rather than stranded. Providers without `SKIP LOCKED` fall back to an unclaimed read and log a warning that only one instance is safe.
+
+## Source and consumer routing
+
+The **source database** holds the Outbox row and receives its processed, retry and dead-letter state. The **consumer database** follows the event's `TenantId`: `InMemoryEventBus` runs its handlers inside `IEventTenantScope.ExecuteAsync`, and the Multitenancy module's `FinbuckleEventTenantScope` installs the full tenant (including a dedicated connection string) before consumers, tenant-aware DbContexts and the Inbox are built.
+
+- A context that already has the tenant and a connection string is reused. Otherwise the tenant is read from the cached tenant store, then the tenant catalog.
+- An unknown or inactive tenant logs a warning and dispatches with an ID-only context.
+- A global event (null or empty `TenantId`) leaves the ambient context untouched.
+
+This describes the InMemory path, not a RabbitMQ receiver.
 
 ## How modules consume Eventing
 
@@ -158,7 +168,7 @@ Replace `IEventingDrainTargetProvider` (and `IEventingDrainScope` if the target 
 - **`OutboxClaimLeaseSeconds` must exceed the worst-case time to publish a batch.** If a batch can outlive its lease, another instance re-claims rows still in flight and publishes them twice.
 - **A background publisher must set the tenant context before `AddAsync`,** not just before the publish - with per-tenant databases the row otherwise lands in the wrong database and is drained under the wrong target.
 - **Inbox dedupes per handler, by `(EventId, HandlerName)`.** A redelivered event is skipped only for handlers that already completed it; if you mint two events with the same `Id`, the second is silently dropped for every handler. Always generate a fresh `Guid` per event.
-- **Background publishers need the tenant context set.** `InMemoryEventBus` does this for you via `IEventTenantScope` (reading `event.TenantId`) *before* resolving handlers - a `MultiTenantDbContext` captures its tenant at construction, so setting it later is too late. If you build your own bus or dispatch path, preserve this ordering or tenant-filtered handlers NRE.
+- **Background publishers need the tenant context set.** `InMemoryEventBus` does this for you via `IEventTenantScope.ExecuteAsync` (reading `event.TenantId`) *before* resolving handlers - a `MultiTenantDbContext` captures its tenant at construction, so setting it later is too late. If you build your own bus or dispatch path, preserve this ordering or tenant-filtered handlers NRE.
 - **RabbitMQ publishing retries in-process** (`PublishRetryCount` / `PublishRetryDelayMs`), but consumers own their durability via inbox + retry semantics.
 
 ## Critical files

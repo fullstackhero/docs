@@ -1,6 +1,6 @@
 ---
 title: Eventing.Abstractions building block
-lastUpdated: 2026-06-11
+lastUpdated: 2026-11-05
 description: Dependency-free contracts for cross-module and cross-service events - IIntegrationEvent, IIntegrationEventHandler, IEventBus, IEventSerializer.
 sidebar:
   label: Eventing.Abstractions
@@ -57,10 +57,13 @@ public interface IEventSerializer
 public interface IEventTenantScope
 {
     IDisposable Begin(string? tenantId);
+
+    // Default implementation: using (Begin(tenantId)) await action(ct);
+    Task ExecuteAsync(string? tenantId, Func<CancellationToken, Task> action, CancellationToken ct = default);
 }
 ```
 
-`IEventTenantScope` is the piece that makes background publishing safe in a multi-tenant world: the bus calls `Begin(event.TenantId)` **before** resolving handlers, because a `MultiTenantDbContext` captures its tenant at construction time. The default implementation is a no-op; the Multitenancy module registers a Finbuckle-backed one.
+`IEventTenantScope` is the piece that makes background publishing safe in a multi-tenant world: the bus runs its handler loop inside `ExecuteAsync(event.TenantId, ...)` **before** resolving handlers, because a `MultiTenantDbContext` captures its tenant at construction time. The callback shape lets an implementation do asynchronous work, such as a tenant lookup, in the same async flow as the handlers. The default `ExecuteAsync` wraps `Begin`, so existing implementations keep working. The default scope is a no-op; the Multitenancy module registers a Finbuckle-backed one that installs the full tenant, including a dedicated connection string. See [source and consumer routing](/docs/building-blocks/eventing/#source-and-consumer-routing).
 
 ## Pattern: where each interface lives
 
