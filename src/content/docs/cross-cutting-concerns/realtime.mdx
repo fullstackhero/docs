@@ -1,6 +1,6 @@
 ---
 title: Realtime
-lastUpdated: 2026-06-11
+lastUpdated: 2026-11-12
 description: SignalR with a Valkey backplane, group conventions for users + channels, post-SaveChanges broadcast pattern, and distributed-cache typing throttle.
 sidebar:
   label: Realtime (SignalR)
@@ -25,7 +25,7 @@ builder.AddHeroPlatform(o => o.EnableRealtime = true);
 app.UseHeroPlatform(p => p.MapRealtime = true);
 ```
 
-`AddHeroRealtime` registers SignalR; if `CachingOptions:Redis` is set, it also calls `AddStackExchangeRedis(...)` (channel prefix `fsh-signalr`) so cross-instance message fan-out works. Without Valkey, every instance broadcasts only to its own connected clients - fine for dev, not for multi-instance production. `MapRealtime` maps the hub at `/api/v1/realtime/hub` plus a presence snapshot endpoint at `GET /api/v1/realtime/presence?userIds=a,b,c` that clients poll for initial online status.
+`AddHeroRealtime` registers SignalR; if `CachingOptions:Redis` is set, it also calls `AddStackExchangeRedis(...)` (channel prefix `fsh-signalr`, or `{CachingOptions:KeyPrefix}:signalr` when a [key prefix](/docs/cross-cutting-concerns/caching/#sharing-a-redis-server) is set) so cross-instance message fan-out works. Pub/sub ignores the Redis database index, so two apps sharing a Valkey server need distinct prefixes or they receive each other's `tenant:root` / `user:{id}` broadcasts. Without Valkey, every instance broadcasts only to its own connected clients - fine for dev, not for multi-instance production. `MapRealtime` maps the hub at `/api/v1/realtime/hub` plus a presence snapshot endpoint at `GET /api/v1/realtime/presence?userIds=a,b,c` that clients poll for initial online status.
 
 ## Group conventions
 

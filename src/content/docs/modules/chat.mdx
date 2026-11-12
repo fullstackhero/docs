@@ -1,6 +1,6 @@
 ---
 title: Chat module
-lastUpdated: 2026-06-11
+lastUpdated: 2026-11-12
 description: Slack-style messaging - named channels, 1:1 + group DMs, @mentions, thread replies, reactions, message pinning, full-text search, typing indicators, and SignalR realtime over Valkey.
 sidebar:
   label: Chat
@@ -217,7 +217,7 @@ The Notifications module's `MentionedInChannelIntegrationEventHandler` writes a 
 
 The module reads no `IOptions<T>` directly. Configuration that matters lives in adjacent blocks:
 
-- **SignalR / Valkey backplane** - set `CachingOptions:Redis` to point at your Valkey. The `AddHeroRealtime` registration calls `AddStackExchangeRedis(...)` automatically (channel prefix `fsh-signalr`); leave it empty and the hub runs in single-host mode, which is what tests and bare-bones dev use.
+- **SignalR / Valkey backplane** - set `CachingOptions:Redis` to point at your Valkey. The `AddHeroRealtime` registration calls `AddStackExchangeRedis(...)` automatically (channel prefix `fsh-signalr`, or `{CachingOptions:KeyPrefix}:signalr` when a key prefix is set); leave it empty and the hub runs in single-host mode, which is what tests and bare-bones dev use.
 - **Files attachments** - `ChatChannelFileAccessPolicy` is registered automatically during `ConfigureServices`. Uploads go through `/api/v1/files/upload-url` with `OwnerType=ChatChannel` and `OwnerId={channelId}`.
 
 ## How to extend
