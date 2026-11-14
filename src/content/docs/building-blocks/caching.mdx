@@ -1,6 +1,6 @@
 ---
 title: Caching building block
-lastUpdated: 2026-10-02
+lastUpdated: 2026-11-12
 description: HybridCache (L1 in-memory + L2 Valkey or distributed memory) with OpenTelemetry instrumentation, stampede protection, and a shared multiplexer for DataProtection.
 sidebar:
   label: Caching
@@ -36,6 +36,7 @@ HybridCache coalesces concurrent identical requests into a single source fetch a
 
 - **`CachingOptions`**:
   - `Redis` - connection string; empty falls back to in-memory `DistributedMemoryCache`
+  - `KeyPrefix` - opt-in namespace for every key and channel the kit writes to Redis (cache entries + tag records via `RedisCacheOptions.InstanceName`, the Data Protection ring, idempotency locks, quota counters, the SignalR channel); empty by default. Normalized and validated by `RedisKeyPrefix` (Core), which rejects whitespace and `{` / `}` at startup. See [Sharing a Redis server](/docs/cross-cutting-concerns/caching/#sharing-a-redis-server)
   - `EnableSsl` - TLS toggle (defaults to inference from the connection string)
   - `DefaultExpiration` - TimeSpan; default 1 hour, applies to L1 + L2
   - `DefaultLocalCacheExpiration` - TimeSpan; default 2 minutes; bounds cross-node staleness after RemoveByTag on peers
@@ -79,6 +80,7 @@ Identity uses HybridCache for per-user permission sets (`UserPermissionService`,
 {
   "CachingOptions": {
     "Redis": "localhost:6379",
+    "KeyPrefix": "",
     "DefaultExpiration": "01:00:00",
     "DefaultLocalCacheExpiration": "00:02:00",
     "MaximumKeyLength": 1024,
