@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-11-05
+lastUpdated: 2026-11-14
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -11,8 +11,9 @@ seo:
 
 Notable changes to the kit, newest first.
 
-## 2026-11-05
+## 2026-11-14
 
+- **Caching: `CachingOptions:KeyPrefix` namespaces every Redis key and channel (feature, opt-in).** Every key the kit writes to Redis was unprefixed - cache entries, HybridCache tag invalidations, the `DataProtection-Keys` ring, idempotency locks, `quota:*` counters - and the SignalR backplane used the fixed `fsh-signalr` channel, so two apps (or two environments of one app) on the same Redis server collided: one app's tag invalidation evicted the other's entries, and because pub/sub ignores the database index, `defaultDatabase=N` did not keep their hub broadcasts apart. The new setting prefixes all of them (`MyApp:prod:theme:t:root`, `MyApp:prod:DataProtection-Keys`, `MyApp:prod:signalr`); `QuotaOptions:KeyPrefix` can override it for quota. It **ships empty**, so existing deployments keep exactly today's keys and channel. Values with whitespace, `{` or `}` (a Redis Cluster hash tag) fail startup. Turning it on for an existing deployment moves the Data Protection key ring: copy it first (`COPY DataProtection-Keys <prefix>:DataProtection-Keys`) or cookies, reset tokens and stored webhook signing secrets stop unprotecting; expect a cold cache, and a rolling deploy splits the backplane until it finishes. `deploy/docker` (`FSH_REDIS_KEY_PREFIX`) and Terraform (`redis_key_prefix`) pass it to the API and the migrator. See [Sharing a Redis server](/docs/cross-cutting-concerns/caching/#sharing-a-redis-server).
 - **Eventing: InMemory consumers now run against the event tenant's database (fix).** `InMemoryEventBus` runs its handler loop inside the new `IEventTenantScope.ExecuteAsync`, and the Multitenancy module's `FinbuckleEventTenantScope` resolves the full tenant (cache first, then the tenant catalog) before consumers, tenant-aware DbContexts and the Inbox are constructed, so a tenant with a dedicated database no longer has its handlers and Inbox rows land in the shared one. A missing or inactive tenant falls back to an ID-only context with a warning, and global events keep the ambient context. The webhook fan-out keeps a complete context the bus already resolved. `ExecuteAsync` has a default implementation over `Begin`, so custom `IEventTenantScope` implementations keep working. See [#1434](https://github.com/fullstackhero/dotnet-starter-kit/pull/1434).
 
 ## 2026-11-04

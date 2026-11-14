@@ -1,6 +1,6 @@
 ---
 title: Data protection
-lastUpdated: 2026-06-11
+lastUpdated: 2026-11-12
 description: Valkey-backed Data Protection key persistence so cookies, antiforgery tokens, and IDataProtector payloads survive rolling deploys across instances.
 sidebar:
   label: Data protection
@@ -38,14 +38,15 @@ var redis = ConnectionMultiplexer.Connect(opts.Redis);
 services.AddSingleton<IConnectionMultiplexer>(redis);
 
 services.AddDataProtection()
-    .PersistKeysToStackExchangeRedis(redis, "DataProtection-Keys")
+    .PersistKeysToStackExchangeRedis(redis, keyPrefix + "DataProtection-Keys") // keyPrefix from CachingOptions:KeyPrefix, empty by default
     .SetApplicationName("FSH.Starter");
 ```
 
 Two important details:
 
 - **Same multiplexer** as the cache + (optionally) SignalR backplane. One connection pool covers all three.
-- **`SetApplicationName`** - Data Protection isolates keys by application name. If you run two fullstackhero hosts against the same Valkey (staging + dev sharing a Valkey instance), use distinct application names so they don't fight over the key ring.
+- **`SetApplicationName`** - Data Protection isolates payloads by application name, but every host still writes to the same Redis list. If you run two fullstackhero hosts against the same Valkey (staging + dev sharing a Valkey instance), give each its own [`CachingOptions:KeyPrefix`](/docs/cross-cutting-concerns/caching/#sharing-a-redis-server) so each gets its own key ring.
+- **Changing the prefix moves the ring.** Copy it first (`COPY DataProtection-Keys {prefix}:DataProtection-Keys`), or cookies, reset tokens and the stored webhook signing secrets stop unprotecting.
 
 ## What happens without it
 
