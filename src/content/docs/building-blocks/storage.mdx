@@ -1,6 +1,6 @@
 ---
 title: Storage building block
-lastUpdated: 2026-11-03
+lastUpdated: 2026-11-14
 description: File storage abstraction - local filesystem or S3-compatible (AWS S3, RustFS, MinIO, R2...) - with presigned URLs, tenant isolation, and optional quota metering.
 sidebar:
   label: Storage
@@ -58,17 +58,19 @@ public interface IStorageService
 
 ### Implementations
 
-- **`LocalStorageService`** - stores under `wwwroot/uploads/{owner-type}/{guid}_{sanitized-filename}` and validates extension + size against `FileTypeMetadata.GetRules(fileType)`. `CopyAsync` is a file copy that throws `FileNotFoundException` when the source is missing. Presigning is a **dev-only token fallback**: `GenerateUploadUrlAsync` issues a `local://upload/{token}` URL backed by `LocalPresignTokenStore`; `GenerateDownloadUrlAsync` and `BuildPublicUrl` return server-relative `/uploads/...` paths (no signing needed).
-- **`S3StorageService`** - uses `AWSSDK.S3` with a singleton `IAmazonS3` client for every real S3 call. `UploadAsync<T>` writes under `public/uploads/{owner-type}/...`, because its result is always used as a public URL; `CopyAsync` is an S3 `CopyObject` within the bucket (content type and metadata carry over). A custom `ServiceUrl` (RustFS, MinIO, etc.) switches to path-style addressing per `ForcePathStyle`; presigned PUT/GET URLs come from the SDK's request signer, through a second, keyed `IAmazonS3` (`S3StorageService.PresignClientKey`) aimed at `PresignServiceUrl` when it is set and at `ServiceUrl` otherwise. Signing itself is offline; the only network call that client can make is fetching ambient credentials when no keys are set.
+- **`LocalStorageService`** - stores under `wwwroot/uploads/{owner-type}/{guid}_{sanitized-filename}` and validates extension + size against `FileTypeMetadata.GetRules(fileType)`, plus the file signature (the bytes must really be a PNG, JPEG, ICO or PDF). Every key is confined to the storage roots (`uploads/`, `public/`, `private/`) under `wwwroot`: rooted paths, `..` segments, `:` and segments ending in a dot or space are refused, and a key outside the roots reads as missing (`RemoveAsync` ignores it, `CopyAsync` throws). `CopyAsync` is a file copy that throws `FileNotFoundException` when the source is missing. Presigning is a **dev-only token fallback**: `GenerateUploadUrlAsync` issues a `local://upload/{token}` URL backed by `LocalPresignTokenStore`; `GenerateDownloadUrlAsync` and `BuildPublicUrl` return server-relative `/uploads/...` paths (no signing needed).
+- **`S3StorageService`** - uses `AWSSDK.S3` with a singleton `IAmazonS3` client for every real S3 call. `UploadAsync<T>` writes under `public/uploads/{owner-type}/...`, because its result is always used as a public URL. It checks the file signature like the local provider, and the stored Content-Type comes from the extension, never from `FileUploadRequest.ContentType`; `CopyAsync` is an S3 `CopyObject` within the bucket (content type and metadata carry over). A custom `ServiceUrl` (RustFS, MinIO, etc.) switches to path-style addressing per `ForcePathStyle`; presigned PUT/GET URLs come from the SDK's request signer, through a second, keyed `IAmazonS3` (`S3StorageService.PresignClientKey`) aimed at `PresignServiceUrl` when it is set and at `ServiceUrl` otherwise. Signing itself is offline; the only network call that client can make is fetching ambient credentials when no keys are set.
 - **`QuotaMeteredStorageService`** - decorator. `CheckAndRecordAsync(tenantId, QuotaResource.StorageBytes, bytes, ct)` on upload (throws 507 when exceeded, rolls back the charge if the write fails). `CopyAsync` charges the copied object's size without a quota check, so a move (copy, then delete) is net-zero and never fails because the tenant is at its limit. `RemoveAsync` refunds the object's size **only when the object is gone afterwards**: providers swallow delete errors, so a failed delete keeps both the bytes and the charge. Requests with no resolved tenant pass through unmetered.
 
 ### Request / response
 
-- **`FileUploadRequest`** - `FileName`, `ContentType`, `Data`.
+- **`FileUploadRequest`** - `FileName`, `ContentType`, `Data`. `ContentType` is the client's claim and is not stored: providers derive it from the validated extension.
 - **`FileDownloadResponse`** - `Stream`, `ContentType`, `FileName`, `ContentLength?`.
 - **`PresignedUploadUrl`** - `Url`, `RequiredHeaders` (headers the browser must send verbatim, e.g. Content-Type), `ExpiresAt`.
 - **`StoredObjectMetadata`** - `SizeBytes`, `ContentType`, `LastModified`, `ETag` (from HEAD).
 - **`FileType`** enum - `Image`, `Document`, `Pdf`; `FileTypeMetadata` maps each to an extension whitelist + max size.
+- **`StorageUploadKeys`** - the `uploads/{owner-type}/{guid}_{name}` layout `UploadAsync<T>` writes, and `IsUploadOf<T>(value)`, the ownership test to run before deleting a stored value that a client could also have set.
+- **`ClientImageUrl.IsValid`** - accepts only an absolute `http(s)` URL or a clean server-relative path; use it to validate any image URL a client may store directly.
 
 ### Options
 
@@ -186,6 +188,7 @@ The Files module ships an `IFileScanner` hook. If you're using `IStorageService`
 
 ## Gotchas
 
+- **Never let a client choose a path, a key or a Content-Type.** Build keys server-side, derive the Content-Type from the validated extension, and before deleting a value a client could also have set (an avatar URL, a tenant logo), check it with `StorageUploadKeys.IsUploadOf<T>`. Identity and the tenant theme do exactly this: a user can point their avatar at an external URL, but can't adopt another upload and then delete it.
 - **Self-hosted S3 stores (RustFS, MinIO) need `ForcePathStyle = true`.** Virtual-hosted-style addressing puts the bucket name in the subdomain, which they can't service without DNS gymnastics. The option defaults to `false` and only takes effect when `ServiceUrl` is set - set it explicitly for RustFS, MinIO, and other self-hosted S3-compatible services.
 - **A presigned URL only works on the host it was signed for.** SigV4 signs the `Host` header, so the URL always points at the endpoint of the client that signed it. When the API reaches the store on an internal address a browser cannot resolve (the Docker Compose stack uses `http://rustfs:9000`), set `PresignServiceUrl` to the public one: presigned PUT and GET URLs are signed for it, their scheme follows it (`http` or `https`), and every other S3 call keeps using `ServiceUrl`. The host refuses to start when it is set but is not an absolute `http(s)` URL; left empty, presigning uses `ServiceUrl` exactly as before. A reverse proxy in front of the public endpoint must forward the `Host` header unchanged, or the store answers `403 SignatureDoesNotMatch`, and the store's CORS has to allow the front-end origins, because the browser PUTs to it cross-origin.
 - **Presigned URLs have a TTL.** Once it expires, the URL is dead. Use `BuildPublicUrl` for non-expiring public URLs; they only work for keys under `public/` (or `{Prefix}/public/`), because that is all the bucket policy opens.
