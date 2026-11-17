@@ -32,11 +32,9 @@ Use the Billing module if your product charges tenants on a recurring plan and y
 
 ### Monthly usage capture
 
-`ApiCalls` is counted in Valkey under a tenant/resource/month key as requests arrive. The monthly job runs at 00:05 UTC on the first day of the next month, reads the previous month's counter by its explicit year and month, and persists the value as a `UsageSnapshot` in the Billing database. Usage invoices are calculated from that saved snapshot, so invoice retries reuse the captured value.
+The monthly job reads the previous month's `ApiCalls` counter from Valkey and saves it as a `UsageSnapshot`; usage invoices are calculated from that snapshot. Counter keys are retained for 90 days by default (`QuotaOptions:PeriodCounterRetentionDays`).
 
-Monthly counter keys are retained for 90 days after their period ends so a delayed job or an operator's backfill can still capture them. The retention period is controlled by `QuotaOptions:PeriodCounterRetentionDays` (default `90`). If the requested period's key is absent, period lookup returns `0`; Billing records zero usage and creates no overage line for that resource. This keeps the capture flow simple, but an expired or otherwise lost key is indistinguishable from a month with no requests and can therefore result in underbilling.
-
-This historical lookup applies to monthly counters. Gauge resources (such as user counts) and perpetual counters (such as storage bytes) are still read at capture time; their period-end or historical measurement policy is not provided by this change.
+If the period key is absent, it counts as zero usage and no overage is billed; a lost key is indistinguishable from a month with no requests. Other resource types are measured at capture time rather than historically.
 
 ## Architecture at a glance
 
