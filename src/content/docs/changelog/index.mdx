@@ -13,7 +13,7 @@ Notable changes to the kit, newest first.
 
 ## 2026-11-17
 
-- **Billing: monthly usage capture reads the requested period (fix).** The monthly invoice job now captures the previous month's `ApiCalls` counter by year/month instead of labeling the current counter as historical usage. Period counters are retained for 90 days after month end to allow delayed capture. If a period key is absent, it is treated as zero usage, so no overage is billed for that resource; this does not distinguish a genuinely unused month from a lost key. The resulting `UsageSnapshot` remains the persisted basis for invoice calculation and retries. See [Issue #37](https://github.com/HiroshiYoshino/dotnet-starter-kit/issues/37).
+- **Billing: monthly usage capture reads the requested period (fix).** The monthly invoice job now captures the previous month's `ApiCalls` counter by year/month instead of labeling the current counter as historical usage. Period counters are retained for 90 days after month end to allow delayed capture. If a period key is absent, it is treated as zero usage, so no overage is billed for that resource; this does not distinguish a genuinely unused month from a lost key. The resulting `UsageSnapshot` remains the persisted basis for invoice calculation and retries.
 
 ## 2026-11-14
 
