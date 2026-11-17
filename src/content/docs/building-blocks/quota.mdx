@@ -27,7 +27,7 @@ Most tenants are on a plan. Plans live in `appsettings:QuotaOptions:Plans`. A te
 
 ### Service interfaces
 
-- **`IQuotaService`** - `CheckAsync`, `RecordAsync`, `CheckAndRecordAsync`, `GetCurrentAsync`, and `GetForPeriodAsync(tenantId, resource, year, month, ct)` (all keyed by tenant and resource). `GetForPeriodAsync` reads a monthly counter for an explicit billing period; it does not infer the period from the current clock. The atomic check-and-record is the one you want for any "this counts towards the quota" path; `RecordAsync` accepts negative amounts for refunds.
+- **`IQuotaService`** - `CheckAsync`, `RecordAsync`, `CheckAndRecordAsync`, `GetCurrentAsync`, and `GetForPeriodAsync(tenantId, resource, year, month, ct)` (all keyed by tenant and resource). `GetForPeriodAsync` reads the supplied period for monthly resources and falls back to `GetCurrentAsync` for others, so callers can use it for every resource. The atomic check-and-record is the one you want for any "this counts towards the quota" path; `RecordAsync` accepts negative amounts for refunds.
 - **`IQuotaGaugeProvider`** - extensibility hook for modules that expose live usage: a `Resource` property plus `GetCurrentAsync(tenantId, ct)`. Gauge-based resources (`Users`, `ActiveFeatureFlags`) are resolved on demand through these.
 
 ### Implementations
@@ -137,7 +137,7 @@ The middleware's path exemptions (`/health*`, `/metrics`, …) are a hardcoded l
 
 ### Use a different period
 
-The monthly window is implemented inside `RedisQuotaService` (`BuildCounterKey` embeds `YYYYMM`; `GetPeriodResetUtc` applies the configured retention after the UTC month ends). A different window means a different `IQuotaService` implementation - the interface doesn't care about periods.
+In `RedisQuotaService`, `GetPeriodResetUtc` returns the next UTC month boundary and `GetCounterExpirationUtc` adds the configured retention. A different window means a different `IQuotaService` implementation.
 
 ## Gotchas
 

@@ -24,7 +24,7 @@ Use the Billing module if your product charges tenants on a recurring plan and y
 - **Tenant-lifecycle wiring** - creating a tenant publishes `TenantSubscribedIntegrationEvent` and renewing one publishes `TenantRenewedIntegrationEvent` (both from the Multitenancy module); Billing's handlers react by starting/replacing the active subscription and issuing the term's subscription invoice. Invoice creation is idempotent (guarded by invoice number), and expiry past `ValidUpto` is grace-windowed via `Billing:GraceWindowDays`.
 - **Per-tenant subscriptions** with a small state machine - Active → Suspended → Active or Active → Cancelled. At most one Active subscription per tenant; assigning a plan cancels the prior active subscription.
 - An **invoice aggregate** with a clean state machine: Draft → Issued → (Paid \| Void). Line items are owned; subtotals recompute on add; period (year, month) is immutable. Every invoice carries a `Purpose` - `Subscription` (plan term, created on tenant create/renew) or `Usage` (metered overage, created by the monthly job) - so the two streams never collide on idempotency keys.
-- **Usage metering** - `UsageSnapshot` rows record what each tenant consumed in a window. For monthly counters such as `ApiCalls`, capture reads the counter for the requested billing period; the monthly job stores the snapshot before calculating overage line items.
+- **Usage metering** - `UsageSnapshot` rows record each tenant's usage. `UsageReporter` calls `GetForPeriodAsync` for every resource; monthly counters such as `ApiCalls` use the requested period, while other resources use current values.
 - A **monthly Hangfire recurring job** (`billing-monthly-invoices`) registered at module startup. Runs on cron `5 0 1 * *` UTC - 00:05 UTC on the 1st of each month - and generates a Draft usage invoice per active tenant for the previous period.
 - **Email notifications** - issuing an invoice raises `InvoiceIssuedIntegrationEvent`, and a daily tenant-expiry scan raises nearing-expiry / entered-grace / expired events; the Notifications module emails the tenant admin. Expiry events are deduped so a tenant is notified once per state per validity window.
 - **On-demand PDF invoices** - `GET /invoices/{id}/pdf` renders the invoice to a PDF (QuestPDF, behind a swappable `IInvoicePdfRenderer`). The fetch is scoped to the caller's tenant, so the same endpoint serves operators and tenant self-service; another tenant's id returns `404`.
@@ -32,9 +32,9 @@ Use the Billing module if your product charges tenants on a recurring plan and y
 
 ### Monthly usage capture
 
-The monthly job reads the previous month's `ApiCalls` counter from Valkey and saves it as a `UsageSnapshot`; usage invoices are calculated from that snapshot. Counter keys are retained for 90 days by default (`QuotaOptions:PeriodCounterRetentionDays`).
+The monthly job captures the previous month's `ApiCalls` counter and stores usage snapshots before calculating overage. Keys are retained for 90 days by default (`QuotaOptions:PeriodCounterRetentionDays`).
 
-If the period key is absent, it counts as zero usage and no overage is billed; a lost key is indistinguishable from a month with no requests. Other resource types are measured at capture time rather than historically.
+A missing period key counts as zero usage; a lost key is indistinguishable from a month with no requests. Non-monthly resources use current values at capture time.
 
 ## Architecture at a glance
 
