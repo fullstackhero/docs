@@ -1,6 +1,6 @@
 ---
 title: Quota building block
-lastUpdated: 2026-06-11
+lastUpdated: 2026-11-17
 description: Per-tenant resource limits with Valkey or in-memory counters, gauge-based live usage, calendar-month windows, and HTTP middleware enforcement.
 sidebar:
   label: Quota
@@ -27,12 +27,12 @@ Most tenants are on a plan. Plans live in `appsettings:QuotaOptions:Plans`. A te
 
 ### Service interfaces
 
-- **`IQuotaService`** - `CheckAsync`, `RecordAsync`, `CheckAndRecordAsync`, `GetCurrentAsync` (all keyed by `string tenantId` + `QuotaResource`). The atomic check-and-record is the one you want for any "this counts towards the quota" path; `RecordAsync` accepts negative amounts for refunds.
+- **`IQuotaService`** - `CheckAsync`, `RecordAsync`, `CheckAndRecordAsync`, `GetCurrentAsync`, and `GetForPeriodAsync(tenantId, resource, year, month, ct)` (all keyed by tenant and resource). `GetForPeriodAsync` reads a monthly counter for an explicit billing period; it does not infer the period from the current clock. The atomic check-and-record is the one you want for any "this counts towards the quota" path; `RecordAsync` accepts negative amounts for refunds.
 - **`IQuotaGaugeProvider`** - extensibility hook for modules that expose live usage: a `Resource` property plus `GetCurrentAsync(tenantId, ct)`. Gauge-based resources (`Users`, `ActiveFeatureFlags`) are resolved on demand through these.
 
 ### Implementations
 
-- **`RedisQuotaService`** - string counters keyed `quota:{tenantId}:{resource}:{YYYYMM}` for periodic resources (`ApiCalls`), `quota:{tenantId}:{resource}` for perpetual ones (`StorageBytes`, which accumulates until explicitly decremented). Periodic keys get a TTL aligned to the start of the next UTC month.
+- **`RedisQuotaService`** - string counters keyed `quota:{tenantId}:{resource}:{YYYYMM}` for periodic resources (`ApiCalls`), `quota:{tenantId}:{resource}` for perpetual ones (`StorageBytes`, which accumulates until explicitly decremented). Monthly counters remain available for `QuotaOptions:PeriodCounterRetentionDays` days after the UTC period ends (default `90`) so the Billing job can capture the previous period after month rollover. `GetForPeriodAsync` builds the key from the supplied year and month. A missing period key returns `0`; callers treat that as zero usage, so a lost key is not distinguished from a month with no requests.
 - **`InMemoryQuotaService`** - in-process counters. Single-instance only.
 - **`NoopQuotaService`** - drop-in for when quotas are off; every check passes.
 
@@ -48,7 +48,7 @@ Most tenants are on a plan. Plans live in `appsettings:QuotaOptions:Plans`. A te
 
 ### Options
 
-- **`QuotaOptions`** - `Enabled` (bool, default true), `Redis` (connection string), `DefaultPlan` (string; e.g. `free`), `Plans` (Dict - `Plans:free:StorageBytes = 1073741824`), `ExemptRootTenant` (bool, default true).
+- **`QuotaOptions`** - `Enabled` (bool, default true), `Redis` (connection string), `DefaultPlan` (string; e.g. `free`), `Plans` (Dict - `Plans:free:StorageBytes = 1073741824`), `ExemptRootTenant` (bool, default true), and `PeriodCounterRetentionDays` (integer, default `90`).
 
 ## How modules consume Quota
 
@@ -94,6 +94,7 @@ The quota service compares the gauge value against the plan limit on every `Chec
     "Redis": "localhost:6379",
     "DefaultPlan": "free",
     "ExemptRootTenant": true,
+    "PeriodCounterRetentionDays": 90,
     "Plans": {
       "free": {
         "ApiCalls": 100000,
@@ -136,7 +137,7 @@ The middleware's path exemptions (`/health*`, `/metrics`, …) are a hardcoded l
 
 ### Use a different period
 
-The monthly window is implemented inside `RedisQuotaService` (`BuildCounterKey` embeds `YYYYMM`; `GetPeriodResetUtc` returns the first moment of the next UTC month). A different window means a different `IQuotaService` implementation - the interface doesn't care about periods.
+The monthly window is implemented inside `RedisQuotaService` (`BuildCounterKey` embeds `YYYYMM`; `GetPeriodResetUtc` applies the configured retention after the UTC month ends). A different window means a different `IQuotaService` implementation - the interface doesn't care about periods.
 
 ## Gotchas
 
@@ -145,7 +146,7 @@ The monthly window is implemented inside `RedisQuotaService` (`BuildCounterKey` 
 - **Gauges are read on-demand.** Each `CheckAsync` invokes the gauge providers, which usually do a DB query. Cache the results inside the gauge if the data is expensive to compute and slightly stale is fine.
 - **`InMemoryQuotaService` is not cluster-safe.** Two instances of the API hold separate counters. Use Valkey (or any distributed cache) in production.
 - **Root tenant exemption is global.** With `ExemptRootTenant = true`, the root/platform tenant has unlimited everything. Don't disable this in production unless you have a reason - internal admin actions tend to exceed all the limits you set for paying customers.
-- **Valkey TTL.** Period keys carry a TTL aligned to the period end. Clock skew between instances can produce off-by-one errors at the period boundary. Use NTP.
+- **Valkey TTL and billing history.** Monthly counter keys are retained for the configured period after month end. Clock skew between instances can still produce boundary errors; use NTP. A missing historical key reads as zero, so the application does not distinguish zero requests from a lost/expired counter. The retention period is a recovery window, not a durable usage ledger.
 
 ## Critical files
 

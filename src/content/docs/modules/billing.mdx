@@ -1,6 +1,6 @@
 ---
 title: Billing module
-lastUpdated: 2026-06-11
+lastUpdated: 2026-11-17
 description: Subscription plans, invoice lifecycle, and usage metering for multi-tenant SaaS - all wired through a monthly Hangfire job.
 sidebar:
   label: Billing
@@ -24,11 +24,19 @@ Use the Billing module if your product charges tenants on a recurring plan and y
 - **Tenant-lifecycle wiring** - creating a tenant publishes `TenantSubscribedIntegrationEvent` and renewing one publishes `TenantRenewedIntegrationEvent` (both from the Multitenancy module); Billing's handlers react by starting/replacing the active subscription and issuing the term's subscription invoice. Invoice creation is idempotent (guarded by invoice number), and expiry past `ValidUpto` is grace-windowed via `Billing:GraceWindowDays`.
 - **Per-tenant subscriptions** with a small state machine - Active → Suspended → Active or Active → Cancelled. At most one Active subscription per tenant; assigning a plan cancels the prior active subscription.
 - An **invoice aggregate** with a clean state machine: Draft → Issued → (Paid \| Void). Line items are owned; subtotals recompute on add; period (year, month) is immutable. Every invoice carries a `Purpose` - `Subscription` (plan term, created on tenant create/renew) or `Usage` (metered overage, created by the monthly job) - so the two streams never collide on idempotency keys.
-- **Usage metering** - `UsageSnapshot` rows record what each tenant consumed in a window. The monthly job reads these against the subscribed plan's overage rates to add overage line items to the next invoice.
+- **Usage metering** - `UsageSnapshot` rows record what each tenant consumed in a window. For monthly counters such as `ApiCalls`, capture reads the counter for the requested billing period; the monthly job stores the snapshot before calculating overage line items.
 - A **monthly Hangfire recurring job** (`billing-monthly-invoices`) registered at module startup. Runs on cron `5 0 1 * *` UTC - 00:05 UTC on the 1st of each month - and generates a Draft usage invoice per active tenant for the previous period.
 - **Email notifications** - issuing an invoice raises `InvoiceIssuedIntegrationEvent`, and a daily tenant-expiry scan raises nearing-expiry / entered-grace / expired events; the Notifications module emails the tenant admin. Expiry events are deduped so a tenant is notified once per state per validity window.
 - **On-demand PDF invoices** - `GET /invoices/{id}/pdf` renders the invoice to a PDF (QuestPDF, behind a swappable `IInvoicePdfRenderer`). The fetch is scoped to the caller's tenant, so the same endpoint serves operators and tenant self-service; another tenant's id returns `404`.
 - **16 endpoints** at `/api/v1/billing/...` covering plans, subscriptions, invoices, usage, and PDF download. Two coarse permissions: `Billing.View` and `Billing.Manage`.
+
+### Monthly usage capture
+
+`ApiCalls` is counted in Valkey under a tenant/resource/month key as requests arrive. The monthly job runs at 00:05 UTC on the first day of the next month, reads the previous month's counter by its explicit year and month, and persists the value as a `UsageSnapshot` in the Billing database. Usage invoices are calculated from that saved snapshot, so invoice retries reuse the captured value.
+
+Monthly counter keys are retained for 90 days after their period ends so a delayed job or an operator's backfill can still capture them. The retention period is controlled by `QuotaOptions:PeriodCounterRetentionDays` (default `90`). If the requested period's key is absent, period lookup returns `0`; Billing records zero usage and creates no overage line for that resource. This keeps the capture flow simple, but an expired or otherwise lost key is indistinguishable from a month with no requests and can therefore result in underbilling.
+
+This historical lookup applies to monthly counters. Gauge resources (such as user counts) and perpetual counters (such as storage bytes) are still read at capture time; their period-end or historical measurement policy is not provided by this change.
 
 ## Architecture at a glance
 
