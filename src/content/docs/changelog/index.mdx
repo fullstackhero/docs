@@ -1,6 +1,6 @@
 ---
 title: Overview
-lastUpdated: 2026-11-17
+lastUpdated: 2026-11-28
 description: Release notes and version history for fullstackhero.
 sidebar:
   order: 1
@@ -11,9 +11,9 @@ seo:
 
 Notable changes to the kit, newest first.
 
-## 2026-11-17
+## 2026-11-28
 
-- **Billing: monthly usage capture reads the requested period (fix).** The monthly invoice job now captures the previous month's `ApiCalls` counter by year/month instead of labeling the current counter as historical usage. Period counters are retained for 90 days after month end to allow delayed capture. If a period key is absent, it is treated as zero usage, so no overage is billed for that resource; this does not distinguish a genuinely unused month from a lost key. The resulting `UsageSnapshot` remains the persisted basis for invoice calculation and retries.
+- **Billing: monthly usage capture reads the requested period (fix).** The `billing-monthly-invoices` job runs at 00:05 UTC on the 1st, but the previous month's `ApiCalls` Redis counter expired at 00:00, and `UsageReporter` read the *current* month's counter anyway. Usage invoices therefore recorded about five minutes of the new month as the previous month's usage, so API overages were usually missing. `UsageReporter` now calls the new `IQuotaService.GetForPeriodAsync(tenantId, resource, year, month)`, which reads the requested month's counter (non-monthly resources keep returning their current value). Monthly counters are retained for `QuotaOptions:PeriodCounterRetentionDays` (default `90`) after month end, and existing counters get the longer TTL on their next increment. A missing period key reads as zero usage. Snapshots and invoices already captured are not corrected. **Breaking for custom `IQuotaService` implementations:** add `GetForPeriodAsync`. See [Billing](/docs/modules/billing/) and [#1477](https://github.com/fullstackhero/dotnet-starter-kit/pull/1477).
 
 ## 2026-11-14
 
