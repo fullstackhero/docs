@@ -13,6 +13,7 @@ Notable changes to the kit, newest first.
 
 ## 2026-11-28
 
+- **CLI: `fsh info` shows a clean version (fix).** It printed the CLI version with the `+<git sha>` build metadata (`10.0.1+2b7fe49…`) while `fsh --version` printed `10.0.1`. Both now show `10.0.1`. See [#1491](https://github.com/fullstackhero/dotnet-starter-kit/issues/1491).
 - **CLI: `fsh new` rejects unknown options (fix).** The CLI parsed leniently, so the `dotnet new fsh` spelling (`--aspire false`) or a typo like `--no-frontned` was silently dropped and you got the full Aspire + React project. Unknown options now fail with `Unknown option`; use `--no-aspire`, `--no-frontend` and `--no-agents` with the CLI. See [#1489](https://github.com/fullstackhero/dotnet-starter-kit/issues/1489).
 - **Template: generated projects build with the .NET 11 SDK (fix).** Scaffolds carry no `global.json`, so they build with whatever SDK is installed, and `AnalysisLevel=latest` plus `TreatWarningsAsErrors` turned the .NET 11 SDK's new CA2026 rule into a build failure. `AnalysisLevel` is now pinned to `10.0` (raise it on purpose), the CA2026 hit in `GetAuditById` is fixed, and CI builds a scaffold with the latest SDK. See [#1478](https://github.com/fullstackhero/dotnet-starter-kit/issues/1478).
 - **CLI: `fsh doctor` accepts .NET 11 and later (fix).** The SDK check only passed `10.x`; any SDK from 10 up now passes. See [#1479](https://github.com/fullstackhero/dotnet-starter-kit/issues/1479).
